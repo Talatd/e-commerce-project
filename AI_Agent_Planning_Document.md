@@ -1,6 +1,6 @@
 # 🤖 AI Agent Planning Document: SmartStore AI
 
-github Repo : 
+github Repo : https://github.com/Talatd/Advanced-Web-Project.git
 
 ## 1. Project Overview
 
