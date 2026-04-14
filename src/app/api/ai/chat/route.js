@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { authenticateRequest } from '@/lib/auth-middleware';
 import { validateMessage, getSystemPrompt } from '@/lib/ai-security';
 import { getProductsSummaryForAIByUser } from '@/data/products';
+import { getReviewsSummaryForAI } from '@/data/reviews';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -36,7 +37,9 @@ export async function POST(request) {
 
         // Step 4: Get ONLY this user's products for AI context
         const productData = getProductsSummaryForAIByUser(user.id);
-        const systemPrompt = getSystemPrompt(productData);
+        const productIds = productData.map(p => p.id);
+        const reviewData = getReviewsSummaryForAI(productIds);
+        const systemPrompt = getSystemPrompt(productData, reviewData);
 
         // Step 5: Call Gemini API
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });

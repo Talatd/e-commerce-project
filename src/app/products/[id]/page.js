@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from './productDetail.module.css';
@@ -9,6 +10,7 @@ import styles from './productDetail.module.css';
 export default function ProductDetailPage({ params }) {
     const { id } = use(params);
     const { user, loading, authFetch } = useAuth();
+    const { addToCart } = useCart();
     const router = useRouter();
     const [product, setProduct] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -16,6 +18,18 @@ export default function ProductDetailPage({ params }) {
     const [aiQuery, setAiQuery] = useState('');
     const [aiResponse, setAiResponse] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
+
+    // Reviews state
+    const [reviews, setReviews] = useState([]);
+    const [reviewStats, setReviewStats] = useState(null);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [showReviewForm, setShowReviewForm] = useState(false);
+    const [newReview, setNewReview] = useState({ rating: 5, title: '', comment: '' });
+    const [reviewSubmitting, setReviewSubmitting] = useState(false);
+    const [reviewSuccess, setReviewSuccess] = useState('');
+
+    // Cart notification
+    const [addedToCart, setAddedToCart] = useState(false);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -39,6 +53,70 @@ export default function ProductDetailPage({ params }) {
             console.error('Failed to fetch product:', error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchReviews = async () => {
+        if (reviewsLoading) return;
+        setReviewsLoading(true);
+        try {
+            const res = await authFetch(`/api/reviews/${id}`);
+            if (!res) return;
+            const data = await res.json();
+            if (data.success) {
+                setReviews(data.reviews);
+                setReviewStats(data.stats);
+            }
+        } catch (error) {
+            console.error('Failed to fetch reviews:', error);
+        } finally {
+            setReviewsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'reviews' && reviews.length === 0 && user && authFetch) {
+            fetchReviews();
+        }
+    }, [activeTab, user, authFetch]);
+
+    const handleSubmitReview = async (e) => {
+        e.preventDefault();
+        setReviewSubmitting(true);
+        setReviewSuccess('');
+        try {
+            const res = await authFetch(`/api/reviews/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newReview),
+            });
+            if (!res) return;
+            const data = await res.json();
+            if (data.success) {
+                setReviewSuccess('Review submitted successfully!');
+                setNewReview({ rating: 5, title: '', comment: '' });
+                setShowReviewForm(false);
+                fetchReviews(); // refresh
+            }
+        } catch (error) {
+            console.error('Failed to submit review:', error);
+        } finally {
+            setReviewSubmitting(false);
+        }
+    };
+
+    const handleAddToCart = () => {
+        if (product) {
+            addToCart(product);
+            setAddedToCart(true);
+            setTimeout(() => setAddedToCart(false), 2000);
+        }
+    };
+
+    const handleBuyNow = () => {
+        if (product) {
+            addToCart(product);
+            router.push('/checkout');
         }
     };
 
@@ -81,6 +159,18 @@ export default function ProductDetailPage({ params }) {
             stars.push(<span key={`empty-${i}`} className={styles.starEmpty}>★</span>);
         }
         return stars;
+    };
+
+    const renderClickableStars = (value, onChange) => {
+        return [1, 2, 3, 4, 5].map(star => (
+            <span
+                key={star}
+                className={`${styles.ratingStarBtn} ${star <= value ? styles.ratingStarActive : ''}`}
+                onClick={() => onChange(star)}
+            >
+                ★
+            </span>
+        ));
     };
 
     const formatAiResponse = (text) => {
@@ -204,13 +294,39 @@ export default function ProductDetailPage({ params }) {
 
                     {/* Action Buttons */}
                     <div className={styles.actions}>
-                        <button className={`btn btn-primary btn-lg ${styles.addToCartBtn}`} id="add-to-cart-btn">
+                        <button
+                            className={`btn btn-primary btn-lg ${styles.addToCartBtn}`}
+                            id="add-to-cart-btn"
+                            onClick={handleAddToCart}
+                        >
+                            {addedToCart ? (
+                                <>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    Added!
+                                </>
+                            ) : (
+                                <>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="9" cy="21" r="1"></circle>
+                                        <circle cx="20" cy="21" r="1"></circle>
+                                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                                    </svg>
+                                    Add to Cart
+                                </>
+                            )}
+                        </button>
+                        <button
+                            className={`btn btn-secondary btn-lg ${styles.buyNowBtn}`}
+                            id="buy-now-btn"
+                            onClick={handleBuyNow}
+                        >
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="9" cy="21" r="1"></circle>
-                                <circle cx="20" cy="21" r="1"></circle>
-                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                <line x1="1" y1="10" x2="23" y2="10"></line>
                             </svg>
-                            Add to Cart
+                            Buy Now
                         </button>
                         <button className={`btn btn-secondary btn-lg ${styles.wishlistBtn}`} id="wishlist-btn">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -235,6 +351,12 @@ export default function ProductDetailPage({ params }) {
                         onClick={() => setActiveTab('specifications')}
                     >
                         Specifications
+                    </button>
+                    <button
+                        className={`${styles.tabBtn} ${activeTab === 'reviews' ? styles.tabBtnActive : ''}`}
+                        onClick={() => setActiveTab('reviews')}
+                    >
+                        📝 Reviews
                     </button>
                     <button
                         className={`${styles.tabBtn} ${activeTab === 'ai-analysis' ? styles.tabBtnActive : ''}`}
@@ -266,6 +388,155 @@ export default function ProductDetailPage({ params }) {
                                     <span className={styles.specValue}>{value}</span>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Reviews Tab */}
+                    {activeTab === 'reviews' && (
+                        <div className={styles.reviewsSection}>
+                            {reviewsLoading ? (
+                                <div className={styles.reviewsLoading}>
+                                    <div className={styles.loader}></div>
+                                    <p>Loading reviews...</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Review Stats */}
+                                    {reviewStats && (
+                                        <div className={styles.reviewStatsCard}>
+                                            <div className={styles.reviewStatsLeft}>
+                                                <div className={styles.bigRating}>{reviewStats.average}</div>
+                                                <div className={styles.bigStars}>
+                                                    {renderStars(reviewStats.average)}
+                                                </div>
+                                                <div className={styles.totalReviews}>
+                                                    {reviewStats.total} reviews
+                                                </div>
+                                            </div>
+                                            <div className={styles.reviewStatsBars}>
+                                                {[5, 4, 3, 2, 1].map(star => {
+                                                    const count = reviewStats.distribution[star] || 0;
+                                                    const percent = reviewStats.total > 0
+                                                        ? Math.round((count / reviewStats.total) * 100) : 0;
+                                                    return (
+                                                        <div key={star} className={styles.ratingBar}>
+                                                            <span className={styles.ratingBarLabel}>{star}★</span>
+                                                            <div className={styles.ratingBarTrack}>
+                                                                <div
+                                                                    className={styles.ratingBarFill}
+                                                                    style={{ width: `${percent}%` }}
+                                                                ></div>
+                                                            </div>
+                                                            <span className={styles.ratingBarCount}>{count}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Write Review Button */}
+                                    <div className={styles.reviewActions}>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={() => setShowReviewForm(!showReviewForm)}
+                                        >
+                                            {showReviewForm ? 'Cancel' : '✍️ Write a Review'}
+                                        </button>
+                                        {reviewSuccess && (
+                                            <span className={styles.reviewSuccessMsg}>✅ {reviewSuccess}</span>
+                                        )}
+                                    </div>
+
+                                    {/* Review Form */}
+                                    {showReviewForm && (
+                                        <form className={styles.reviewForm} onSubmit={handleSubmitReview}>
+                                            <div className={styles.formGroup}>
+                                                <label>Your Rating</label>
+                                                <div className={styles.ratingSelector}>
+                                                    {renderClickableStars(newReview.rating, (val) =>
+                                                        setNewReview(prev => ({ ...prev, rating: val }))
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className={styles.formGroup}>
+                                                <label htmlFor="review-title">Review Title</label>
+                                                <input
+                                                    id="review-title"
+                                                    type="text"
+                                                    className={styles.reviewInput}
+                                                    value={newReview.title}
+                                                    onChange={(e) => setNewReview(prev => ({ ...prev, title: e.target.value }))}
+                                                    placeholder="Summarize your review..."
+                                                    required
+                                                    maxLength={100}
+                                                />
+                                            </div>
+                                            <div className={styles.formGroup}>
+                                                <label htmlFor="review-comment">Your Review</label>
+                                                <textarea
+                                                    id="review-comment"
+                                                    className={styles.reviewTextarea}
+                                                    value={newReview.comment}
+                                                    onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
+                                                    placeholder="Share your experience with this product..."
+                                                    required
+                                                    rows={4}
+                                                    maxLength={500}
+                                                />
+                                            </div>
+                                            <button
+                                                type="submit"
+                                                className="btn btn-primary"
+                                                disabled={reviewSubmitting}
+                                                id="submit-review-btn"
+                                            >
+                                                {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                                            </button>
+                                        </form>
+                                    )}
+
+                                    {/* Reviews List */}
+                                    <div className={styles.reviewsList}>
+                                        {reviews.length === 0 ? (
+                                            <div className={styles.noReviews}>
+                                                <p>No reviews yet. Be the first to review this product!</p>
+                                            </div>
+                                        ) : (
+                                            reviews.map(review => (
+                                                <div key={review.id} className={styles.reviewCard}>
+                                                    <div className={styles.reviewCardHeader}>
+                                                        <div className={styles.reviewAuthor}>
+                                                            <div className={styles.reviewAvatar}>
+                                                                {review.userName.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <div className={styles.reviewAuthorName}>
+                                                                    {review.userName}
+                                                                    {review.verified && (
+                                                                        <span className={styles.verifiedBadge}>✓ Verified</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className={styles.reviewDate}>{review.date}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className={styles.reviewRating}>
+                                                            {renderStars(review.rating)}
+                                                        </div>
+                                                    </div>
+                                                    <h4 className={styles.reviewTitle}>{review.title}</h4>
+                                                    <p className={styles.reviewComment}>{review.comment}</p>
+                                                    <div className={styles.reviewFooter}>
+                                                        <span className={styles.helpfulCount}>
+                                                            👍 {review.helpful} found this helpful
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
 

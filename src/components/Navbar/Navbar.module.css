@@ -92,6 +92,22 @@
     background: rgba(108, 92, 231, 0.1);
 }
 
+.cartCountBadge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--color-accent), #ff4757);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    animation: scaleIn 0.3s ease;
+}
+
 /* User Section */
 .userSection {
     display: flex;

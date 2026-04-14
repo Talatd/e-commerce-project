@@ -1,5 +1,6 @@
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { CartProvider } from "@/context/CartContext";
 import Navbar from "@/components/Navbar/Navbar";
 import ChatBot from "@/components/ChatBot/ChatBot";
 
@@ -14,9 +15,11 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <AuthProvider>
-          <Navbar />
-          <main>{children}</main>
-          <ChatBot />
+          <CartProvider>
+            <Navbar />
+            <main>{children}</main>
+            <ChatBot />
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>
