@@ -27,6 +27,7 @@ export default function ProductDetailPage({ params }) {
     const [newReview, setNewReview] = useState({ rating: 5, title: '', comment: '' });
     const [reviewSubmitting, setReviewSubmitting] = useState(false);
     const [reviewSuccess, setReviewSuccess] = useState('');
+    const [selectedImage, setSelectedImage] = useState(0);
 
     // Cart notification
     const [addedToCart, setAddedToCart] = useState(false);
@@ -228,22 +229,39 @@ export default function ProductDetailPage({ params }) {
                 {/* Left - Product Image */}
                 <div className={styles.imageSection}>
                     <div className={styles.mainImage}>
-                        <div className={styles.imagePlaceholder}>
-                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                <line x1="8" y1="21" x2="16" y2="21"></line>
-                                <line x1="12" y1="17" x2="12" y2="21"></line>
-                            </svg>
-                            <span>{product.subcategory}</span>
-                        </div>
+                        {product.image && product.image.startsWith('http') ? (
+                            <img
+                                src={product.images[selectedImage] || product.image}
+                                alt={product.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--radius-lg)' }}
+                            />
+                        ) : (
+                            <div className={styles.imagePlaceholder}>
+                                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                                </svg>
+                                <span>{product.subcategory}</span>
+                            </div>
+                        )}
                         {discount > 0 && (
                             <span className={styles.discountBadge}>-{discount}% OFF</span>
                         )}
                     </div>
                     <div className={styles.thumbnails}>
-                        {product.images.map((_, index) => (
-                            <div key={index} className={`${styles.thumbnail} ${index === 0 ? styles.thumbnailActive : ''}`}>
-                                <span>{index + 1}</span>
+                        {product.images.map((img, index) => (
+                            <div
+                                key={index}
+                                className={`${styles.thumbnail} ${index === selectedImage ? styles.thumbnailActive : ''}`}
+                                onClick={() => setSelectedImage(index)}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                {img.startsWith('http') ? (
+                                    <img src={img} alt={`${product.name} ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                                ) : (
+                                    <span>{index + 1}</span>
+                                )}
                             </div>
                         ))}
                     </div>

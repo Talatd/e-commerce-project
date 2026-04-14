@@ -34,8 +34,8 @@ export const products = [
       "Battery": "800mAh Li-ion",
       "Charging": "USB-C, 10min quick charge = 3hrs playback"
     },
-    image: "/products/headphones.jpg",
-    images: ["/products/headphones.jpg", "/products/headphones-2.jpg", "/products/headphones-3.jpg"],
+    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop", "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=600&h=600&fit=crop", "https://images.unsplash.com/photo-1487215078519-e21cc028cb29?w=600&h=600&fit=crop"],
     tags: ["wireless", "noise-cancelling", "bluetooth", "premium"],
     dateAdded: "2024-01-15",
     sku: "SM-WH-001"
@@ -73,8 +73,8 @@ export const products = [
       "Weight": "1.6 kg",
       "OS": "Windows 11 Pro"
     },
-    image: "/products/laptop.jpg",
-    images: ["/products/laptop.jpg", "/products/laptop-2.jpg"],
+    image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&h=600&fit=crop", "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=600&h=600&fit=crop"],
     tags: ["laptop", "ultrabook", "4k", "oled", "professional"],
     dateAdded: "2024-02-01",
     sku: "TN-LP-015"
@@ -112,8 +112,8 @@ export const products = [
       "Weight": "45g (without strap)",
       "Strap": "Silicone, 22mm quick-release"
     },
-    image: "/products/smartwatch.jpg",
-    images: ["/products/smartwatch.jpg", "/products/smartwatch-2.jpg"],
+    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=600&fit=crop", "https://images.unsplash.com/photo-1546868871-af0de0ae72be?w=600&h=600&fit=crop"],
     tags: ["smartwatch", "fitness", "health", "gps"],
     dateAdded: "2024-01-20",
     sku: "FP-SW-X3"
@@ -151,8 +151,8 @@ export const products = [
       "Storage": "microSD up to 256GB",
       "Weight": "158g"
     },
-    image: "/products/action-camera.jpg",
-    images: ["/products/action-camera.jpg", "/products/action-camera-2.jpg"],
+    image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&h=600&fit=crop", "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=600&h=600&fit=crop"],
     tags: ["camera", "4k", "action", "waterproof", "adventure"],
     dateAdded: "2024-03-10",
     sku: "AC-4K-001"
@@ -190,8 +190,8 @@ export const products = [
       "Weight": "980g",
       "Cable Length": "1.8m braided"
     },
-    image: "/products/keyboard.jpg",
-    images: ["/products/keyboard.jpg", "/products/keyboard-2.jpg"],
+    image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&h=600&fit=crop", "https://images.unsplash.com/photo-1595225476474-87563907a212?w=600&h=600&fit=crop"],
     tags: ["keyboard", "mechanical", "ergonomic", "rgb", "gaming"],
     dateAdded: "2024-02-15",
     sku: "TM-KB-ERG"
@@ -229,8 +229,8 @@ export const products = [
       "Weight": "540g",
       "Dimensions": "180 x 70 x 70mm"
     },
-    image: "/products/speaker.jpg",
-    images: ["/products/speaker.jpg"],
+    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600&h=600&fit=crop"],
     tags: ["speaker", "bluetooth", "portable", "waterproof"],
     dateAdded: "2024-01-05",
     sku: "SM-BS-360"
@@ -268,8 +268,8 @@ export const products = [
       "Power": "12V DC adapter",
       "Dimensions": "200 x 130 x 20mm"
     },
-    image: "/products/smart-hub.jpg",
-    images: ["/products/smart-hub.jpg"],
+    image: "https://images.unsplash.com/photo-1558089687-f282ffcbc126?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1558089687-f282ffcbc126?w=600&h=600&fit=crop"],
     tags: ["smart-home", "hub", "automation", "zigbee"],
     dateAdded: "2024-03-01",
     sku: "HT-HB-PRO"
@@ -307,8 +307,8 @@ export const products = [
       "Weight": "795g (with battery)",
       "Folded Size": "178 x 82 x 68mm"
     },
-    image: "/products/drone.jpg",
-    images: ["/products/drone.jpg", "/products/drone-2.jpg"],
+    image: "https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?w=600&h=600&fit=crop", "https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=600&h=600&fit=crop"],
     tags: ["drone", "4k", "camera", "aerial", "professional"],
     dateAdded: "2024-02-28",
     sku: "SV-DR-X500"
@@ -346,8 +346,8 @@ export const products = [
       "Dimensions": "200 x 100 x 8mm",
       "Weight": "180g"
     },
-    image: "/products/charger.jpg",
-    images: ["/products/charger.jpg"],
+    image: "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=600&h=600&fit=crop"],
     tags: ["charger", "wireless", "qi", "fast-charging"],
     dateAdded: "2024-01-10",
     sku: "CT-WC-DUO"
@@ -385,8 +385,8 @@ export const products = [
       "Weight": "58g (without cable)",
       "Grip Style": "Claw/Fingertip"
     },
-    image: "/products/mouse.jpg",
-    images: ["/products/mouse.jpg"],
+    image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=600&h=600&fit=crop",
+    images: ["https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=600&h=600&fit=crop"],
     tags: ["mouse", "gaming", "wireless", "esports", "rgb"],
     dateAdded: "2024-03-05",
     sku: "TM-MS-ULT"
@@ -476,4 +476,85 @@ export function getProductsSummaryForAIByUser(userId) {
       specifications: p.specifications,
       tags: p.tags
     }));
+}
+
+// ===== Admin CRUD Functions =====
+
+let nextProductId = products.length > 0
+  ? Math.max(...products.map(p => p.id)) + 1
+  : 1;
+
+/**
+ * Get ALL products (admin only - no user filtering)
+ */
+export function getAllProducts() {
+  return products;
+}
+
+/**
+ * Add a new product
+ */
+export function addProduct(productData) {
+  const newProduct = {
+    id: nextProductId++,
+    ownerId: productData.ownerId || 1,
+    name: productData.name,
+    brand: productData.brand || 'Unknown',
+    price: parseFloat(productData.price),
+    originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
+    category: productData.category || 'Electronics',
+    subcategory: productData.subcategory || 'General',
+    rating: 0,
+    reviewCount: 0,
+    stock: parseInt(productData.stock) || 0,
+    description: productData.description || '',
+    features: productData.features || [],
+    specifications: productData.specifications || {},
+    image: productData.image || '/products/placeholder.jpg',
+    images: productData.images || ['/products/placeholder.jpg'],
+    tags: productData.tags || [],
+    dateAdded: new Date().toISOString().split('T')[0],
+    sku: productData.sku || `SM-${Date.now().toString(36).toUpperCase()}`
+  };
+  products.push(newProduct);
+  return newProduct;
+}
+
+/**
+ * Update an existing product
+ */
+export function updateProduct(id, updates) {
+  const index = products.findIndex(p => p.id === parseInt(id));
+  if (index === -1) return null;
+
+  // Allowed update fields
+  const allowedFields = [
+    'name', 'brand', 'price', 'originalPrice', 'category', 'subcategory',
+    'stock', 'description', 'features', 'specifications', 'image', 'images',
+    'tags', 'sku'
+  ];
+
+  allowedFields.forEach(field => {
+    if (updates[field] !== undefined) {
+      if (field === 'price' || field === 'originalPrice') {
+        products[index][field] = updates[field] !== null ? parseFloat(updates[field]) : null;
+      } else if (field === 'stock') {
+        products[index][field] = parseInt(updates[field]);
+      } else {
+        products[index][field] = updates[field];
+      }
+    }
+  });
+
+  return products[index];
+}
+
+/**
+ * Delete a product
+ */
+export function deleteProduct(id) {
+  const index = products.findIndex(p => p.id === parseInt(id));
+  if (index === -1) return false;
+  products.splice(index, 1);
+  return true;
 }

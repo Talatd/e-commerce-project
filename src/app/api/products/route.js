@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/auth-middleware';
-import { getProductsByUser, searchProductsForUser, getProductsByCategoryForUser, getCategoriesForUser, getBrandsForUser } from '@/data/products';
+import { getAllProducts } from '@/data/products';
 
 export async function GET(request) {
-    // Step 1: Authenticate the request - REQUIRE valid JWT
     const authResult = authenticateRequest(request);
-    if (authResult.error) return authResult.error; // Returns 401/403
-    const user = authResult.user;
+    if (authResult.error) return authResult.error;
 
     try {
         const { searchParams } = new URL(request.url);
@@ -16,18 +14,27 @@ export async function GET(request) {
         const minPrice = searchParams.get('minPrice');
         const maxPrice = searchParams.get('maxPrice');
 
-        let results;
+        // All users see ALL products (this is an e-commerce store)
+        let results = [...getAllProducts()];
 
-        // Step 2: All queries are filtered by user ID - data isolation
+        // Search filter
         if (query) {
-            results = searchProductsForUser(query, user.id);
-        } else if (category && category !== 'all') {
-            results = getProductsByCategoryForUser(category, user.id);
-        } else {
-            results = getProductsByUser(user.id);
+            const q = query.toLowerCase();
+            results = results.filter(p =>
+                p.name.toLowerCase().includes(q) ||
+                p.description.toLowerCase().includes(q) ||
+                p.brand.toLowerCase().includes(q) ||
+                p.category.toLowerCase().includes(q) ||
+                p.tags.some(t => t.toLowerCase().includes(q))
+            );
         }
 
-        // Apply price filter
+        // Category filter
+        if (category && category !== 'all') {
+            results = results.filter(p => p.category === category);
+        }
+
+        // Price filter
         if (minPrice) {
             results = results.filter(p => p.price >= parseFloat(minPrice));
         }
@@ -35,7 +42,7 @@ export async function GET(request) {
             results = results.filter(p => p.price <= parseFloat(maxPrice));
         }
 
-        // Apply sorting
+        // Sorting
         if (sort) {
             switch (sort) {
                 case 'price-asc':
@@ -56,12 +63,16 @@ export async function GET(request) {
             }
         }
 
+        const allProducts = getAllProducts();
+        const categories = [...new Set(allProducts.map(p => p.category))];
+        const brands = [...new Set(allProducts.map(p => p.brand))];
+
         return NextResponse.json({
             success: true,
             products: results,
             total: results.length,
-            categories: getCategoriesForUser(user.id),
-            brands: getBrandsForUser(user.id)
+            categories,
+            brands
         });
     } catch (error) {
         return NextResponse.json(
