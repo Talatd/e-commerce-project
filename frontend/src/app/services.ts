@@ -35,7 +35,21 @@ export class AiService {
   private http = inject(HttpClient);
   private aiUrl = 'http://localhost:8000/api/v1/chatbot/query';
 
-  query(prompt: string, userId: number, role: string): Observable<any> {
-    return this.http.post(this.aiUrl, { query: prompt, user_id: userId, role: role });
+  query(prompt: string, userId: number, role: string, history: string[]): Observable<any> {
+    return this.http.post(this.aiUrl, { query: prompt, user_id: userId, role: role, history: history });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class ProductService {
+  private http = inject(HttpClient);
+  private apiUrl = 'http://localhost:8080/api/v1/products';
+
+  getProducts(): Observable<any[]> {
+    return this.http.get<any[]>(this.apiUrl);
+  }
+
+  getSentiment(productId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${productId}/reviews/sentiment`);
   }
 }
