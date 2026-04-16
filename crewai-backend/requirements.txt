@@ -1,6 +1,0 @@
-crewai==0.108.0
-crewai-tools==0.40.1
-flask==3.1.0
-flask-cors==5.0.1
-google-generativeai==0.8.5
-python-dotenv==1.1.0
