@@ -45,3 +45,5 @@ __pycache__/
 *.pyc
 venv/
 .venv/
+
+legacy/node_modules/
