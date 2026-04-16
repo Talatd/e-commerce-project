@@ -22,6 +22,7 @@ class ChatRequest(BaseModel):
     query: str
     user_id: int
     role: str
+    history: List[str] = []
 
 @app.get("/health")
 def health_check():
@@ -34,6 +35,7 @@ async def process_query(request: ChatRequest):
     try:
         initial_state = {
             "query": request.query,
+            "history": request.history,
             "user_id": request.user_id,
             "user_role": request.role,
             "sql_query": "",
