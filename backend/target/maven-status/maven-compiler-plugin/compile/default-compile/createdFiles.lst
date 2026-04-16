@@ -3,6 +3,7 @@ com\smartstore\backend\repository\ProductRepository.class
 com\smartstore\backend\repository\RegionalInventoryRepository.class
 com\smartstore\backend\model\User$UserBuilder.class
 com\smartstore\backend\repository\OrderRepository.class
+com\smartstore\backend\service\DataIngestionService.class
 com\smartstore\backend\security\JwtService.class
 com\smartstore\backend\security\JwtAuthenticationFilter.class
 com\smartstore\backend\model\Role.class
@@ -21,4 +22,6 @@ com\smartstore\backend\security\SecurityConfig.class
 com\smartstore\backend\dto\AuthResponse.class
 com\smartstore\backend\model\Order$OrderStatus.class
 com\smartstore\backend\dto\AuthRequest.class
+com\smartstore\backend\controller\DataIngestionController.class
+com\smartstore\backend\controller\ProductController.class
 com\smartstore\backend\model\ProductReview.class

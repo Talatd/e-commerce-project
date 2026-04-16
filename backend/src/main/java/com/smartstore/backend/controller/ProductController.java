@@ -4,6 +4,8 @@ import com.smartstore.backend.model.Product;
 import com.smartstore.backend.model.ProductReview;
 import com.smartstore.backend.repository.ProductRepository;
 import com.smartstore.backend.repository.ProductReviewRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,17 +16,20 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
+@Tag(name = "Products", description = "Endpoints for catalog browsing and sentiment analysis")
 public class ProductController {
 
     private final ProductRepository productRepository;
     private final ProductReviewRepository reviewRepository;
 
     @GetMapping
+    @Operation(summary = "Get all products", description = "Retrieves the full product catalog from the database.")
     public ResponseEntity<List<Product>> getAllProducts() {
         return ResponseEntity.ok(productRepository.findAll());
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get product by ID", description = "Retrieves specific product details.")
     public ResponseEntity<Product> getProduct(@PathVariable Long id) {
         return productRepository.findById(id)
                 .map(ResponseEntity::ok)
@@ -32,6 +37,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}/reviews/sentiment")
+    @Operation(summary = "Analyze product sentiment", description = "Calculates average sentiment score from reviews using AI enriched data.")
     public ResponseEntity<Map<String, Object>> getProductSentiment(@PathVariable Long id) {
         Product product = productRepository.findById(id).orElseThrow();
         List<ProductReview> reviews = reviewRepository.findByProduct(product);
