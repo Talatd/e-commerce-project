@@ -27,20 +27,29 @@ class ChatRequest(BaseModel):
 def health_check():
     return {"status": "healthy", "service": "SmartStore AI Service"}
 
+from agents import ai_graph
+
 @app.post("/api/v1/chatbot/query")
 async def process_query(request: ChatRequest):
-    # This will be replaced with LangGraph orchestration
     try:
-        # Step 1: Query Agent (Intent Analysis)
-        # Step 2: SQL Agent (Text to SQL)
-        # Step 3: Execution Agent (Database Query)
-        # Step 4: Response Agent (Formatting & Masking)
+        initial_state = {
+            "query": request.query,
+            "user_id": request.user_id,
+            "user_role": request.role,
+            "sql_query": "",
+            "results": [],
+            "response": "",
+            "next_step": ""
+        }
+        
+        final_state = ai_graph.invoke(initial_state)
         
         return {
             "success": True,
             "query": request.query,
-            "response": "AI Service is initialized. Text2SQL logic is coming in the next step.",
-            "data": []
+            "response": final_state["response"],
+            "sql": final_state["sql_query"],
+            "data": final_state["results"]
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
