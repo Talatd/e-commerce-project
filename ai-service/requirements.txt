@@ -1,0 +1,10 @@
+fastapi==0.110.0
+uvicorn==0.27.1
+langgraph==0.0.30
+google-generativeai==0.4.1
+sqlalchemy==2.0.27
+mysql-connector-python==8.3.0
+python-dotenv==1.0.1
+pydantic==2.6.1
+langchain==0.1.9
+langchain-google-genai==0.0.11
