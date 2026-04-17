@@ -261,47 +261,142 @@ import { RouterModule } from '@angular/router';
         <div class="page-sub">Explore the catalog</div>
       </div>
     </div>
-    <div class="app-content">
-      <div class="row2">
-        <div class="gcard">
-          <div class="gc-head"><div class="gc-title">Product List</div></div>
-          <div class="gc-body" style="padding:0;">
-             <table class="tbl">
-                <thead><tr><th>Product</th><th>Price</th><th>Action</th><th>Sentiment</th></tr></thead>
-                <tbody>
-                  <tr *ngFor="let p of products">
-                     <td class="nm"><span class="fancy-link" [routerLink]="['/product', p.productId]">{{p.name}}</span></td>
-                     <td class="mono">{{p.basePrice | currency}}</td>
-                     <td><button (click)="checkSentiment(p)" class="ripple-btn ghost" style="padding:4px 8px; font-size:9px; border-radius:12px;">Analyze Vibes 🧠</button></td>
-                     <td>
-                        <span *ngIf="sentiments[p.productId]" class="spill" [class.p-g]="sentiments[p.productId].averageScore > 0.5" [class.p-w]="sentiments[p.productId].averageScore <= 0.5">
-                          ● {{sentiments[p.productId].sentimentLabel}}
-                        </span>
-                     </td>
-                  </tr>
-                  <tr *ngIf="products.length === 0">
-                     <td colspan="4" style="text-align:center; padding: 2rem; color:var(--text3);">No products available. Database is empty.</td>
-                  </tr>
-                </tbody>
-             </table>
+    <div class="app-content" style="padding:0; display:flex; flex-direction:column; height: calc(100vh - 140px);">
+      
+      <!-- SEARCH BAR -->
+      <div class="search-wrap">
+        <div class="search-box">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="#3ECFB2" stroke-width="1.2"/><path d="M10 10l2.5 2.5" stroke="#3ECFB2" stroke-width="1.2" stroke-linecap="round"/></svg>
+          <input id="search-input" placeholder="Search 50,000+ products..." [(ngModel)]="searchQuery"/>
+          <div class="search-count" id="search-count">{{filteredProducts.length}} results</div>
+        </div>
+        <div class="filter-toggle-btn" [class.active]="filtersOpen" (click)="filtersOpen = !filtersOpen">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h10M3.5 6.5h6M5.5 9.5h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Filters
+          <div id="filter-badge" [class.show]="activeFilters.length > 0">{{activeFilters.length}}</div>
+        </div>
+      </div>
+
+      <!-- ACTIVE FILTER CHIPS -->
+      <div class="active-filters" [class.show]="activeFilters.length > 0">
+        <div class="af-chip" *ngFor="let f of activeFilters">{{f}} <span class="af-x" (click)="removeFilter(f)">×</span></div>
+        <div class="af-clear" *ngIf="activeFilters.length > 1" (click)="clearAll()">Clear all</div>
+      </div>
+
+      <div class="body" style="flex:1; overflow:hidden;">
+
+        <!-- FILTER PANEL -->
+        <div class="filter-panel" [class.collapsed]="!filtersOpen" style="overflow-y:auto;">
+          <div class="fp-inner">
+            <div class="fs">
+              <div class="fs-head" (click)="catOpen = !catOpen">
+                <div class="fs-title">Category</div>
+                <div class="fs-arrow" [class.open]="catOpen">▾</div>
+              </div>
+              <div class="fs-body" [class.closed]="!catOpen">
+                 <div class="fcheck" *ngFor="let c of categories" [class.checked]="c.checked" (click)="toggleFilter(c)">
+                   <div class="fcheck-box"><svg *ngIf="c.checked" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                   <span class="fcheck-label">{{c.name}}</span>
+                 </div>
+              </div>
+            </div>
+
+            <div class="fs">
+              <div class="fs-head" (click)="priceOpen = !priceOpen">
+                <div class="fs-title">Price Range</div>
+                <div class="fs-arrow" [class.open]="priceOpen">▾</div>
+              </div>
+              <div class="fs-body" [class.closed]="!priceOpen">
+                <div class="price-inputs">
+                  <input class="price-input" [value]="0" readonly/>
+                  <div class="price-sep">—</div>
+                  <input class="price-input" [(ngModel)]="maxPrice" />
+                </div>
+                <div class="range-wrap">
+                  <div class="range-track"><div class="range-fill" [style.right]="(100 - (maxPrice/2000)*100) + '%'"></div></div>
+                  <input type="range" min="0" max="2000" [(ngModel)]="maxPrice"/>
+                </div>
+              </div>
+            </div>
+            
+            <div class="fs">
+              <div class="fs-head" (click)="ratingOpen = !ratingOpen">
+                <div class="fs-title">Rating</div>
+                <div class="fs-arrow" [class.open]="ratingOpen">▾</div>
+              </div>
+              <div class="fs-body" [class.closed]="!ratingOpen">
+                <div class="rating-opts">
+                  <div class="rating-opt" [class.sel]="minRating === 4" (click)="minRating = 4">
+                    <div class="stars-mini"><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star">★</span></div>
+                    <span class="rating-label">4+ stars</span>
+                  </div>
+                  <div class="rating-opt" [class.sel]="minRating === 0" (click)="minRating = 0">
+                    <div class="stars-mini"><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span></div>
+                    <span class="rating-label">Any</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="gcard" style="display:flex; flex-direction:column; height: 100%; min-height: 400px;">
-          <div class="gc-head">
-            <div class="gc-title">AI Assistant <span style="font-size:9px;color:var(--green);margin-left:8px;font-weight:400;">● online</span></div>
+        <!-- PRODUCTS GRID -->
+        <div class="products-area" style="background:var(--bg);">
+          <div class="sort-row">
+            <div class="results-label"><span>{{filteredProducts.length}}</span> products found</div>
+            <div class="sort-select">
+              Sort: Featured
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="#6A8A84" stroke-width="1.1" stroke-linecap="round"/></svg>
+            </div>
           </div>
-          <div class="chat-msgs" style="flex:1; overflow-y:auto; max-height: calc(100% - 100px);">
+
+          <div class="prod-grid" *ngIf="filteredProducts.length > 0">
+            <div class="prod-card" *ngFor="let p of filteredProducts" [routerLink]="['/product', p.productId]">
+              <div class="pc-img">
+                <svg width="52" height="52" viewBox="0 0 52 52" fill="none"><rect x="5" y="12" width="42" height="26" rx="3.5" stroke="#3ECFB2" stroke-width="1.2" opacity="0.5"/><rect x="19" y="38" width="14" height="3" rx="1.5" fill="rgba(62,207,178,0.2)"/><rect x="9" y="16" width="34" height="18" rx="2" fill="rgba(62,207,178,0.04)"/></svg>
+                <div class="pc-badge badge-new" *ngIf="p.stockQuantity > 50">New</div>
+              </div>
+              <div class="pc-body">
+                <div class="pc-cat">{{p.category}}</div>
+                <div class="pc-name">{{p.name}}</div>
+                <div class="pc-bottom">
+                  <div class="pc-price">{{p.basePrice | currency}}</div>
+                  <div class="pc-stars">
+                     <button (click)="$event.stopPropagation(); checkSentiment(p)" class="ripple-btn ghost" style="padding:2px 6px; font-size:9px; border-radius:4px; margin-right:4px;">AI Vibe</button>
+                     <span class="pc-star">★</span> 4.9
+                  </div>
+                </div>
+                <div *ngIf="sentiments[p.productId]" style="margin-top:8px; font-size:10px;" class="spill" [class.p-g]="sentiments[p.productId].averageScore > 0.5" [class.p-w]="sentiments[p.productId].averageScore <= 0.5">
+                   ● {{sentiments[p.productId].sentimentLabel}}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="no-results" *ngIf="filteredProducts.length === 0">
+            <div class="nr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="6.5" stroke="#344844" stroke-width="1.3"/><path d="M13.5 13.5l4 4" stroke="#344844" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+            <div class="nr-title">No results found</div>
+            <div class="nr-sub">Try adjusting your filters or search term.</div>
+          </div>
+        </div>
+
+        <!-- AI ASSISTANT PANEL -->
+        <div class="ai-panel" style="width:320px; border-left:1px solid var(--border); display:flex; flex-direction:column; background:rgba(8,8,8,0.4);">
+          <div class="gc-head" style="padding:16px 20px; border-bottom:1px solid var(--border);">
+            <div class="gc-title">AI Shopping Assistant <span style="font-size:9px;color:var(--green);margin-left:8px;font-weight:400;">● online</span></div>
+          </div>
+          <div class="chat-msgs" style="flex:1; overflow-y:auto; padding:20px;">
             <div *ngFor="let msg of chatMessages" class="cmsg" [class.r]="msg.sender === 'user'">
               <div class="cav">{{msg.sender === 'user' ? 'ME' : 'AI'}}</div>
               <div class="cbub">{{msg.text}}</div>
             </div>
           </div>
-          <div class="chat-ft">
+          <div class="chat-ft" style="padding:16px 20px; border-top:1px solid var(--border);">
             <input [(ngModel)]="prompt" (keyup.enter)="sendQuery()" class="cinput" placeholder="Ask about products...">
             <div class="csend" (click)="sendQuery()" style="display:flex; align-items:center;">Send →</div>
           </div>
         </div>
+
       </div>
     </div>
   `
@@ -310,15 +405,67 @@ export class ConsumerComponent implements OnInit {
   products: any[] = [];
   sentiments: any = {};
   prompt = '';
-  chatMessages: any[] = [{ sender: 'ai', text: 'Welcome! How can I assist with your shopping today?' }];
+  chatMessages: any[] = [{ sender: 'ai', text: 'Welcome to Nexus Store! Tell me what you are looking for today.' }];
   history: string[] = [];
+
+  // PLP State
+  searchQuery = '';
+  filtersOpen = true;
+  maxPrice = 1500;
+  minRating = 0;
+  catOpen = true;
+  priceOpen = true;
+  ratingOpen = true;
+
+  categories = [
+    { name: 'Hardware', checked: false },
+    { name: 'Accessories', checked: false },
+    { name: 'Software', checked: false },
+    { name: 'Electronics', checked: false }
+  ];
 
   auth = inject(AuthService);
   ai = inject(AiService);
   productService = inject(ProductService);
 
   ngOnInit() {
-    this.productService.getProducts().subscribe(res => this.products = res);
+    this.productService.getProducts().subscribe(res => {
+      this.products = res;
+      // Pre-populate some dummy categories if backend doesn't have them yet
+      const cats = Array.from(new Set(this.products.map(p => p.category)));
+      this.categories = cats.map((c: any) => ({ name: c, checked: false }));
+    });
+  }
+
+  get activeFilters() {
+    return this.categories.filter(c => c.checked).map(c => c.name);
+  }
+
+  get filteredProducts() {
+    let list = this.products;
+    if (this.searchQuery) {
+      const q = this.searchQuery.toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+    }
+    list = list.filter(p => p.basePrice <= this.maxPrice);
+    const selCats = this.activeFilters;
+    if (selCats.length > 0) {
+      list = list.filter(p => selCats.includes(p.category));
+    }
+    return list;
+  }
+
+  toggleFilter(c: any) {
+    c.checked = !c.checked;
+  }
+
+  removeFilter(name: string) {
+    const c = this.categories.find(x => x.name === name);
+    if(c) c.checked = false;
+  }
+
+  clearAll() {
+    this.categories.forEach(c => c.checked = false);
   }
 
   checkSentiment(p: any) {
