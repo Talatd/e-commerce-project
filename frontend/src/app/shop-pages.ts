@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ViewChild, ElementRef, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -9,7 +9,7 @@ import { ProductService } from './services';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="page-head" style="display:flex;justify-content:space-between;">
+    <div class="page-head" style="display:flex;justify-content:space-between;" *ngIf="step < 3">
       <div>
         <div class="page-title">{{ step === 1 ? 'Your Cart' : 'Secure Checkout' }}</div>
         <div class="page-sub">{{ step === 1 ? 'Review your items' : 'Complete your payment' }}</div>
@@ -19,8 +19,8 @@ import { ProductService } from './services';
         256-bit SSL encrypted
       </div>
     </div>
-    <div class="app-content">
-      <div class="steps" style="margin-bottom:20px;">
+    <div class="app-content" [style.padding]="step === 3 ? '0' : '20px'">
+      <div class="steps" style="margin-bottom:20px;" *ngIf="step < 3">
         <div class="step">
           <div class="step-num done"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <span class="step-label done">Cart</span>
@@ -213,10 +213,92 @@ import { ProductService } from './services';
         </div>
       </div>
 
+      <!-- STEP 3: ORDER SUCCESS -->
+      <div class="content-success" *ngIf="step === 3" style="min-height: 600px; display:flex; flex-direction:column; position:relative; overflow:hidden;">
+        <canvas #confettiCanvas id="confetti-canvas"></canvas>
+        <div class="bg-glow"></div>
+
+        <div class="success-icon-wrap" style="margin-top:20px;">
+          <div class="pulse-ring pr1"></div>
+          <div class="pulse-ring pr2"></div>
+          <div class="pulse-ring pr3"></div>
+          <div class="success-icon">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <path class="check-path" d="M8 18l6 7 14-16" stroke="#3EC98A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="order-id-badge">
+          <div class="order-id-label">Order</div>
+          <div class="order-id-val">#ORD-{{orderId}}</div>
+        </div>
+
+        <div class="success-title">Order <em>confirmed,</em><br>{{displayName}}! 🎉</div>
+        <div class="success-sub">Payment of {{subtotal * 1.08 | currency}} was processed successfully. A confirmation has been sent to your email.</div>
+
+        <div class="eta-bar">
+          <div class="eta-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 9h14M10 4l5 5-5 5" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <div class="eta-label">Estimated Delivery</div>
+            <div class="eta-val">December 5, 2024</div>
+            <div class="eta-sub">Between 2:00 PM – 6:00 PM · Home</div>
+          </div>
+          <div class="eta-track">
+            <div class="eta-track-label">Tracking ID</div>
+            <div class="eta-track-val">FX-89234152</div>
+          </div>
+        </div>
+
+        <div class="summary-card" style="margin: 0 auto; margin-bottom: 24px; animation:fade-up 0.5s ease 0.8s both;">
+          <div class="sc-head">
+            <div class="sc-title">Order Summary</div>
+            <div style="font-size:10px;color:var(--text3);">{{cartItems.length}} items</div>
+          </div>
+          <div class="sc-items">
+            <div class="sc-item" *ngFor="let item of cartItems">
+              <div class="sc-img" style="background:rgba(62,207,178,0.04);">
+                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="5" width="14" height="9" rx="2" stroke="#3ECFB2" stroke-width="1.1" opacity="0.5"/><rect x="7" y="14" width="4" height="1.5" rx="0.75" fill="rgba(62,207,178,0.2)"/></svg>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div class="sc-name">{{item.name}}</div>
+                <div class="sc-var">{{item.category}}</div>
+              </div>
+              <div class="sc-qty">×{{item.qty}}</div>
+              <div class="sc-price">{{item.basePrice | currency}}</div>
+            </div>
+          </div>
+          <div class="sc-totals">
+            <div class="sc-line"><span class="sc-line-label">Subtotal</span><span class="sc-line-val">{{subtotal | currency}}</span></div>
+            <div class="sc-line"><span class="sc-line-label">Shipping</span><span class="sc-line-val green">Free</span></div>
+            <div class="sc-line"><span class="sc-line-label">Tax (8%)</span><span class="sc-line-val">{{subtotal * 0.08 | currency}}</span></div>
+            <div class="sc-total-row">
+              <span class="sc-total-label">Total Paid</span>
+              <span class="sc-total-val">{{subtotal * 1.08 | currency}}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions" style="margin:0 auto;">
+          <button class="btn-primary" routerLink="/orders">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="5.5" r="4" stroke="#080808" stroke-width="1.2"/><path d="M2 13c0-3 2-4.5 4.5-4.5S11 10 11 13" stroke="#080808" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Track Order
+          </button>
+          <button class="btn-ghost" routerLink="/shop">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 4h7l-1 6H4L3 4Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><circle cx="5.5" cy="11.5" r="1" fill="currentColor"/><circle cx="8.5" cy="11.5" r="1" fill="currentColor"/></svg>
+            Continue Shopping
+          </button>
+        </div>
+
+        <div class="replay-btn" (click)="launchConfetti()">✦ Replay confetti</div>
+      </div>
+
     </div>
   `
 })
-export class CartComponent implements OnInit {
+export class CartComponent implements OnInit, OnDestroy {
   cartItems: any[] = [];
   subtotal = 0;
   step = 1;
@@ -236,6 +318,14 @@ export class CartComponent implements OnInit {
 
   isProcessing = false;
   paySuccess = false;
+  orderId = Math.floor(1000 + Math.random() * 9000);
+
+  // Confetti State
+  @ViewChild('confettiCanvas') canvasRef?: ElementRef<HTMLCanvasElement>;
+  animId: any;
+  pieces: any[] = [];
+  frameCount = 0;
+  ctx: CanvasRenderingContext2D | null = null;
 
   ngOnInit() {
     this.cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -323,10 +413,96 @@ export class CartComponent implements OnInit {
       this.isProcessing = false;
       this.paySuccess = true;
       setTimeout(() => {
-        localStorage.removeItem('cart');
-        this.router.navigate(['/orders']);
+        this.step = 3;
+        setTimeout(() => this.launchConfetti(), 100);
       }, 1500);
     }, 2000);
+  }
+
+  // --- CONFETTI LOGIC ---
+  @HostListener('window:resize')
+  onResize() {
+    if (this.step === 3 && this.canvasRef) {
+      const c = this.canvasRef.nativeElement;
+      const parent = c.parentElement;
+      if (parent) {
+        c.width = parent.offsetWidth;
+        c.height = parent.offsetHeight;
+      }
+    }
+  }
+
+  launchConfetti() {
+    if (!this.canvasRef) return;
+    const c = this.canvasRef.nativeElement;
+    this.ctx = c.getContext('2d');
+    this.onResize();
+    const colors = ['#3ECFB2','#6EDEC8','#3EC98A','#E8A94A','#6BA8C8','#A78BCC','#E6F0EE','rgba(62,207,178,0.7)'];
+    
+    this.pieces = Array.from({length: 90}, () => {
+      return {
+        x: Math.random() * c.width,
+        y: Math.random() * -c.height,
+        w: Math.random() * 8 + 4,
+        h: Math.random() * 4 + 2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vy: Math.random() * 2.5 + 1.5,
+        vx: (Math.random() - 0.5) * 1.5,
+        rot: Math.random() * Math.PI * 2,
+        vrot: (Math.random() - 0.5) * 0.12,
+        opacity: Math.random() * 0.5 + 0.5,
+        shape: Math.random() > 0.5 ? 'rect' : 'circle'
+      };
+    });
+    
+    this.frameCount = 0;
+    if (this.animId) cancelAnimationFrame(this.animId);
+    this.animateConfetti();
+  }
+
+  animateConfetti = () => {
+    if (!this.ctx || !this.canvasRef) return;
+    const c = this.canvasRef.nativeElement;
+    this.ctx.clearRect(0, 0, c.width, c.height);
+    
+    this.pieces.forEach(p => {
+      p.y += p.vy;
+      p.x += p.vx;
+      p.rot += p.vrot;
+      p.vy += 0.03;
+      if (p.y > c.height + 20) {
+        p.x = Math.random() * c.width;
+        p.y = -10;
+        p.vy = Math.random() * 2.5 + 1.5;
+        p.vx = (Math.random() - 0.5) * 1.5;
+      }
+      
+      this.ctx!.save();
+      this.ctx!.globalAlpha = p.opacity;
+      this.ctx!.translate(p.x, p.y);
+      this.ctx!.rotate(p.rot);
+      this.ctx!.fillStyle = p.color;
+      if (p.shape === 'rect') {
+        this.ctx!.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      } else {
+        this.ctx!.beginPath();
+        this.ctx!.arc(0, 0, p.w/2, 0, Math.PI*2);
+        this.ctx!.fill();
+      }
+      this.ctx!.restore();
+    });
+    
+    this.frameCount++;
+    if (this.frameCount < 280) {
+      this.animId = requestAnimationFrame(this.animateConfetti);
+    } else {
+      this.ctx.clearRect(0, 0, c.width, c.height);
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.animId) cancelAnimationFrame(this.animId);
+    if (this.step === 3) localStorage.removeItem('cart');
   }
 }
 
