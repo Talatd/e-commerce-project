@@ -9,10 +9,14 @@ import { ProductService } from './services';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="page-head">
+    <div class="page-head" style="display:flex;justify-content:space-between;">
       <div>
-        <div class="page-title">Your Cart</div>
-        <div class="page-sub">Checkout and Payment</div>
+        <div class="page-title">{{ step === 1 ? 'Your Cart' : 'Secure Checkout' }}</div>
+        <div class="page-sub">{{ step === 1 ? 'Review your items' : 'Complete your payment' }}</div>
+      </div>
+      <div class="secure-badge" *ngIf="step === 2">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L2 2.8v3.5c0 2.5 1.8 4.5 4 5.2 2.2-.7 4-2.7 4-5.2V2.8L6 1Z" stroke="#344844" stroke-width="1"/></svg>
+        256-bit SSL encrypted
       </div>
     </div>
     <div class="app-content">
@@ -22,14 +26,19 @@ import { ProductService } from './services';
           <span class="step-label done">Cart</span>
         </div>
         <div class="step-line done"></div>
-        <div class="step"><div class="step-num active">2</div><span class="step-label active">Checkout</span></div>
-        <div class="step-line"></div>
-        <div class="step"><div class="step-num idle">3</div><span class="step-label idle">Payment</span></div>
-        <div class="step-line"></div>
-        <div class="step"><div class="step-num idle">4</div><span class="step-label idle">Confirmation</span></div>
+        <div class="step">
+          <div class="step-num" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">
+             <span *ngIf="step <= 2">2</span>
+             <svg *ngIf="step > 2" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="step-label" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">Payment</span>
+        </div>
+        <div class="step-line" [class.done]="step > 2" [class.idle]="step <= 2"></div>
+        <div class="step"><div class="step-num idle">3</div><span class="step-label idle">Confirmation</span></div>
       </div>
 
-      <div class="row2">
+      <!-- STEP 1: CART -->
+      <div class="row2" *ngIf="step === 1">
         <div class="gcard" style="padding: 20px;">
           <h3 style="margin-bottom:15px;font-family:'Playfair Display',serif;font-weight:400;font-style:italic;">Items ({{cartItems.length}})</h3>
           
@@ -66,17 +75,167 @@ import { ProductService } from './services';
             <div class="summary-line"><span class="sl-label">Shipping</span><span class="sl-val green">Free</span></div>
             <div class="summary-divider"></div>
             <div class="summary-line" style="margin-top:14px;"><span class="sl-label" style="font-size:14px;color:var(--text);font-weight:500;">Total</span><span class="total-val">{{subtotal | currency}}</span></div>
-            <button class="ripple-btn primary" style="width:100%; margin-top:20px;" (click)="checkout()">Proceed to Payment →</button>
+            <button class="ripple-btn primary" style="width:100%; margin-top:20px;" (click)="goStep2()" [disabled]="cartItems.length === 0">Proceed to Payment →</button>
           </div>
         </div>
       </div>
+
+      <!-- STEP 2: PAYMENT GATEWAY -->
+      <div class="main" *ngIf="step === 2" style="grid-template-columns: 1fr 340px;">
+        <div class="left">
+          
+          <!-- CARD VISUAL -->
+          <div class="card-visual-wrap">
+            <div class="card-visual" [class.flipped]="cardFlipped">
+              <div class="card-front">
+                <div class="card-network">
+                  <span *ngIf="cardType === 'visa'" class="visa-logo" style="font-size:18px;">VISA</span>
+                  <div *ngIf="cardType === 'mastercard'" class="mc-logo">
+                    <div class="mc-r" style="width:20px;height:20px;"></div><div class="mc-l" style="width:20px;height:20px;margin-left:-8px;"></div>
+                  </div>
+                  <span *ngIf="cardType === 'amex'" style="font-size:16px;font-weight:700;color:#3ECFB2;letter-spacing:0.05em;">AMEX</span>
+                </div>
+                <div class="card-chip"></div>
+                <div class="card-number-display">{{displayNum}}</div>
+                <div class="card-bottom-row">
+                  <div>
+                    <div class="card-label">Card Holder</div>
+                    <div class="card-value card-holder-name">{{displayName}}</div>
+                  </div>
+                  <div>
+                    <div class="card-label">Expires</div>
+                    <div class="card-value">{{displayExp}}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card-back">
+                <div class="card-stripe"></div>
+                <div class="card-cvv-row">
+                  <div class="cvv-label">CVV</div>
+                  <div class="cvv-box">{{displayCvv}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADDRESS TAB -->
+          <div class="section-title" style="margin-bottom:10px;">Delivery Address</div>
+          <div class="addr-tabs">
+            <div class="addr-tab" [class.active]="addrMode === 'saved'" (click)="addrMode = 'saved'">Saved Addresses</div>
+            <div class="addr-tab" [class.active]="addrMode === 'new'" (click)="addrMode = 'new'">+ New Address</div>
+          </div>
+          
+          <div *ngIf="addrMode === 'saved'">
+            <div class="saved-addr">
+              <div class="addr-card sel">
+                <div class="addr-radio"><div class="addr-rdot"></div></div>
+                <div>
+                  <div class="addr-name">Home</div>
+                  <div class="addr-detail">123 Nexus Grove, Build 4<br>San Francisco, CA 94107</div>
+                </div>
+                <div class="addr-default">Default</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD INPUT FIELDS -->
+          <div class="section-title" style="margin-top:20px;margin-bottom:12px;">Card Details</div>
+          <div class="fields">
+            <div class="field">
+              <div class="field-label">Card Number</div>
+              <div class="card-input-wrap">
+                <input class="fi fi-card" placeholder="0000 0000 0000 0000" maxlength="19" [(ngModel)]="rawNum" (input)="onNumInput()" [class.error]="numErr"/>
+                <div class="card-type-badge">
+                  <span *ngIf="cardType === 'visa'" class="visa-logo">VISA</span>
+                  <div *ngIf="cardType === 'mastercard'" class="mc-logo"><div class="mc-r"></div><div class="mc-l"></div></div>
+                  <span *ngIf="cardType === 'amex'" style="font-size:11px;font-weight:700;color:#3ECFB2;letter-spacing:0.05em;">AMEX</span>
+                </div>
+              </div>
+              <div class="field-error" [class.show]="numErr">Please enter a valid 16-digit card number</div>
+            </div>
+            
+            <div class="field">
+              <div class="field-label">Cardholder Name</div>
+              <input class="fi" placeholder="Full name on card" [(ngModel)]="rawName"/>
+            </div>
+
+            <div class="field-row" style="grid-template-columns:1fr 1fr;">
+              <div class="field">
+                <div class="field-label">Expiry Date</div>
+                <input class="fi" placeholder="MM / YY" maxlength="7" [(ngModel)]="rawExp" (input)="onExpInput()" (focus)="cardFlipped = false" [class.error]="expErr"/>
+                <div class="field-error" [class.show]="expErr">Invalid expiry date</div>
+              </div>
+              <div class="field">
+                <div class="field-label">CVV</div>
+                <input class="fi" placeholder="•••" maxlength="4" [(ngModel)]="rawCvv" (input)="onCvvInput()" (focus)="cardFlipped = true" (blur)="cardFlipped = false" [class.error]="cvvErr"/>
+                <div class="field-error" [class.show]="cvvErr">Invalid CVV</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="right">
+          <div class="summary-title" style="margin-top:0;">Order Summary</div>
+          <div class="order-items">
+            <div class="oi" *ngFor="let i of cartItems">
+               <div class="oi-name" style="line-height:1.2;">{{i.name}}<br><span class="oi-var">{{i.category}} × {{i.qty}}</span></div>
+               <div class="oi-price">{{i.basePrice * i.qty | currency}}</div>
+            </div>
+          </div>
+          <div class="summary-lines">
+            <div class="sl"><span class="sl-label">Subtotal</span><span class="sl-val">{{subtotal | currency}}</span></div>
+            <div class="sl"><span class="sl-label">Shipping</span><span class="sl-val green">Free</span></div>
+            <div class="sl"><span class="sl-label">Tax (8%)</span><span class="sl-val">{{subtotal * 0.08 | currency}}</span></div>
+            <div class="sl" style="border-top:1px solid var(--border);padding-top:10px;margin-top:2px;">
+              <span class="sl-total-label">Total</span>
+              <span class="sl-total">{{subtotal * 1.08 | currency}}</span>
+            </div>
+          </div>
+
+          <button class="pay-btn" (click)="processPayment()" [disabled]="isProcessing || paySuccess">
+            <ng-container *ngIf="!isProcessing && !paySuccess">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="#080808" stroke-width="1.2"/><path d="M1 7h12" stroke="#080808" stroke-width="1.2"/></svg>
+              Pay {{subtotal * 1.08 | currency}}
+            </ng-container>
+            <span *ngIf="isProcessing" class="spin">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7" stroke="#080808" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </span>
+            <span *ngIf="paySuccess">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="#3EC98A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Payment Successful!
+            </span>
+          </button>
+
+          <div class="secure-note">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1L2 2.5v3c0 2.2 1.5 4 3.5 4.8C7.5 9.5 9 7.7 9 5.5v-3L5.5 1Z" stroke="#344844" stroke-width="1"/></svg>
+            Secured by Nexus Pay
+          </div>
+        </div>
+      </div>
+
     </div>
   `
 })
 export class CartComponent implements OnInit {
   cartItems: any[] = [];
   subtotal = 0;
+  step = 1;
   router = inject(Router);
+
+  // Payment Form State
+  addrMode = 'saved';
+  cardFlipped = false;
+  rawNum = '';
+  rawName = '';
+  rawExp = '';
+  rawCvv = '';
+  
+  numErr = false;
+  expErr = false;
+  cvvErr = false;
+
+  isProcessing = false;
+  paySuccess = false;
 
   ngOnInit() {
     this.cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -103,9 +262,71 @@ export class CartComponent implements OnInit {
     this.subtotal = this.cartItems.reduce((acc, item) => acc + (item.basePrice * item.qty), 0);
   }
 
-  checkout() {
-    localStorage.removeItem('cart');
-    this.router.navigate(['/orders']);
+  goStep2() {
+    this.step = 2;
+  }
+
+  get cardType() {
+    const fn = this.rawNum.replace(/\D/g,'');
+    if(fn.startsWith('4')) return 'visa';
+    if(fn.startsWith('5') || fn.startsWith('2')) return 'mastercard';
+    if(fn.startsWith('3')) return 'amex';
+    return '';
+  }
+
+  get displayNum() {
+    return this.rawNum.padEnd(19,'•').replace(/ /g,'•');
+  }
+
+  get displayName() {
+    return this.rawName.toUpperCase() || 'YOUR NAME';
+  }
+
+  get displayExp() {
+    return this.rawExp || 'MM/YY';
+  }
+
+  get displayCvv() {
+    return '•'.repeat(this.rawCvv.length) || '•••';
+  }
+
+  onNumInput() {
+    let v = this.rawNum.replace(/\D/g,'').slice(0,16);
+    this.rawNum = v.replace(/(.{4})/g,'$1 ').trim();
+    this.numErr = false;
+  }
+
+  onExpInput() {
+    let v = this.rawExp.replace(/\D/g,'');
+    if(v.length >= 3) v = v.slice(0,2) + ' / ' + v.slice(2,4);
+    this.rawExp = v;
+    this.expErr = false;
+  }
+
+  onCvvInput() {
+    this.rawCvv = this.rawCvv.replace(/\D/g,'').slice(0,4);
+    this.cvvErr = false;
+  }
+
+  processPayment() {
+    const cleanNum = this.rawNum.replace(/\\s/g,'');
+    let valid = true;
+
+    if (cleanNum.length < 16) { this.numErr = true; valid = false; }
+    if (this.rawExp.replace(/\\D/g,'').length < 4) { this.expErr = true; valid = false; }
+    if (this.rawCvv.length < 3) { this.cvvErr = true; valid = false; }
+
+    if (!valid) return;
+
+    this.isProcessing = true;
+    setTimeout(() => {
+      this.isProcessing = false;
+      this.paySuccess = true;
+      setTimeout(() => {
+        localStorage.removeItem('cart');
+        this.router.navigate(['/orders']);
+      }, 1500);
+    }, 2000);
   }
 }
 
