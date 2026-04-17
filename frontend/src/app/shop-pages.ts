@@ -232,7 +232,7 @@ export class ProductDetailComponent implements OnInit {
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="page-head">
       <div>
@@ -330,7 +330,7 @@ export class ProductDetailComponent implements OnInit {
             </div>
           </div>
           
-          <div class="gcard">
+          <div class="gcard" style="margin-bottom: 12px;">
             <div class="gc-head"><div class="gc-title">Carrier Info</div></div>
             <div class="gc-body" style="color:var(--text3); font-size:12px; line-height: 1.5;">
                <strong style="color:var(--text);">FedEx Express</strong><br>
@@ -338,9 +338,161 @@ export class ProductDetailComponent implements OnInit {
                <button class="ripple-btn ghost" style="width:100%; padding:8px;">View Route Map</button>
             </div>
           </div>
+
+          <div class="gcard" style="padding:22px; display:flex; flex-direction:column; align-items:center; gap:10px; background:rgba(62,207,178,0.03);">
+             <h3 style="font-family:'Playfair Display',serif;font-weight:400;font-style:italic;">Got it already?</h3>
+             <p style="font-size:11px;color:var(--text2);text-align:center;">If you received this part of your order, let us know how we did.</p>
+             <button class="open-btn" (click)="openModal()" style="margin-top:4px;">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L8.6 5.2H13L9.7 7.8l1.3 4.2L7 9.5 2.9 12l1.3-4.2L1 5.2h4.4L7 1Z" stroke="#080808" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                Write a Review
+             </button>
+          </div>
         </div>
       </div>
+
+      <!-- REVIEW MODAL OVERLAY -->
+      <div id="overlay" [class.open]="isModalOpen" (click)="handleOverlayClick($event)">
+        <div class="modal" id="modal">
+          <!-- FORM STATE -->
+          <div *ngIf="!isSuccess">
+            <div class="modal-head">
+              <div class="mh-product">
+                <div class="mh-img">
+                  <svg width="22" height="22" viewBox="0 0 28 28" fill="none"><rect x="3" y="7" width="22" height="14" rx="2.5" stroke="#3ECFB2" stroke-width="1.2" opacity="0.5"/><rect x="5" y="9" width="18" height="10" rx="1.5" fill="rgba(62,207,178,0.04)"/></svg>
+                </div>
+                <div>
+                  <div class="mh-name">Recent Order</div>
+                  <div class="mh-sub">Share your experience</div>
+                </div>
+              </div>
+              <div class="close-btn" (click)="closeModal()">×</div>
+            </div>
+
+            <div class="modal-title">How would you <em>rate it?</em></div>
+
+            <!-- STARS -->
+            <div class="stars-section">
+              <div class="stars-label">Overall rating</div>
+              <div class="stars-row">
+                <div class="star-btn" *ngFor="let s of [1,2,3,4,5]" 
+                     [class.selected]="rating >= s" [class.pop]="popStar === s"
+                     (click)="setRating(s)" (mouseenter)="hoverRating = s" (mouseleave)="hoverRating = 0">
+                  <svg class="star-svg" width="36" height="36" viewBox="0 0 36 36" fill="none">
+                    <path d="M18 4l3.5 9H31l-7.7 5.6 3 9L18 22.5 9.7 27.6l3-9L5 13h9.5L18 4Z" 
+                          [attr.fill]="(hoverRating > 0 ? hoverRating >= s : rating >= s) ? '#E8A94A' : 'none'" 
+                          [attr.stroke]="(hoverRating > 0 ? hoverRating >= s : rating >= s) ? '#E8A94A' : '#344844'" 
+                          stroke-width="1.3" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="rating-text" [style.color]="ratingColor">{{ratingText}}</div>
+            </div>
+
+            <div class="review-body">
+              <div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Your review</div>
+              <textarea class="review-textarea" placeholder="What did you like or dislike?" [(ngModel)]="reviewText" (input)="updateChar()"></textarea>
+              <div class="char-row"><span class="char-count" [class.warn]="charCount > 400" [class.over]="charCount > 500">{{charCount}} / 500</span></div>
+            </div>
+
+            <div class="tags-section">
+              <div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;">Quick tags</div>
+              <div class="tags-row">
+                <div class="tag" *ngFor="let t of tags" [class.selected]="t.selected" (click)="t.selected = !t.selected">{{t.label}}</div>
+              </div>
+            </div>
+
+            <div class="modal-foot">
+              <div class="foot-hint">Your review helps others</div>
+              <button class="submit-btn" [disabled]="!canSubmit()" (click)="submitReview()">
+                <ng-container *ngIf="!isSubmitting">
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5L5 10l6.5-7" stroke="#080808" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Submit Review
+                </ng-container>
+                <span *ngIf="isSubmitting" class="spin">
+                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5A5 5 0 1 1 1.5 6.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <!-- SUCCESS STATE -->
+          <div class="success-state" *ngIf="isSuccess" style="display:flex;">
+            <div class="success-icon">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 14l7 7L24 7" stroke="#3EC98A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="success-title">Thank you for your <em>review!</em></div>
+            <div class="success-sub">Your feedback helps thousands of shoppers make better decisions. We really appreciate it.</div>
+            <button class="submit-btn" style="margin-top:8px;" (click)="closeModal()">Back to tracking →</button>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   `
 })
-export class OrdersComponent {}
+export class OrdersComponent {
+  isModalOpen = false;
+  isSuccess = false;
+  isSubmitting = false;
+  rating = 0;
+  hoverRating = 0;
+  popStar = 0;
+  reviewText = '';
+  charCount = 0;
+
+  tags = [
+    {label: 'Great value', selected: false},
+    {label: 'Fast delivery', selected: false},
+    {label: 'Premium quality', selected: false},
+    {label: 'As described', selected: false},
+    {label: 'Would recommend', selected: false}
+  ];
+
+  labels = ['Tap a star to rate','Terrible 😬','Not great 😕',"It's okay 🤔",'Really good 👍','Outstanding! 🌟'];
+  colors = ['var(--text2)','#E07070','#E8A94A','#6BA8C8','#3EC98A','#3ECFB2'];
+
+  get ratingText() { return this.labels[this.hoverRating || this.rating]; }
+  get ratingColor() { return this.colors[this.hoverRating || this.rating]; }
+
+  openModal() {
+    this.isModalOpen = true;
+  }
+
+  closeModal() {
+    this.isModalOpen = false;
+    setTimeout(() => {
+      this.isSuccess = false;
+      this.rating = 0;
+      this.reviewText = '';
+      this.charCount = 0;
+      this.tags.forEach(t => t.selected = false);
+    }, 400);
+  }
+
+  handleOverlayClick(e: Event) {
+    if ((e.target as HTMLElement).id === 'overlay') this.closeModal();
+  }
+
+  setRating(val: number) {
+    this.rating = val;
+    this.popStar = val;
+    setTimeout(() => this.popStar = 0, 350);
+  }
+
+  updateChar() {
+    this.charCount = this.reviewText.length;
+  }
+
+  canSubmit() {
+    return this.rating > 0 && this.reviewText.trim().length > 10 && this.charCount <= 500 && !this.isSubmitting;
+  }
+
+  submitReview() {
+    this.isSubmitting = true;
+    setTimeout(() => {
+      this.isSubmitting = false;
+      this.isSuccess = true;
+    }, 1500);
+  }
+}
