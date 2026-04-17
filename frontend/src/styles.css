@@ -515,3 +515,5 @@ body {
 .fancy-link::after{content:'';position:absolute;bottom:0;left:0;width:0;height:1px;background:var(--teal);transition:width 0.3s cubic-bezier(0.4,0,0.2,1);}
 .fancy-link:hover{color:var(--text);}
 .fancy-link:hover::after{width:100%;}
+
+@import url('nexus-components.css');

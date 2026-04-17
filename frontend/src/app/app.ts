@@ -91,4 +91,69 @@ export class AppComponent implements OnInit {
       localStorage.setItem('theme', 'dark');
     }
   }
+
+  // SEARCH AND NOTIF STATE
+  isSearchOpen = false;
+  isNotifOpen = false;
+  unreadCount = 2;
+  notifs = [
+    {type: 'delivery', title: 'Package out for delivery', msg: 'Your order #ORD-7821 is with your local driver.', unread: true},
+    {type: 'promo', title: 'Flash sale — 24h only', msg: 'Use code NEXUS20 for 20% off all Apple products.', unread: true},
+    {type: 'order', title: 'Payment confirmed', msg: '$1,039.00 charged for MacBook Pro 14".', unread: false}
+  ];
+  searchQuery = '';
+  searchResults: any[] = [];
+
+  toggleNotif(e?: Event) {
+    if(e) e.stopPropagation();
+    this.isNotifOpen = !this.isNotifOpen;
+    if(this.isNotifOpen) {
+      document.addEventListener('click', this.closeNotifHandler);
+    } else {
+      document.removeEventListener('click', this.closeNotifHandler);
+    }
+  }
+
+  closeNotifHandler = (e: Event) => {
+    const target = e.target as HTMLElement;
+    if(!target.closest('#notif-panel') && !target.closest('.bell-wrap')) {
+      this.isNotifOpen = false;
+      document.removeEventListener('click', this.closeNotifHandler);
+    }
+  };
+
+  markAllRead() {
+    this.notifs.forEach(n => n.unread = false);
+    this.unreadCount = 0;
+  }
+
+  toggleSearch() {
+    this.isSearchOpen = true;
+    setTimeout(() => {
+       const inp = document.getElementById('search-input') as HTMLInputElement;
+       if(inp) inp.focus();
+    }, 100);
+  }
+
+  closeSearch(e?: Event | null) {
+    if(e) e.stopPropagation();
+    this.isSearchOpen = false;
+    this.searchQuery = '';
+    this.searchResults = [];
+    const inp = document.getElementById('search-input') as HTMLInputElement;
+    if(inp) inp.value = '';
+  }
+
+  onSearchInput(e: any) {
+    this.searchQuery = e.target?.value || '';
+    if(this.searchQuery.trim().length > 0) {
+      // Fake dummy search results logic
+      this.searchResults = [
+         { productId: 1, name: 'MacBook Pro 14"', category: 'Electronics', basePrice: 1039 },
+         { productId: 3, name: 'AirPods Pro Max', category: 'Accessories', basePrice: 479 },
+      ];
+    } else {
+      this.searchResults = [];
+    }
+  }
 }
