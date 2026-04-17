@@ -1,15 +1,18 @@
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
 <div class="wrap" [class.light-mode]="isLightMode" *ngIf="auth.currentUser$ | async as user; else noAuth">
   <div class="glow-tl"></div>
   <div class="glow-br"></div>
 
   <div class="navbar">
     <div class="logo"><div class="logo-dot"></div>Nexus</div>
-    <div class="nav-pills">
-      <div class="npill" [class.active]="user.role === 'ADMIN'" routerLink="/admin" *ngIf="user.role === 'ADMIN'">Admin</div>
-      <div class="npill" [class.active]="user.role === 'MANAGER'" routerLink="/manager" *ngIf="user.role === 'MANAGER'">Manager</div>
-      <div class="npill" [class.active]="user.role === 'CONSUMER'" routerLink="/consumer" *ngIf="user.role === 'CONSUMER'">Shop</div>
-      <div class="npill" [routerLink]="['/cart']" *ngIf="user.role === 'CONSUMER'" routerLinkActive="active">Cart</div>
-      <div class="npill" [routerLink]="['/orders']" *ngIf="user.role === 'CONSUMER'" routerLinkActive="active">Orders</div>
+    <div class="nav-pills" style="padding:0; border:none; background:transparent; gap:8px;">
+      <div class="mag-pill" routerLink="/admin" routerLinkActive="active-pill" *ngIf="user.role === 'ADMIN'">Admin<div class="pill-bg"></div></div>
+      <div class="mag-pill" routerLink="/manager" routerLinkActive="active-pill" *ngIf="user.role === 'MANAGER'">Manager<div class="pill-bg"></div></div>
+      <div class="mag-pill" routerLink="/consumer" routerLinkActive="active-pill" *ngIf="user.role === 'CONSUMER'">Shop<div class="pill-bg"></div></div>
+      <div class="mag-pill" routerLink="/cart" routerLinkActive="active-pill" *ngIf="user.role === 'CONSUMER'">Cart<div class="pill-bg"></div></div>
+      <div class="mag-pill" routerLink="/orders" routerLinkActive="active-pill" *ngIf="user.role === 'CONSUMER'">Orders<div class="pill-bg"></div></div>
     </div>
     
     <div class="head-r">

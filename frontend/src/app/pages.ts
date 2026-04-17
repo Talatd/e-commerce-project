@@ -63,9 +63,9 @@ import { RouterModule } from '@angular/router';
                 <thead><tr><th>Product</th><th>Price</th><th>Action</th><th>Sentiment</th></tr></thead>
                 <tbody>
                   <tr *ngFor="let p of products">
-                     <td class="nm"><span style="cursor:pointer; text-decoration: underline;" [routerLink]="['/product', p.productId]">{{p.name}}</span></td>
+                     <td class="nm"><span class="fancy-link" [routerLink]="['/product', p.productId]">{{p.name}}</span></td>
                      <td class="mono">{{p.basePrice | currency}}</td>
-                     <td><button (click)="checkSentiment(p)" style="font-size:9px; padding:4px 8px; border:1px solid var(--teal); color:var(--teal); background:var(--teal-dim); border-radius:12px; cursor:pointer;">Analyze Vibes 🧠</button></td>
+                     <td><button (click)="checkSentiment(p)" class="ripple-btn ghost" style="padding:4px 8px; font-size:9px; border-radius:12px;">Analyze Vibes 🧠</button></td>
                      <td>
                         <span *ngIf="sentiments[p.productId]" class="spill" [class.p-g]="sentiments[p.productId].averageScore > 0.5" [class.p-w]="sentiments[p.productId].averageScore <= 0.5">
                           ● {{sentiments[p.productId].sentimentLabel}}
