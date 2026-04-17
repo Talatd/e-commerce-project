@@ -40,6 +40,7 @@ class AuthServiceTest {
     }
 
     @Test
+    @SuppressWarnings("all")
     void register_ShouldSaveUserAndReturnResponse() {
         // Arrange
         User request = new User();
@@ -62,6 +63,7 @@ class AuthServiceTest {
     }
 
     @Test
+    @SuppressWarnings("all")
     void authenticate_ShouldReturnResponseOnSuccess() {
         // Arrange
         AuthRequest loginRequest = new AuthRequest("test@example.com", "password123");

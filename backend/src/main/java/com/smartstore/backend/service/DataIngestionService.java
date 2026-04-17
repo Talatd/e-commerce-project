@@ -25,56 +25,62 @@ public class DataIngestionService {
 
     @Transactional
     public void importProductsFromDS4(InputStream inputStream) throws Exception {
-        CSVParser parser = new CSVParser(new InputStreamReader(inputStream), CSVFormat.DEFAULT.withFirstRecordAsHeader());
-        List<Product> products = new ArrayList<>();
-        
-        for (CSVRecord record : parser) {
-            Product product = new Product();
-            product.setName(record.get("product_name"));
-            product.setCategory(record.get("category"));
-            product.setBrand(record.get("brand"));
-            product.setBasePrice(new BigDecimal(record.get("price")));
-            product.setDescription(record.get("description"));
-            products.add(product);
+        try (CSVParser parser = new CSVParser(new InputStreamReader(inputStream), 
+                CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).build())) {
+            List<Product> products = new ArrayList<>();
+            
+            for (CSVRecord record : parser) {
+                Product product = new Product();
+                product.setName(record.get("product_name"));
+                product.setCategory(record.get("category"));
+                product.setBrand(record.get("brand"));
+                product.setBasePrice(new BigDecimal(record.get("price")));
+                product.setDescription(record.get("description"));
+                products.add(product);
+            }
+            productRepository.saveAll(products);
         }
-        productRepository.saveAll(products);
     }
 
     @Transactional
     public void importReviewsFromDS6(InputStream inputStream) throws Exception {
-        CSVParser parser = new CSVParser(new InputStreamReader(inputStream), CSVFormat.DEFAULT.withFirstRecordAsHeader());
-        User dummyUser = userRepository.findAll().stream().findFirst().orElse(null);
-        
-        for (CSVRecord record : parser) {
-            Long productId = Long.parseLong(record.get("product_id"));
-            Product product = productRepository.findById(productId).orElse(null);
+        try (CSVParser parser = new CSVParser(new InputStreamReader(inputStream), 
+                CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).build())) {
+            User dummyUser = userRepository.findAll().stream().findFirst().orElse(null);
             
-            if (product != null && dummyUser != null) {
-                ProductReview review = new ProductReview();
-                review.setProduct(product);
-                review.setUser(dummyUser);
-                review.setRating(Integer.parseInt(record.get("star_rating")));
-                review.setComment(record.get("review_body"));
-                // Sentiment default to neutral for now, will be set by Python AI later
-                review.setSentimentScore(BigDecimal.valueOf(0.5)); 
-                reviewRepository.save(review);
+            for (CSVRecord record : parser) {
+                Long productId = Long.parseLong(record.get("product_id"));
+                Product product = productRepository.findById(productId).orElse(null);
+                
+                if (product != null && dummyUser != null) {
+                    ProductReview review = new ProductReview();
+                    review.setProduct(product);
+                    review.setUser(dummyUser);
+                    review.setRating(Integer.parseInt(record.get("star_rating")));
+                    review.setComment(record.get("review_body"));
+                    // Sentiment default to neutral for now, will be set by Python AI later
+                    review.setSentimentScore(BigDecimal.valueOf(0.5)); 
+                    reviewRepository.save(review);
+                }
             }
         }
     }
 
     @Transactional
     public void importInventoryFromDS5(InputStream inputStream) throws Exception {
-        CSVParser parser = new CSVParser(new InputStreamReader(inputStream), CSVFormat.DEFAULT.withFirstRecordAsHeader());
-        for (CSVRecord record : parser) {
-            Long productId = Long.parseLong(record.get("product_id"));
-            Product product = productRepository.findById(productId).orElse(null);
-            
-            if (product != null) {
-                RegionalInventory inventory = new RegionalInventory();
-                inventory.setProduct(product);
-                inventory.setRegion(record.get("region"));
-                inventory.setStockQuantity(Integer.parseInt(record.get("stock")));
-                inventoryRepository.save(inventory);
+        try (CSVParser parser = new CSVParser(new InputStreamReader(inputStream), 
+                CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).build())) {
+            for (CSVRecord record : parser) {
+                Long productId = Long.parseLong(record.get("product_id"));
+                Product product = productRepository.findById(productId).orElse(null);
+                
+                if (product != null) {
+                    RegionalInventory inventory = new RegionalInventory();
+                    inventory.setProduct(product);
+                    inventory.setRegion(record.get("region"));
+                    inventory.setStockQuantity(Integer.parseInt(record.get("stock")));
+                    inventoryRepository.save(inventory);
+                }
             }
         }
     }

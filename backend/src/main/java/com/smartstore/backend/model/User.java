@@ -34,6 +34,7 @@ public class User {
     @Column(nullable = false)
     private String fullName;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.CONSUMER;

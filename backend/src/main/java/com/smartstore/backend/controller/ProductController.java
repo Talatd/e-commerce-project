@@ -30,7 +30,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get product by ID", description = "Retrieves specific product details.")
-    public ResponseEntity<Product> getProduct(@PathVariable Long id) {
+    public ResponseEntity<Product> getProduct(@PathVariable @org.springframework.lang.NonNull Long id) {
         return productRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -38,7 +38,7 @@ public class ProductController {
 
     @GetMapping("/{id}/reviews/sentiment")
     @Operation(summary = "Analyze product sentiment", description = "Calculates average sentiment score from reviews using AI enriched data.")
-    public ResponseEntity<Map<String, Object>> getProductSentiment(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> getProductSentiment(@PathVariable @org.springframework.lang.NonNull Long id) {
         Product product = productRepository.findById(id).orElseThrow();
         List<ProductReview> reviews = reviewRepository.findByProduct(product);
         
