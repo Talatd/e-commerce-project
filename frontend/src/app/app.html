@@ -1,8 +1,60 @@
-<nav class="navbar" *ngIf="auth.currentUser$ | async as user" style="display:flex; justify-content:space-between; padding:1rem; background:#1a1a1a; color:white;">
-  <div class="brand">SmartStore AI ({{user.role}})</div>
-  <button (click)="auth.logout()" style="background:red; color:white; border:none; padding:0.5rem 1rem; cursor:pointer;">Logout</button>
-</nav>
+<div class="wrap" [class.light-mode]="isLightMode" *ngIf="auth.currentUser$ | async as user; else noAuth">
+  <div class="glow-tl"></div>
+  <div class="glow-br"></div>
 
-<div class="content" style="padding:2rem;">
-  <router-outlet></router-outlet>
+  <div class="navbar">
+    <div class="logo"><div class="logo-dot"></div>Nexus</div>
+    <div class="nav-pills">
+      <div class="npill" [class.active]="user.role === 'ADMIN'" routerLink="/admin" *ngIf="user.role === 'ADMIN'">Admin</div>
+      <div class="npill" [class.active]="user.role === 'MANAGER'" routerLink="/manager" *ngIf="user.role === 'MANAGER'">Manager</div>
+      <div class="npill" [class.active]="user.role === 'CONSUMER'" routerLink="/consumer" *ngIf="user.role === 'CONSUMER'">Shop</div>
+      <div class="npill" [routerLink]="['/cart']" *ngIf="user.role === 'CONSUMER'" routerLinkActive="active">Cart</div>
+      <div class="npill" [routerLink]="['/orders']" *ngIf="user.role === 'CONSUMER'" routerLinkActive="active">Orders</div>
+    </div>
+    
+    <div class="head-r">
+      <div class="toggle" (click)="toggleTheme()">
+        <div class="toggle-thumb">
+          <svg *ngIf="!isLightMode" class="thumb-icon" viewBox="0 0 14 14" fill="none"><path d="M7 2C4.2 2 2 4.2 2 7s2.2 5 5 5c1.5 0 2.8-.6 3.8-1.6-3.2 0-5.8-2.6-5.8-5.8 0-1 .3-2 .8-2.8C5.5 2.1 6.2 2 7 2Z" fill="white"/></svg>
+          <svg *ngIf="isLightMode" class="thumb-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.8" fill="#2C2C2A"/><line x1="7" y1="1" x2="7" y2="2.5" stroke="#2C2C2A" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="11.5" x2="7" y2="13" stroke="#2C2C2A" stroke-width="1.2" stroke-linecap="round"/><line x1="1" y1="7" x2="2.5" y2="7" stroke="#2C2C2A" stroke-width="1.2" stroke-linecap="round"/><line x1="11.5" y1="7" x2="13" y2="7" stroke="#2C2C2A" stroke-width="1.2" stroke-linecap="round"/><line x1="2.9" y1="2.9" x2="3.9" y2="3.9" stroke="#2C2C2A" stroke-width="1.2" stroke-linecap="round"/><line x1="10.1" y1="10.1" x2="11.1" y2="11.1" stroke="#2C2C2A" stroke-width="1.2" stroke-linecap="round"/><line x1="11.1" y1="2.9" x2="10.1" y2="3.9" stroke="#2C2C2A" stroke-width="1.2" stroke-linecap="round"/><line x1="3.9" y1="10.1" x2="2.9" y2="11.1" stroke="#2C2C2A" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      
+      <div class="user-chip" (click)="auth.logout()">
+        <div class="av">{{user.fullName.substring(0, 2).toUpperCase()}}</div>
+        <div><div class="uname">{{user.fullName}}</div><div class="urole">{{user.role.toLowerCase()}}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="ng-label">Overview</div>
+      <div class="nitem" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Dashboard</div>
+      <div class="nitem" *ngIf="user.role !== 'CONSUMER'">Analytics</div>
+      <div class="nitem" *ngIf="user.role !== 'CONSUMER'">AI Assistant <span class="nbadge">New</span></div>
+
+      <div class="ng-label" *ngIf="user.role !== 'CONSUMER'">Store</div>
+      <div class="nitem" *ngIf="user.role !== 'CONSUMER'">Products</div>
+      <div class="nitem" routerLink="/orders" routerLinkActive="active">Orders</div>
+      <div class="nitem" *ngIf="user.role !== 'CONSUMER'">Customers</div>
+
+      <div class="sidebar-foot" *ngIf="user.role !== 'CONSUMER'">
+        <div class="store-status">
+          <div class="sdot"></div>
+          <div><div class="sname">SmartStore DB</div><div class="ssub">Online · Connected</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
 </div>
+
+<ng-template #noAuth>
+  <div [class.light-mode]="isLightMode">
+    <router-outlet></router-outlet>
+  </div>
+</ng-template>
