@@ -493,40 +493,35 @@ export class ConsumerComponent implements OnInit {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="page-head">
+    <div class="page-head" style="display:flex;justify-content:space-between;">
       <div>
-        <div class="page-title">Business Intelligence</div>
-        <div class="page-sub">Live Monitoring</div>
+        <div class="page-title">Store Operations</div>
+        <div class="page-sub">Management Panel</div>
       </div>
       <div class="head-r">
-        <div class="chip">Last 30 days ↓</div>
-        <div class="chip-teal">Export Data</div>
+        <div class="admin-badge" style="background:var(--blue-dim); color:var(--blue); border-color:var(--blue-dim);">Manager</div>
       </div>
     </div>
     <div class="app-content">
       <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">Products</div><div class="kpi-val">{{products.length}}</div><div class="kpi-delta up">Database synced</div></div>
-        <div class="kpi"><div class="kpi-label">Sales Flow</div><div class="kpi-val">Live</div><div class="kpi-delta up">● Active</div></div>
-        <div class="kpi"><div class="kpi-label">Inventory</div><div class="kpi-val">Optimal</div><div class="kpi-delta up">Stock updated</div></div>
-        <div class="kpi"><div class="kpi-label">Reviews</div><div class="kpi-val">Positive</div><div class="kpi-delta up">AI Moderated</div></div>
+        <div class="kpi"><div class="kpi-label">Your Products</div><div class="kpi-val">{{products.length}}</div><div class="kpi-delta up">↑ Active</div></div>
+        <div class="kpi"><div class="kpi-label">Store Rating</div><div class="kpi-val">4.8★</div><div class="kpi-delta up">Excellent</div></div>
+        <div class="kpi"><div class="kpi-label">Low Stock</div><div class="kpi-val">3</div><div class="kpi-delta dn">Action needed</div></div>
+        <div class="kpi"><div class="kpi-label">Today's Sales</div><div class="kpi-val">$2,840</div><div class="kpi-delta up">↑ 8%</div></div>
       </div>
-      <div class="gcard">
-        <div class="gc-head"><div class="gc-title">Product Catalog</div><div class="gc-link">View all →</div></div>
-        <div class="gc-body" style="padding:0;">
-           <table class="tbl">
-             <thead><tr><th>Product Name</th><th>Category</th><th>Base Price</th></tr></thead>
-             <tbody>
-               <tr *ngFor="let p of products">
-                 <td class="nm">{{p.name}}</td>
-                 <td>{{p.category}}</td>
-                 <td class="mono">{{p.basePrice | currency}}</td>
-               </tr>
-               <tr *ngIf="products.length === 0">
-                 <td colspan="3" style="text-align:center; padding: 2rem; color:var(--text3);">No products available. Please import data.</td>
-               </tr>
-             </tbody>
-           </table>
-        </div>
+      <div class="table-card" style="background:var(--glass); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+        <div class="gc-head" style="padding:15px; border-bottom:1px solid var(--border);"><div class="gc-title">Inventory Overview</div></div>
+        <table class="tbl">
+          <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let p of products">
+              <td class="td-name">{{p.name}}</td>
+              <td>{{p.category}}</td>
+              <td style="font-family:'JetBrains Mono',monospace;">{{p.basePrice | currency}}</td>
+              <td><span class="spill" [class.sp-green]="p.stockQuantity > 10" [class.sp-amber]="p.stockQuantity <= 10">● {{p.stockQuantity}}</span></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   `
@@ -542,26 +537,205 @@ export class ManagerComponent implements OnInit {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <div class="page-head">
-      <div>
-        <div class="page-title">System Administration</div>
-        <div class="page-sub">Security & Integrations</div>
+    <div class="body" style="display:flex; height:calc(100vh - 84px);">
+      <!-- SIDEBAR -->
+      <div class="sidebar-admin">
+        <div class="sg-label">Overview</div>
+        <div class="sitem-admin" [class.active]="tab === 'dashboard'" (click)="tab = 'dashboard'"><div style="display:flex;align-items:center;gap:8px;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.6"/><rect x="7" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.4"/><rect x="1" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.4"/><rect x="7" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.3"/></svg>Dashboard</div></div>
+        <div class="sitem-admin" [class.active]="tab === 'analytics'" (click)="tab = 'analytics'"><div style="display:flex;align-items:center;gap:8px;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 10L4 6l3 2 5-6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Analytics</div></div>
+        
+        <div class="sg-label">Management</div>
+        <div class="sitem-admin" [class.active]="tab === 'stores'" (click)="tab = 'stores'"><div style="display:flex;align-items:center;gap:8px;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 5.5h10v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6Z" stroke="currentColor" stroke-width="1.1"/><path d="M.5 3l.8-1.5h10.4L12.5 3a2 2 0 0 1-2 2.5h-8A2 2 0 0 1 .5 3Z" stroke="currentColor" stroke-width="1.1"/></svg>Stores</div> <span class="sitem-badge green" style="background:var(--green-dim);color:var(--green);font-size:9px;padding:1px 6px;border-radius:8px;border:1px solid rgba(62,201,138,0.2);">4</span></div>
+        <div class="sitem-admin" [class.active]="tab === 'users'" (click)="tab = 'users'"><div style="display:flex;align-items:center;gap:8px;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1.5 11.5c0-2.7 2-4 5-4s5 1.3 5 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Users</div></div>
+        
+        <div class="sg-label" style="margin-top:auto;">System</div>
+        <div class="sitem-admin" [class.active]="tab === 'settings'" (click)="tab = 'settings'"><div style="display:flex;align-items:center;gap:8px;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1v1.2M6.5 10.8V12M1 6.5h1.2M10.8 6.5H12M2.6 2.6l.85.85M9.55 9.55l.85.85M2.6 10.4l.85-.85M9.55 3.45l.85-.85" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Settings</div></div>
       </div>
-    </div>
-    <div class="app-content">
-       <div style="background:var(--red); border:1px solid rgba(224,112,112,0.3); padding:1rem; border-radius:8px; margin-bottom:1.5rem; color:var(--red); display:flex; align-items:center; gap:8px; font-size:12px; background-color: rgba(224,112,112, 0.05);">
-          ⚠️ <b>Security Alert:</b> RBAC policies are strictly enforced. All database actions are logged.
-       </div>
-       <div class="gcard">
-          <div class="gc-head"><div class="gc-title">Active Integration Logs (DS4, DS5, DS6)</div></div>
-          <div class="gc-body">
-            <p style="color:var(--text); font-size:12px; margin-bottom:12px;">ETL Pipeline Status: <span class="spill p-g">● OK</span></p>
-            <p style="color:var(--text); font-size:12px;">Database Health (3NF): <span class="spill p-g">● Optimal</span></p>
+
+      <!-- MAIN CONTENT -->
+      <div class="main" style="flex:1; overflow-y:auto; padding:24px;">
+        <!-- DASHBOARD TAB -->
+        <div *ngIf="tab === 'dashboard'">
+          <div class="top-bar">
+            <div><div class="page-title">Dashboard</div><div class="page-sub">Friday, 17 April · Platform overview</div></div>
+            <div class="top-actions" style="display:flex; gap:8px;">
+              <button class="tbtn tbtn-ghost" style="background:var(--glass); border:1px solid var(--border2); color:var(--text2); padding:7px 14px; border-radius:20px; font-size:11.5px; cursor:pointer;">Export Report</button>
+              <button class="tbtn tbtn-primary" style="background:var(--teal); color:#080808; border:none; padding:7px 14px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer;">+ Add Store</button>
+            </div>
           </div>
-       </div>
+
+          <div class="kpi-row">
+            <div class="kpi"><div class="kpi-label">Platform Revenue</div><div class="kpi-val">$847K</div><div class="kpi-delta up" style="color:var(--green);">↑ 22.4% this month</div></div>
+            <div class="kpi"><div class="kpi-label">Total Orders</div><div class="kpi-val">12,847</div><div class="kpi-delta up" style="color:var(--green);">↑ 14.2% this month</div></div>
+            <div class="kpi"><div class="kpi-label">Active Stores</div><div class="kpi-val">4</div><div class="kpi-delta up" style="color:var(--green);">↑ 1 new this week</div></div>
+            <div class="kpi"><div class="kpi-label">Total Users</div><div class="kpi-val">24,391</div><div class="kpi-delta up" style="color:var(--green);">↑ 8.7% this month</div></div>
+          </div>
+
+          <div class="chart-row">
+            <div class="gcard" style="background:var(--glass); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+              <div class="gc-head" style="padding:11px 15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between;"><div class="gc-title" style="font-size:9.5px; text-transform:uppercase; color:var(--text2);">Revenue by Month</div></div>
+              <div class="gc-body" style="padding:12px 15px;">
+                <div class="bar-chart">
+                  <div class="bc-col" *ngFor="let m of months; let i = index">
+                    <div class="bc-bar" [class.active-bar]="i === 9" [style.height.%]="m.val"></div>
+                    <div class="bc-label" [style.color]="i === 9 ? 'var(--teal2)' : 'var(--text3)'">{{m.label}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="gcard" style="background:var(--glass); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+               <div class="gc-head" style="padding:11px 15px; border-bottom:1px solid var(--border);"><div class="gc-title" style="font-size:9.5px; text-transform:uppercase; color:var(--text2);">Revenue Split</div></div>
+               <div class="gc-body" style="padding:12px 15px; display:flex; flex-direction:column; gap:12px;">
+                 <div class="dl-item"><div class="dl-dot" style="background:var(--teal); width:7px; height:7px; border-radius:50%;"></div> Electronics 44%</div>
+                 <div class="dl-item"><div class="dl-dot" style="background:var(--blue); width:7px; height:7px; border-radius:50%;"></div> Accessories 20%</div>
+                 <div class="dl-item"><div class="dl-dot" style="background:var(--amber); width:7px; height:7px; border-radius:50%;"></div> Peripherals 14%</div>
+               </div>
+            </div>
+          </div>
+
+          <div class="table-card" style="background:var(--glass); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+            <div class="gc-head" style="padding:15px; border-bottom:1px solid var(--border);"><div class="gc-title">Recent Activity</div></div>
+            <table class="tbl">
+              <thead><tr><th>Order</th><th>Customer</th><th>Store</th><th>Amount</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td class="td-mono">#ORD-7821</td><td class="td-name">Buse Ü.</td><td>Nexus Main</td><td class="td-amt">$1,788</td><td><span class="spill sp-blue">● Shipped</span></td></tr>
+                <tr><td class="td-mono">#ORD-7820</td><td class="td-name">James W.</td><td>TechHub</td><td class="td-amt">$284</td><td><span class="spill sp-green">● Delivered</span></td></tr>
+                <tr><td class="td-mono">#ORD-7819</td><td class="td-name">Emily J.</td><td>Nexus Main</td><td class="td-amt">$432</td><td><span class="spill sp-amber">● Pending</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- STORES TAB -->
+        <div *ngIf="tab === 'stores'">
+          <div class="top-bar"><div><div class="page-title">Store Management</div><div class="page-sub">Approve, open or close stores.</div></div></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="gcard" style="padding:16px; background:var(--glass); border:1px solid var(--border); border-radius:12px;" *ngFor="let s of stores">
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                <div><div class="td-name" style="font-size:14px;">{{s.name}}</div><div style="font-size:11px; color:var(--text3);">Owner: {{s.owner}}</div></div>
+                <div class="spill sp-green">Open</div>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+                <div style="text-align:center;"><div style="font-size:14px; color:var(--text);">{{s.rev}}</div><div style="font-size:9px; color:var(--text3); text-transform:uppercase;">Revenue</div></div>
+                <div style="text-align:center;"><div style="font-size:14px; color:var(--text);">{{s.orders}}</div><div style="font-size:9px; color:var(--text3); text-transform:uppercase;">Orders</div></div>
+                <div style="text-align:center;"><div style="font-size:14px; color:var(--text);">{{s.rating}}★</div><div style="font-size:9px; color:var(--text3); text-transform:uppercase;">Rating</div></div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="tbtn tbtn-ghost" style="flex:1; border:1px solid var(--border); background:var(--glass); color:var(--text2); padding:6px; border-radius:20px; font-size:11px;">View</button>
+                <button class="tbtn tbtn-ghost" style="flex:1; border:1px solid var(--red-border); background:var(--glass); color:var(--red); padding:6px; border-radius:20px; font-size:11px;">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   `
 })
-export class AdminComponent {}
+export class AdminComponent {
+  tab = 'dashboard';
+  months = [
+    {label:'J', val:35}, {label:'F', val:52}, {label:'M', val:44}, {label:'A', val:68},
+    {label:'M', val:55}, {label:'J', val:72}, {label:'J', val:61}, {label:'A', val:80},
+    {label:'S', val:65}, {label:'O', val:100}, {label:'N', val:74}, {label:'D', val:30}
+  ];
+  stores = [
+    { name: 'Nexus Main Store', owner: 'Admin', rev: '$427K', orders: '6,421', rating: '4.9' },
+    { name: 'TechHub Store', owner: 'James W.', rev: '$218K', orders: '3,104', rating: '4.7' },
+    { name: 'GadgetPro', owner: 'Sara M.', rev: '$142K', orders: '2,089', rating: '4.8' },
+    { name: 'ByteShop', owner: 'Pending', rev: '$60K', orders: '1,233', rating: '4.5' }
+  ];
+}
+
+@Component({
+  selector: 'app-settings',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule],
+  template: `
+    <div class="body" style="display:flex; height:calc(100vh - 84px);">
+      <!-- SIDEBAR -->
+      <div class="sidebar" style="width:200px; border-right:1px solid var(--border); padding:20px 10px; display:flex; flex-direction:column; gap:4px;">
+        <div class="sidebar-title">Account</div>
+        <div class="sitem" [class.active]="tab === 'personal'" (click)="tab = 'personal'">Personal Info</div>
+        <div class="sitem" [class.active]="tab === 'password'" (click)="tab = 'password'">Password</div>
+        
+        <div class="sidebar-title">Preferences</div>
+        <div class="sitem" [class.active]="tab === 'notifs'" (click)="tab = 'notifs'">Notifications</div>
+        <div class="sitem" [class.active]="tab === 'privacy'" (click)="tab = 'privacy'">Privacy</div>
+        
+        <div class="danger-item" (click)="tab = 'danger'" style="margin-top:auto; color:var(--red); font-size:12px; cursor:pointer; padding:10px;">
+          Danger Zone
+        </div>
+      </div>
+
+      <!-- MAIN CONTENT -->
+      <div class="main" style="flex:1; padding:24px; overflow-y:auto;">
+        
+        <!-- PERSONAL INFO -->
+        <div *ngIf="tab === 'personal'">
+          <div class="sec-head" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
+            <div><div class="sec-title">Personal Info</div><div class="sec-sub">Update your profile details.</div></div>
+            <button class="save-btn" style="background:var(--teal); color:#080808; padding:10px 24px; border-radius:22px; border:none; font-weight:600; cursor:pointer;">Save Changes</button>
+          </div>
+
+          <div class="avatar-section-nexus">
+            <div class="av-circle-nexus">B</div>
+            <div class="av-info">
+              <div class="av-name" style="font-size:16px; font-weight:500;">Buse Ünal</div>
+              <div class="av-email" style="font-size:12px; color:var(--text3);">buse@akdeniz.edu.tr</div>
+            </div>
+            <button class="tbtn tbtn-ghost" style="background:var(--glass); border:1px solid var(--border2); color:var(--text2); padding:6px 12px; border-radius:20px; font-size:11px;">Change Photo</button>
+          </div>
+
+          <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="field"><div class="fl" style="font-size:11px; color:var(--text2); margin-bottom:4px;">First Name</div><input class="fi" value="Buse"/></div>
+            <div class="field"><div class="fl" style="font-size:11px; color:var(--text2); margin-bottom:4px;">Last Name</div><input class="fi" value="Ünal"/></div>
+            <div class="field"><div class="fl" style="font-size:11px; color:var(--text2); margin-bottom:4px;">Email</div><input class="fi" value="buse@akdeniz.edu.tr"/></div>
+            <div class="field"><div class="fl" style="font-size:11px; color:var(--text2); margin-bottom:4px;">Phone</div><input class="fi" value="+90 555 123 45 67"/></div>
+          </div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div *ngIf="tab === 'notifs'">
+          <div class="sec-head" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
+            <div><div class="sec-title">Notifications</div><div class="sec-sub">Manage your alerts.</div></div>
+          </div>
+          <div class="notif-list" style="display:flex; flex-direction:column; gap:1px; border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+            <div class="notif-row-nexus" *ngFor="let n of notifs">
+              <div class="notif-body" style="flex:1;">
+                <div class="notif-title" style="font-size:13px; font-weight:500;">{{n.title}}</div>
+                <div class="notif-desc" style="font-size:11px; color:var(--text3);">{{n.desc}}</div>
+              </div>
+              <div class="tog-nexus" [class.on]="n.on" [class.off]="!n.on" (click)="n.on = !n.on">
+                <div class="tog-nexus-thumb"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DANGER ZONE -->
+        <div *ngIf="tab === 'danger'">
+          <div class="sec-head" style="margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
+            <div><div class="sec-title" style="color:var(--red);">Danger Zone</div><div class="sec-sub">Irreversible actions.</div></div>
+          </div>
+          <div class="danger-zone-nexus">
+            <div style="font-size:13px; font-weight:600; color:var(--red); margin-bottom:8px;">Deactivate Account</div>
+            <p style="font-size:12px; color:var(--text2); line-height:1.6; margin-bottom:16px;">Temporarily disable your account. You can reactivate anytime by logging back in.</p>
+            <button class="tbtn tbtn-ghost" style="border-color:var(--red-border); color:var(--red); padding:8px 16px; border-radius:20px; cursor:pointer;">Deactivate</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `
+})
+export class SettingsComponent {
+  tab = 'personal';
+  notifs = [
+    { title: 'Order Confirmations', desc: 'When an order is placed', on: true },
+    { title: 'Shipping Updates', desc: 'Real-time tracking alerts', on: true },
+    { title: 'Deals & Offers', desc: 'Personalized sale alerts', on: false }
+  ];
+}
