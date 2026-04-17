@@ -6,7 +6,15 @@
   <div class="glow-br"></div>
 
   <div class="navbar">
-    <div class="logo"><div class="logo-dot"></div>Nexus</div>
+    <div class="logo" style="gap:10px;">
+      <svg width="28" height="28" viewBox="0 0 44 44" fill="none">
+        <path d="M22 4L38 13V31L22 40L6 31V13L22 4Z" stroke="#3ECFB2" stroke-width="1.5" fill="rgba(62,207,178,0.08)" stroke-linejoin="round"/>
+        <path d="M22 4V22M22 22L38 13M22 22L6 13" stroke="#3ECFB2" stroke-width="1" opacity="0.5"/>
+        <path d="M22 22V40M22 22L38 31M22 22L6 31" stroke="#3ECFB2" stroke-width="1" opacity="0.28"/>
+        <circle cx="22" cy="22" r="3.5" fill="#3ECFB2"/>
+      </svg>
+      Nexus
+    </div>
     <div class="nav-pills" style="padding:0; border:none; background:transparent; gap:8px;">
       <div class="mag-pill" routerLink="/admin" routerLinkActive="active-pill" *ngIf="user.role === 'ADMIN'">Admin<div class="pill-bg"></div></div>
       <div class="mag-pill" routerLink="/manager" routerLinkActive="active-pill" *ngIf="user.role === 'MANAGER'">Manager<div class="pill-bg"></div></div>
