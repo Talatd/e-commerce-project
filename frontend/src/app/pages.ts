@@ -415,7 +415,7 @@ export class ConsumerComponent implements OnInit {
   products: any[] = [];
   sentiments: any = {};
   prompt = '';
-  chatMessages: any[] = [{ sender: 'ai', text: 'Welcome to Nexus Store! Tell me what you are looking for today.' }];
+  chatMessages: any[] = [];
   history: string[] = [];
   searchQuery = '';
   filtersOpen = true;
@@ -428,6 +428,14 @@ export class ConsumerComponent implements OnInit {
   productService = inject(ProductService);
 
   ngOnInit() {
+    const role = this.auth.currentUserValue?.role || 'CONSUMER';
+    const greetings: any = {
+      'CONSUMER': 'Welcome to Nexus Store! I can help you find premium electronics.',
+      'MANAGER': 'Nexus Manager AI at your service. I can help with stock alerts and sales trends.',
+      'ADMIN': 'System-level AI online. I have full access to platform analytics and user management.'
+    };
+    this.chatMessages.push({ sender: 'ai', text: greetings[role] || greetings['CONSUMER'] });
+    
     this.productService.getProducts().subscribe(res => {
       this.products = res;
       const cats = Array.from(new Set(this.products.map(p => p.category)));
@@ -895,6 +903,7 @@ export class AdminComponent implements OnInit {
   orders: any[] = [];
   pagedProducts: any[] = [];
   stats: any = {};
+  breakdown: any = { categories: [], regions: [] };
 
   sysSettings = {
     maintenance: false,
@@ -914,19 +923,22 @@ export class AdminComponent implements OnInit {
       this.storeService.getStores(),
       this.adminService.getUsers(),
       this.adminService.getOrders(),
-      this.adminService.getStats()
+      this.adminService.getStats(),
+      this.adminService.getSalesBreakdown()
     ];
 
     import('rxjs').then(({ forkJoin }) => {
       forkJoin(reqs).subscribe({
-        next: ([p, s, u, o, st]) => {
-          this.pagedProducts = p;
-          this.stores = s;
-          this.users = u;
-          this.orders = o;
-          this.stats = st;
-          if (st.monthlyRevenue) {
-             this.months = st.monthlyRevenue;
+        next: (results: any) => {
+          const res = results as any[];
+          this.pagedProducts = res[0];
+          this.stores = res[1];
+          this.users = res[2];
+          this.orders = res[3];
+          this.stats = res[4];
+          this.breakdown = res[5];
+          if (this.stats && this.stats.monthlyRevenue) {
+             this.months = this.stats.monthlyRevenue;
           }
           this.isLoading = false;
         },
@@ -1066,8 +1078,14 @@ export class AdminComponent implements OnInit {
                    </div>
                    <div style="font-size:12px; color:var(--text2); margin-top:10px; line-height:1.5;">Halaskargazi Cad. No:42, Şişli/İstanbul</div>
                 </div>
-                <div class="card-nexus" style="padding:20px; border-style:dashed; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text3);">
-                   + Add New Address
+                <div class="table-card-nexus" style="padding:20px;">
+                  <div class="gc-title-nexus" style="margin-bottom:15px;">Sales by Category</div>
+                  <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div *ngFor="let c of breakdown.categories" style="display:flex; align-items:center; justify-content:space-between;">
+                      <div style="font-size:12px; color:var(--text2);">{{c.name}}</div>
+                      <div style="font-size:12px; color:var(--text); font-weight:500;">{{c.value | currency}}</div>
+                    </div>
+                  </div>
                 </div>
              </div>
           </div>
@@ -1140,5 +1158,203 @@ export class SettingsComponent implements OnInit {
     if(/[A-Z]/.test(v)) this.pwS++;
     const colors = ['#E07070','#E8A94A','#E8A94A','#3EC98A'];
     this.pwC = this.pwS > 0 ? colors[this.pwS-1] : '';
+  }
+}
+
+@Component({
+  selector: 'app-landing',
+  standalone: true,
+  imports: [CommonModule, RouterModule],
+  template: `
+<style>
+.landing-page{
+  background:var(--bg);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  color:var(--text);
+  min-height: 100vh;
+}
+.navbar-l{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 32px;
+  border-bottom:1px solid var(--border);
+  background:rgba(8,8,8,0.92);
+  backdrop-filter:blur(20px);
+  position:sticky;top:0;z-index:100;
+}
+.logo-l{font-family:'Playfair Display',serif;font-style:italic;font-size:20px;color:var(--text);display:flex;align-items:center;gap:8px;}
+.logo-dot-l{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal-glow);}
+.nav-pills-l{display:flex;align-items:center;gap:3px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:30px;padding:4px;}
+.npill-l{padding:6px 16px;border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all 0.2s;}
+.npill-l.active{background:var(--teal-dim);color:var(--teal2);border:1px solid rgba(62,207,178,0.18);}
+.nav-r-l{display:flex;align-items:center;gap:8px;}
+.nbtn-l{padding:7px 18px;border-radius:20px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif; text-decoration: none;}
+.nbtn-ghost-l{background:transparent;border:1px solid var(--border2);color:var(--text2);}
+.nbtn-teal-l{background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);color:var(--teal2);}
+
+.hero-l{
+  min-height:600px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:100px 40px;
+  position:relative;
+  overflow:hidden;
+}
+
+.hero-glow-1-l{position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(62,207,178,0.08) 0%,transparent 65%);pointer-events:none;}
+.hero-glow-2-l{position:absolute;bottom:-100px;left:20%;width:300px;height:300px;background:radial-gradient(circle,rgba(62,207,178,0.05) 0%,transparent 65%);pointer-events:none;}
+
+.hero-badge-l{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);
+  color:var(--teal2);font-size:11px;padding:5px 14px;border-radius:20px;
+  margin-bottom:28px;letter-spacing:0.04em;
+}
+.badge-dot-l{width:5px;height:5px;border-radius:50%;background:var(--teal);animation:pulse-l 2s infinite;}
+@keyframes pulse-l{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+.hero-title-l{
+  font-family:'Playfair Display',serif;
+  font-size:64px;font-weight:400;
+  color:var(--text);line-height:1.1;
+  letter-spacing:-0.02em;
+  margin-bottom:10px;
+  max-width:800px;
+}
+.hero-title-l em{font-style:italic;color:var(--teal2);}
+
+.hero-sub-l{
+  font-size:16px;color:var(--text2);
+  line-height:1.7;max-width:520px;
+  margin:16px auto 40px;font-weight:300;
+}
+
+.hero-cta-l{display:flex;align-items:center;gap:12px;justify-content:center;}
+.btn-primary-l{
+  padding:14px 32px;border-radius:24px;
+  background:var(--teal);color:#080808;
+  font-size:14px;font-weight:600;cursor:pointer;
+  transition:all 0.2s; border:none; text-decoration:none;
+}
+.btn-primary-l:hover { background: var(--teal2); }
+.btn-secondary-l{
+  padding:14px 32px;border-radius:24px;
+  background:transparent;color:var(--text2);
+  font-size:14px;cursor:pointer;
+  border:1px solid var(--border2);transition:all 0.2s; text-decoration:none;
+}
+.btn-secondary-l:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
+
+.stats-l{
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(4,1fr);
+}
+.stat-item-l{
+  padding:32px 0;text-align:center;
+  border-right:1px solid var(--border);
+}
+.stat-item-l:last-child{border-right:none;}
+.stat-val-l{font-family:'Playfair Display',serif;font-size:36px;color:var(--text);line-height:1;margin-bottom:6px;}
+.stat-val-l em{font-style:italic;color:var(--teal2);}
+
+.features-l{padding:80px 40px; text-align:center;}
+.feat-grid-l{display:grid;grid-template-columns:repeat(3,1fr);gap:24px; margin-top:60px;}
+.feat-card-l{
+  background:var(--glass); border:1px solid var(--border);
+  padding:40px 32px; border-radius:20px; text-align:left;
+  transition:all 0.3s;
+}
+.feat-card-l:hover{border-color:var(--teal-glow); transform:translateY(-5px);}
+.feat-icon-l { margin-bottom: 20px; color: var(--teal); }
+.feat-title-l{font-size:18px;font-weight:500;color:var(--text);margin-bottom:12px;}
+.feat-desc-l{font-size:14px;color:var(--text2);line-height:1.7;}
+
+.footer-l{
+  padding:40px; border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+</style>
+
+<div class="landing-page">
+  <div class="navbar-l">
+    <div class="logo-l"><div class="logo-dot-l"></div>Nexus</div>
+    <div class="nav-pills-l">
+      <div class="npill-l active">Home</div>
+      <div class="npill-l" routerLink="/consumer">Shop</div>
+      <div class="npill-l">About</div>
+    </div>
+    <div class="nav-r-l" *ngIf="!auth.currentUserValue">
+      <a routerLink="/login" class="nbtn-l nbtn-ghost-l">Sign in</a>
+      <a routerLink="/login" class="nbtn-l nbtn-teal-l">Join Now</a>
+    </div>
+    <div class="nav-r-l" *ngIf="auth.currentUserValue">
+      <a [routerLink]="dashboardLink" class="nbtn-l nbtn-teal-l">Dashboard</a>
+    </div>
+  </div>
+
+  <div class="hero-l">
+    <div class="hero-glow-1-l"></div>
+    <div class="hero-glow-2-l"></div>
+    <div class="hero-badge-l"><div class="badge-dot-l"></div>Premium Tech Commerce</div>
+    <h1 class="hero-title-l">The future of<br><em>tech shopping</em><br>is here.</h1>
+    <p class="hero-sub-l">Discover curated premium technology products. Seamless experience, intelligent recommendations, effortless checkout.</p>
+    <div class="hero-cta-l">
+      <a routerLink="/consumer" class="btn-primary-l">Start Exploring →</a>
+      <a routerLink="/consumer" class="btn-secondary-l">Learn more</a>
+    </div>
+  </div>
+
+  <div class="stats-l">
+    <div class="stat-item-l"><div class="stat-val-l">50<em>K+</em></div><div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.1em;">Products</div></div>
+    <div class="stat-item-l"><div class="stat-val-l">2<em>M+</em></div><div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.1em;">Customers</div></div>
+    <div class="stat-item-l"><div class="stat-val-l">4.9<em>★</em></div><div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.1em;">Rating</div></div>
+    <div class="stat-item-l"><div class="stat-val-l">24<em>/7</em></div><div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.1em;">Support</div></div>
+  </div>
+
+  <div class="features-l">
+    <div style="font-size:10px; color:var(--teal); text-transform:uppercase; letter-spacing:0.2em; margin-bottom:12px;">Why Nexus</div>
+    <h2 style="font-family:'Playfair Display',serif; font-size:36px; font-weight:400; font-style:italic;">Built for the modern buyer</h2>
+    <div class="feat-grid-l">
+      <div class="feat-card-l">
+        <div class="feat-icon-l">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <div class="feat-title-l">Curated Selection</div>
+        <div class="feat-desc-l">Every product is hand-picked and verified by our team of tech experts before listing.</div>
+      </div>
+      <div class="feat-card-l">
+        <div class="feat-icon-l">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+        <div class="feat-title-l">AI Recommendations</div>
+        <div class="feat-desc-l">Our Text2SQL AI assistant helps you find exactly what you need in seconds.</div>
+      </div>
+      <div class="feat-card-l">
+        <div class="feat-icon-l">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <div class="feat-title-l">Seamless Checkout</div>
+        <div class="feat-desc-l">Multiple payment options, one-click reorder, and real-time shipment tracking.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-l">
+    <div style="font-family:'Playfair Display',serif; font-style:italic; opacity:0.6;">Nexus</div>
+    <div style="display:flex; gap:24px; font-size:12px; color:var(--text3);">
+       <span>Terms</span> <span>Privacy</span> <span>Contact</span>
+    </div>
+    <div style="font-size:12px; color:var(--text3); font-family:'JetBrains Mono',monospace;">© 2025 NEXUS</div>
+  </div>
+</div>
+  `
+})
+export class LandingComponent {
+  auth = inject(AuthService);
+  get dashboardLink() {
+    const role = this.auth.currentUserValue?.role;
+    if(role === 'ADMIN') return '/admin';
+    if(role === 'MANAGER') return '/manager';
+    return '/consumer';
   }
 }

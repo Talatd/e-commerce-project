@@ -42,20 +42,20 @@ public class DbInitializer {
     private void seedSmartwatches() {
         List<Product> watches = new ArrayList<>();
 
-        watches.add(createProduct("Nexus Watch Pro", "Electronics", "Nexus", 299.99, 
-            "Professional titanium smartwatch with sapphire glass and advanced health tracking.", 
-            "/products/nexus_watch_pro.png"));
+        watches.add(createProduct("Nexus Pro Laptop", "Computers", "Nexus", 1499.00, 
+            "High-end minimalist laptop with titanium chassis and 4K display.", 
+            "nexus_pro_laptop_1776548252741.png"));
 
-        watches.add(createProduct("Nexus Sync S", "Electronics", "Nexus", 249.99, 
-            "Elegant lifestyle smartwatch with mesh strap and customizable floral displays.", 
-            "/products/nexus_sync_s.png"));
+        watches.add(createProduct("Nexus Smartphone X", "Mobile", "Nexus", 999.00, 
+            "Ultimate mobile experience with edge-to-edge OLED and triple lens system.", 
+            "nexus_smartphone_1776548329975.png"));
 
-        watches.add(createProduct("Nexus Active X", "Electronics", "Nexus", 199.99, 
-            "Rugged sports watch with GPS, heart rate monitor, and cyber lime accents.", 
-            "/products/nexus_active_x.png"));
-            
-        watches.add(createProduct("Nexus Aura", "Electronics", "Nexus", 349.99, 
-            "Minimalist ceramic smartwatch with always-on AMOLED display.", 
+        watches.add(createProduct("Nexus Sound Pro", "Audio", "Nexus", 349.00, 
+            "Studio-grade noise cancelling headphones with deep bass and crystal clear highs.", 
+            "nexus_headphones_1776548345133.png"));
+
+        watches.add(createProduct("Nexus Watch Pro", "Wearables", "Nexus", 299.99, 
+            "Professional titanium smartwatch with sapphire glass and health tracking.", 
             "https://images.unsplash.com/photo-1544006659-f0b21f04cb1d?auto=format&fit=crop&q=80&w=400"));
 
         List<Product> saved = productRepository.saveAll(watches);

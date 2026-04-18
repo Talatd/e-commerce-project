@@ -123,6 +123,10 @@ export class AdminService {
   deleteUser(id: number): Observable<any> {
     return this.http.delete(`http://localhost:8080/api/users/${id}`);
   }
+
+  getSalesBreakdown(): Observable<any> {
+    return this.http.get('http://localhost:8080/api/v1/analytics/sales-breakdown');
+  }
 }
 
 @Injectable({ providedIn: 'root' })
