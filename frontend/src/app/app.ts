@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { RouterOutlet, RouterModule } from '@angular/router';
+import { RouterOutlet, RouterModule, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './services';
 
@@ -11,7 +11,13 @@ import { AuthService } from './services';
 })
 export class AppComponent implements OnInit {
   auth = inject(AuthService);
+  router = inject(Router);
   isLightMode = false;
+
+  get shouldShowGlobalSidebar(): boolean {
+    const hiddenRoutes = ['/admin', '/manager', '/settings'];
+    return !hiddenRoutes.some(r => this.router.url.startsWith(r));
+  }
 
   ngOnInit() {
     const saved = localStorage.getItem('theme');
@@ -19,6 +25,15 @@ export class AppComponent implements OnInit {
       this.isLightMode = true;
       document.documentElement.classList.add('light-mode');
     }
+
+    // Redirect if already logged in and on login page
+    this.auth.currentUser$.subscribe(u => {
+      if (u && this.router.url === '/login') {
+        if (u.role === 'ADMIN') this.router.navigate(['/admin']);
+        else if (u.role === 'MANAGER') this.router.navigate(['/manager']);
+        else this.router.navigate(['/consumer']);
+      }
+    });
 
     // Cursor Logic
     const cursor = document.getElementById('cursor');
@@ -31,7 +46,11 @@ export class AppComponent implements OnInit {
       my = e.clientY;
       
       const target = e.target as HTMLElement;
-      if (target.closest('button') || target.closest('.mag-pill') || target.closest('.npill') || target.closest('.nitem') || target.closest('.gcard') || target.closest('.c-item') || target.closest('.cursor-pointer') || target.closest('.fancy-link') || target.style.cursor === 'pointer' || getComputedStyle(target).cursor === 'pointer') {
+      // Robust hover detection: check specific classes OR if any parent has cursor:pointer
+      const isPointer = target.closest('button, .mag-pill, .npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link');
+      const computedPointer = getComputedStyle(target).cursor === 'pointer' || (target.parentElement && getComputedStyle(target.parentElement).cursor === 'pointer');
+      
+      if (isPointer || computedPointer) {
          cursor?.classList.add('hover');
          ring?.classList.add('hover');
       } else {

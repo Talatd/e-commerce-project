@@ -33,6 +33,8 @@ public class Product {
     @Column(nullable = false)
     private BigDecimal basePrice;
 
+    private String imageUrl;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<RegionalInventory> regionalInventories;
 
