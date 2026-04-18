@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { AuthService, AiService, ProductService } from './services';
+import { AuthService, AiService, ProductService, StoreService, AdminService, ToastService } from './services';
 
 @Component({
   selector: 'app-login',
@@ -285,152 +285,131 @@ export class LoginComponent {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <div class="page-head">
-      <div>
-        <div class="page-title">Available Products</div>
-        <div class="page-sub">Explore the catalog</div>
+    <div class="page-frame">
+      <div class="navbar-nexus">
+        <div style="display:flex;align-items:center;gap:15px;">
+          <div class="logo-admin" routerLink="/consumer"><div class="logo-dot-admin"></div>Nexus</div>
+          <div class="search-box-nexus">
+            <svg width="12" height="12" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="var(--text2)" stroke-width="1.2"/><path d="M9 9l2.5 2.5" stroke="var(--text2)" stroke-width="1.2" stroke-linecap="round"/></svg>
+            <input [(ngModel)]="searchQuery" placeholder="Search premium products..."/>
+          </div>
+        </div>
+        <div class="nav-r-nexus">
+          <div class="mag-pill" style="font-size:11px; padding:6px 14px; border-radius:12px;" routerLink="/cart">Cart · {{auth.currentUserValue?.cartCount || 0}} items</div>
+          <div class="nav-notif-nexus"><div class="notif-dot-nexus"></div><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4.8 1.5 3 3.3 3 5.5V8l-1 1.5h10L11 8V5.5c0-2.2-1.8-4-4-4Z" stroke="#6A8A84" stroke-width="1.1"/><path d="M5.5 11c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="#6A8A84" stroke-width="1.1"/></svg></div>
+          <div class="nav-av-nexus" routerLink="/settings">{{auth.currentUserValue?.fullName?.charAt(0)}}</div>
+        </div>
+      </div>
+      <div class="body-frame">
+        <div class="sidebar-nexus" style="width:240px; min-width:240px; padding:20px 16px;">
+          <div class="filter-sect">
+             <div class="fs-head" (click)="catOpen = !catOpen">
+               <span>Categories</span>
+               <svg [style.transform]="catOpen ? 'rotate(0deg)' : 'rotate(-90deg)'" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2"/></svg>
+             </div>
+             <div class="fs-body" *ngIf="catOpen">
+               <div class="cat-row-nexus" *ngFor="let c of categories" (click)="toggleFilter(c)">
+                 <div class="cat-chk-nexus" [class.checked]="c.checked"></div>
+                 <span>{{c.name}}</span>
+               </div>
+             </div>
+          </div>
+          <div class="filter-sect" style="margin-top:20px;">
+             <div class="fs-head" (click)="priceOpen = !priceOpen">
+               <span>Price Range</span>
+               <svg [style.transform]="priceOpen ? 'rotate(0deg)' : 'rotate(-90deg)'" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2"/></svg>
+             </div>
+             <div class="fs-body" *ngIf="priceOpen">
+               <div style="padding:10px 0;">
+                 <input type="range" min="0" max="2000" [(ngModel)]="maxPrice" class="range-nexus"/>
+                 <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:11px; color:var(--text3); font-family:'JetBrains Mono';"><span>\$0</span><span>\${{maxPrice}}</span></div>
+               </div>
+             </div>
+          </div>
+          <div class="sidebar-foot-nexus" style="border-top:1px solid var(--border); padding-top:15px; margin-top:auto;">
+             <button class="sc-btn-nexus" style="width:100%; border-radius:12px; margin-bottom:8px;" (click)="clearAll()">Clear Filters</button>
+             <div class="s-user-nexus" *ngIf="auth.role === 'ADMIN'" routerLink="/admin">
+               <div class="su-name-nexus">Admin Panel →</div>
+             </div>
+          </div>
+        </div>
+        <div class="main-nexus" style="display:flex; gap:0; padding:0;">
+          <div style="flex:1; overflow-y:auto; padding:24px;">
+            <div class="top-bar-nexus" style="margin-bottom:24px;">
+              <div><div class="page-title-nexus">Curated Collection</div><div class="page-sub-nexus">Showing {{filteredProducts.length}} products based on your interest</div></div>
+            </div>
+            <div class="product-grid-nexus">
+              <div class="pcard-nexus" *ngFor="let p of filteredProducts">
+                <div class="pc-image-nexus" [routerLink]="['/product', p.productId]">
+                  <img *ngIf="p.imageUrl" [src]="p.imageUrl" /><div class="pc-overlay-nexus">View Details</div>
+                </div>
+                <div class="pc-info-nexus">
+                  <div class="pc-cat-nexus">{{p.category}}</div>
+                  <div class="pc-name-nexus">{{p.name}}</div>
+                  <div class="pc-footer-nexus">
+                    <div class="pc-price-nexus">{{p.basePrice | currency}}</div>
+                    <button class="pc-add-nexus" (click)="checkSentiment(p)">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3.5v7M3.5 7h7" stroke="currentColor" stroke-width="1.2"/></svg>
+                    </button>
+                  </div>
+                  <div *ngIf="sentiments[p.productId]" class="pc-sent-nexus" [class.pos]="sentiments[p.productId].averageScore > 0.5"><div class="pc-sent-dot"></div>{{sentiments[p.productId].sentimentLabel}}</div>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="filteredProducts.length === 0" style="padding:100px 0; text-align:center;"><div style="font-size:32px; opacity:0.1; margin-bottom:12px;">∅</div><div style="color:var(--text3); font-size:14px;">No products match your filters.</div></div>
+          </div>
+          <div class="ai-side-nexus">
+            <div class="ai-head-nexus"><div><div class="ai-title-nexus">Assistant</div><div class="ai-status-nexus">● Online</div></div><div class="ai-badge-nexus">AI</div></div>
+            <div class="ai-body-nexus"><div *ngFor="let m of chatMessages" class="ai-msg-nexus" [class.user]="m.sender === 'user'"><div class="ai-bub-nexus">{{m.text}}</div></div></div>
+            <div class="ai-foot-nexus"><input [(ngModel)]="prompt" (keyup.enter)="sendQuery()" placeholder="Search via AI..."/><div class="ai-send-nexus" (click)="sendQuery()">Send</div></div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="app-content" style="padding:0; display:flex; flex-direction:column; height: calc(100vh - 140px);">
-      
-      <!-- SEARCH BAR -->
-      <div class="search-wrap">
-        <div class="search-box">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="#3ECFB2" stroke-width="1.2"/><path d="M10 10l2.5 2.5" stroke="#3ECFB2" stroke-width="1.2" stroke-linecap="round"/></svg>
-          <input id="search-input" placeholder="Search 50,000+ products..." [(ngModel)]="searchQuery"/>
-          <div class="search-count">{{filteredProducts.length}} results</div>
-        </div>
-        <div class="filter-toggle-btn" [class.active]="filtersOpen" (click)="filtersOpen = !filtersOpen">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h10M3.5 6.5h6M5.5 9.5h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-          Filters
-          <div id="filter-badge" [class.show]="activeFilters.length > 0">{{activeFilters.length}}</div>
-        </div>
-      </div>
-
-      <!-- ACTIVE FILTER CHIPS -->
-      <div class="active-filters" [class.show]="activeFilters.length > 0">
-        <div class="af-chip" *ngFor="let f of activeFilters">{{f}} <span class="af-x" (click)="removeFilter(f)">×</span></div>
-        <div class="af-clear" *ngIf="activeFilters.length > 1" (click)="clearAll()">Clear all</div>
-      </div>
-
-      <div class="con-body" style="flex:1; overflow:hidden; display:flex; width:100%;">
-
-        <!-- FILTER PANEL -->
-        <div class="con-sidebar filter-panel" [class.collapsed]="!filtersOpen" style="overflow-y:auto; width:260px; border-right:1px solid var(--border);">
-          <div class="fp-inner">
-            <div class="fs">
-              <div class="fs-head" (click)="catOpen = !catOpen">
-                <div class="fs-title">Category</div>
-                <div class="fs-arrow" [class.open]="catOpen">▾</div>
-              </div>
-              <div class="fs-body" [class.closed]="!catOpen">
-                 <div class="fcheck" *ngFor="let c of categories" [class.checked]="c.checked" (click)="toggleFilter(c)">
-                   <div class="fcheck-box"><svg *ngIf="c.checked" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-                   <span class="fcheck-label">{{c.name}}</span>
-                 </div>
-              </div>
-            </div>
-
-            <div class="fs">
-              <div class="fs-head" (click)="priceOpen = !priceOpen">
-                <div class="fs-title">Price Range</div>
-                <div class="fs-arrow" [class.open]="priceOpen">▾</div>
-              </div>
-              <div class="fs-body" [class.closed]="!priceOpen">
-                <div class="price-inputs">
-                  <input class="price-input" [value]="0" readonly/>
-                  <div class="price-sep">—</div>
-                  <input class="price-input" [(ngModel)]="maxPrice" />
-                </div>
-                <div class="range-wrap">
-                  <div class="range-track"><div class="range-fill" [style.right]="(100 - (maxPrice/2000)*100) + '%'"></div></div>
-                  <input type="range" min="0" max="2000" [(ngModel)]="maxPrice"/>
-                </div>
-              </div>
-            </div>
-            
-            <div class="fs">
-              <div class="fs-head" (click)="ratingOpen = !ratingOpen">
-                <div class="fs-title">Rating</div>
-                <div class="fs-arrow" [class.open]="ratingOpen">▾</div>
-              </div>
-              <div class="fs-body" [class.closed]="!ratingOpen">
-                <div class="rating-opts">
-                  <div class="rating-opt" [class.sel]="minRating === 4" (click)="minRating = 4">
-                    <div class="stars-mini"><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star">★</span></div>
-                    <span class="rating-label">4+ stars</span>
-                  </div>
-                  <div class="rating-opt" [class.sel]="minRating === 0" (click)="minRating = 0">
-                    <div class="stars-mini"><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span><span class="sm-star fill">★</span></div>
-                    <span class="rating-label">Any</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PRODUCTS GRID -->
-        <div class="products-area" style="background:var(--bg); flex:1;">
-          <div class="sort-row">
-            <div class="results-label"><span>{{filteredProducts.length}}</span> products found</div>
-            <div class="sort-select">
-              Sort: Featured
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="#6A8A84" stroke-width="1.1" stroke-linecap="round"/></svg>
-            </div>
-          </div>
-
-          <div class="prod-grid" *ngIf="filteredProducts.length > 0">
-            <div class="prod-card" *ngFor="let p of filteredProducts" [routerLink]="['/product', p.productId]">
-              <div class="pc-img">
-                <img *ngIf="p.imageUrl" [src]="p.imageUrl" [alt]="p.name" style="width:100%; height:100%; object-fit:cover; border-radius:12px;"/>
-                <svg *ngIf="!p.imageUrl" width="52" height="52" viewBox="0 0 52 52" fill="none"><rect x="5" y="12" width="42" height="26" rx="3.5" stroke="#3ECFB2" stroke-width="1.2" opacity="0.5"/><rect x="19" y="38" width="14" height="3" rx="1.5" fill="rgba(62,207,178,0.2)"/><rect x="9" y="16" width="34" height="18" rx="2" fill="rgba(62,207,178,0.04)"/></svg>
-                <div class="pc-badge badge-new" *ngIf="p.stockQuantity > 50">New</div>
-              </div>
-              <div class="pc-body">
-                <div class="pc-cat">{{p.category}}</div>
-                <div class="pc-name">{{p.name}}</div>
-                <div class="pc-bottom">
-                  <div class="pc-price">{{p.basePrice | currency}}</div>
-                  <div class="pc-stars">
-                     <button (click)="$event.stopPropagation(); checkSentiment(p)" class="ripple-btn ghost" style="padding:2px 6px; font-size:9px; border-radius:4px; margin-right:4px;">AI Vibe</button>
-                     <span class="pc-star">★</span> 4.9
-                  </div>
-                </div>
-                <div *ngIf="sentiments[p.productId]" style="margin-top:8px; font-size:10px;" class="spill" [class.p-g]="sentiments[p.productId].averageScore > 0.5" [class.p-w]="sentiments[p.productId].averageScore <= 0.5">
-                   ● {{sentiments[p.productId].sentimentLabel}}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="no-results" *ngIf="filteredProducts.length === 0">
-            <div class="nr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="6.5" stroke="#344844" stroke-width="1.3"/><path d="M13.5 13.5l4 4" stroke="#344844" stroke-width="1.3" stroke-linecap="round"/></svg></div>
-            <div class="nr-title">No results found</div>
-            <div class="nr-sub">Try adjusting your filters or search term.</div>
-          </div>
-        </div>
-
-        <!-- AI ASSISTANT PANEL -->
-        <div class="ai-panel" style="width:320px; border-left:1px solid var(--border); display:flex; flex-direction:column; background:rgba(8,8,8,0.4);">
-          <div class="gc-head" style="padding:16px 20px; border-bottom:1px solid var(--border);">
-            <div class="gc-title">AI Shopping Assistant <span style="font-size:9px;color:var(--green);margin-left:8px;font-weight:400;">● online</span></div>
-          </div>
-          <div class="chat-msgs" style="flex:1; overflow-y:auto; padding:20px;">
-            <div *ngFor="let msg of chatMessages" class="cmsg" [class.r]="msg.sender === 'user'">
-              <div class="cav">{{msg.sender === 'user' ? 'ME' : 'AI'}}</div>
-              <div class="cbub">{{msg.text}}</div>
-            </div>
-          </div>
-          <div class="chat-ft" style="padding:16px 20px; border-top:1px solid var(--border);">
-            <input [(ngModel)]="prompt" (keyup.enter)="sendQuery()" class="cinput" placeholder="Ask about products...">
-            <div class="csend" (click)="sendQuery()" style="display:flex; align-items:center;">Send →</div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  `
+  `,
+  styles: [`
+    .page-frame { height: 100vh; display:flex; flex-direction:column; background:var(--bg); overflow:hidden; }
+    .navbar-nexus { padding:14px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); background:rgba(8,8,8,0.9); backdrop-filter:blur(20px); z-index:100; }
+    .search-box-nexus { display:flex; align-items:center; gap:10px; background:var(--glass); border:1px solid var(--border); border-radius:12px; padding:0 15px; width:300px; height:38px; }
+    .search-box-nexus input { background:transparent; border:none; color:var(--text); font-size:12px; outline:none; flex:1; }
+    .body-frame { display:flex; flex:1; overflow:hidden; }
+    .sidebar-nexus { display:flex; flex-direction:column; gap:24px; border-right:1px solid var(--border); background:rgba(8,8,8,0.2); }
+    .fs-head { display:flex; align-items:center; justify-content:space-between; font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.1em; font-weight:600; cursor:pointer; margin-bottom:15px; }
+    .cat-row-nexus { display:flex; align-items:center; gap:10px; padding:6px 0; font-size:12.5px; color:var(--text2); cursor:pointer; transition:all 0.15s; }
+    .cat-row-nexus:hover { color:var(--text); }
+    .cat-chk-nexus { width:14px; height:14px; border-radius:4px; border:1px solid var(--border2); position:relative; }
+    .cat-chk-nexus.checked { background:var(--teal); border-color:var(--teal); }
+    .range-nexus { width:100%; height:4px; appearance:none; background:var(--glass2); border-radius:2px; outline:none; }
+    .range-nexus::-webkit-slider-thumb { appearance:none; width:12px; height:12px; border-radius:50%; background:var(--teal); cursor:pointer; }
+    .product-grid-nexus { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:20px; }
+    .pcard-nexus { background:var(--glass); border:1px solid var(--border); border-radius:16px; overflow:hidden; transition:all 0.3s cubic-bezier(0.4,0,0.2,1); }
+    .pcard-nexus:hover { transform:translateY(-5px); border-color:var(--teal-glow); box-shadow:0 15px 35px rgba(0,0,0,0.4); }
+    .pc-image-nexus { height:180px; background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:pointer; }
+    .pc-image-nexus img { max-height:140px; }
+    .pc-overlay-nexus { position:absolute; bottom:0; left:0; width:100%; padding:10px; background:rgba(62,207,178,0.8); color:#000; font-size:11px; font-weight:600; text-align:center; transform:translateY(100%); transition:transform 0.3s; }
+    .pcard-nexus:hover .pc-overlay-nexus { transform:translateY(0); }
+    .pc-info-nexus { padding:15px; }
+    .pc-cat-nexus { font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:5px; }
+    .pc-name-nexus { font-size:13px; font-weight:500; color:var(--text); margin-bottom:12px; height:34px; line-height:1.3; }
+    .pc-footer-nexus { display:flex; align-items:center; justify-content:space-between; }
+    .pc-price-nexus { font-family:'JetBrains Mono',monospace; font-size:15px; color:var(--teal2); }
+    .pc-add-nexus { width:28px; height:28px; border-radius:8px; border:1px solid var(--border2); background:var(--glass2); display:flex; align-items:center; justify-content:center; color:var(--text2); cursor:pointer; transition:0.2s; }
+    .pc-add-nexus:hover { background:var(--teal); color:#000; border-color:var(--teal); }
+    .pc-sent-nexus { margin-top:10px; font-size:10px; color:var(--amber); display:flex; align-items:center; gap:5px; }
+    .pc-sent-nexus.pos { color:var(--green); }
+    .pc-sent-dot { width:4px; height:4px; border-radius:50%; background:currentColor; }
+    .ai-side-nexus { width:300px; border-left:1px solid var(--border); background:rgba(8,8,8,0.3); display:flex; flex-direction:column; }
+    .ai-head-nexus { padding:20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .ai-title-nexus { font-size:13px; font-weight:600; color:var(--text); }
+    .ai-status-nexus { font-size:9px; color:var(--green); margin-top:2px; }
+    .ai-badge-nexus { background:var(--teal-dim); color:var(--teal); padding:3px 8px; border-radius:8px; font-size:9px; font-weight:600; border:1px solid var(--border2); }
+    .ai-body-nexus { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; }
+    .ai-msg-nexus { max-width:85%; padding:10px 14px; border-radius:14px; font-size:12px; line-height:1.5; background:var(--glass2); color:var(--text2); border:1px solid var(--border); align-self:flex-start; }
+    .ai-msg-nexus.user { background:var(--teal-dim); color:var(--text); align-self:flex-end; border-color:var(--teal-glow); }
+    .ai-foot-nexus { padding:20px; border-top:1px solid var(--border); display:flex; gap:10px; }
+    .ai-foot-nexus input { flex:1; background:var(--glass); border:1px solid var(--border); padding:8px 12px; border-radius:10px; font-size:12px; color:var(--text); outline:none; }
+    .ai-send-nexus { padding:8px 15px; background:var(--teal); color:#000; border-radius:10px; font-size:11.5px; font-weight:600; cursor:pointer; }
+  `]
 })
 export class ConsumerComponent implements OnInit {
   products: any[] = [];
@@ -438,18 +417,12 @@ export class ConsumerComponent implements OnInit {
   prompt = '';
   chatMessages: any[] = [{ sender: 'ai', text: 'Welcome to Nexus Store! Tell me what you are looking for today.' }];
   history: string[] = [];
-
-  // PLP State
   searchQuery = '';
   filtersOpen = true;
   maxPrice = 1500;
-  minRating = 0;
   catOpen = true;
   priceOpen = true;
-  ratingOpen = true;
-
   categories: {name: string, checked: boolean}[] = [];
-
   auth = inject(AuthService);
   ai = inject(AiService);
   productService = inject(ProductService);
@@ -461,11 +434,7 @@ export class ConsumerComponent implements OnInit {
       this.categories = cats.map((c: any) => ({ name: c, checked: false }));
     });
   }
-
-  get activeFilters() {
-    return this.categories.filter(c => c.checked).map(c => c.name);
-  }
-
+  get activeFilters() { return this.categories.filter(c => c.checked).map(c => c.name); }
   get filteredProducts() {
     let list = this.products || [];
     if (this.searchQuery) {
@@ -474,39 +443,23 @@ export class ConsumerComponent implements OnInit {
     }
     list = list.filter(p => p.basePrice <= this.maxPrice);
     const selCats = this.activeFilters;
-    if (selCats.length > 0) {
-      list = list.filter(p => selCats.includes(p.category));
-    }
+    if (selCats.length > 0) list = list.filter(p => selCats.includes(p.category));
     return list;
   }
-
-  toggleFilter(c: any) {
-    c.checked = !c.checked;
-  }
-
-  removeFilter(name: string) {
-    const c = this.categories.find(x => x.name === name);
-    if(c) c.checked = false;
-  }
-
-  clearAll() {
-    this.categories.forEach(c => c.checked = false);
-  }
-
+  toggleFilter(c: any) { c.checked = !c.checked; }
+  clearAll() { this.categories.forEach(c => c.checked = false); }
   checkSentiment(p: any) {
     this.productService.getSentiment(p.productId).subscribe(res => {
       this.sentiments[p.productId] = res;
     });
   }
-
   sendQuery() {
     if (!this.prompt) return;
     const userMsg = this.prompt;
     this.chatMessages.push({ sender: 'user', text: userMsg });
     this.prompt = '';
-
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    this.ai.query(userMsg, user.userId || 1, user.role, this.history).subscribe(res => {
+    const user = this.auth.currentUserValue || { userId: 1, role: 'CONSUMER' };
+    this.ai.query(userMsg, user.userId, user.role, this.history).subscribe(res => {
       this.chatMessages.push({ sender: 'ai', text: res.response });
       this.history.push(`User: ${userMsg}`, `AI: ${res.response}`);
     });
@@ -516,37 +469,67 @@ export class ConsumerComponent implements OnInit {
 @Component({
   selector: 'app-manager',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <div class="page-head" style="display:flex;justify-content:space-between;">
-      <div>
-        <div class="page-title">Store Operations</div>
-        <div class="page-sub">Management Panel</div>
+    <div class="page-frame">
+      <div class="navbar-nexus">
+        <div style="display:flex;align-items:center;gap:15px;">
+          <div class="logo-admin"><div class="logo-dot-admin"></div>Nexus</div>
+          <div class="admin-badge-nexus" style="background:var(--blue-dim); color:var(--blue); border-color:rgba(107,168,200,0.2);">Manager</div>
+        </div>
+        <div class="nav-r-nexus">
+          <div class="nav-notif-nexus"><div class="notif-dot-nexus"></div><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4.8 1.5 3 3.3 3 5.5V8l-1 1.5h10L11 8V5.5c0-2.2-1.8-4-4-4Z" stroke="#6A8A84" stroke-width="1.1"/><path d="M5.5 11c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="#6A8A84" stroke-width="1.1"/></svg></div>
+          <div class="nav-av-nexus">{{auth.currentUserValue?.fullName?.charAt(0)}}</div>
+        </div>
       </div>
-      <div class="head-r">
-        <div class="admin-badge" style="background:var(--blue-dim); color:var(--blue); border-color:var(--blue-dim);">Manager</div>
-      </div>
-    </div>
-    <div class="app-content">
-      <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">Your Products</div><div class="kpi-val">{{products.length}}</div><div class="kpi-delta up">↑ Active</div></div>
-        <div class="kpi"><div class="kpi-label">Store Rating</div><div class="kpi-val">4.8★</div><div class="kpi-delta up">Excellent</div></div>
-        <div class="kpi"><div class="kpi-label">Low Stock</div><div class="kpi-val">3</div><div class="kpi-delta dn">Action needed</div></div>
-        <div class="kpi"><div class="kpi-label">Today's Sales</div><div class="kpi-val">$2,840</div><div class="kpi-delta up">↑ 8%</div></div>
-      </div>
-      <div class="table-card" style="background:var(--glass); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
-        <div class="gc-head" style="padding:15px; border-bottom:1px solid var(--border);"><div class="gc-title">Inventory Overview</div></div>
-        <table class="tbl">
-          <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
-          <tbody>
-            <tr *ngFor="let p of products">
-              <td class="td-name">{{p.name}}</td>
-              <td>{{p.category}}</td>
-              <td style="font-family:'JetBrains Mono',monospace;">{{p.basePrice | currency}}</td>
-              <td><span class="spill" [class.sp-green]="p.stockQuantity > 10" [class.sp-amber]="p.stockQuantity <= 10">● {{p.stockQuantity}}</span></td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="body-frame">
+        <div class="sidebar-nexus">
+          <div class="sg-label-admin">Navigation</div>
+          <div class="sitem-nexus active">
+            <div class="sitem-l-nexus">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.2" fill="currentColor"/><rect x="7" y="1" width="5" height="5" rx="1.2" fill="currentColor"/><rect x="1" y="7" width="5" height="5" rx="1.2" fill="currentColor"/><rect x="7" y="7" width="5" height="5" rx="1.2" fill="currentColor"/></svg>
+              Store Ops
+            </div>
+          </div>
+          <div class="sitem-nexus" routerLink="/settings">
+            <div class="sitem-l-nexus">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1v1.2M6.5 10.8V12M1 6.5h1.2M10.8 6.5H12" stroke="currentColor" stroke-width="1.1"/></svg>
+              My Profile
+            </div>
+          </div>
+          <div class="sidebar-foot-nexus">
+            <div class="s-user-nexus" (click)="auth.logout()" style="cursor:pointer; margin-bottom:8px;">
+              <div><div class="su-name-nexus">{{auth.currentUserValue?.fullName}}</div><div class="su-role-nexus">Manager · Logout</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="main-nexus">
+           <div class="panel-nexus">
+             <div class="top-bar-nexus"><div><div class="page-title-nexus">Operations</div><div class="page-sub-nexus">Manage your store inventory and sales performance.</div></div></div>
+             
+             <div class="kpi-row-nexus">
+              <div class="kpi-nexus"><div class="kpi-label-nexus">Your Products</div><div class="kpi-val-nexus">{{products.length}}</div><div class="kpi-delta-nexus up">↑ Active</div></div>
+              <div class="kpi-nexus"><div class="kpi-label-nexus">Store Rating</div><div class="kpi-val-nexus">4.8★</div><div class="kpi-delta-nexus up">Excellent</div></div>
+              <div class="kpi-nexus"><div class="kpi-label-nexus">Low Stock</div><div class="kpi-val-nexus">3</div><div class="kpi-delta-nexus" style="color:var(--red);">Action needed</div></div>
+              <div class="kpi-nexus"><div class="kpi-label-nexus">Today's Sales</div><div class="kpi-val-nexus">$2,840</div><div class="kpi-delta-nexus up">↑ 8%</div></div>
+             </div>
+
+             <div class="table-card-nexus">
+               <div class="gc-head-nexus"><div class="gc-title-nexus">Inventory Overview</div><button class="sc-btn-nexus primary" style="padding:6px 12px; font-size:10px;">+ Add Product</button></div>
+               <table class="tbl-nexus">
+                 <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
+                 <tbody>
+                   <tr *ngFor="let p of products">
+                     <td class="td-name-nexus">{{p.name}}</td>
+                     <td>{{p.category}}</td>
+                     <td class="td-mono-nexus">{{p.basePrice | currency}}</td>
+                     <td><span class="spill-nexus" [class.sp-green]="p.stockQuantity > 10" [class.sp-amber]="p.stockQuantity <= 10">● {{p.stockQuantity}} units</span></td>
+                   </tr>
+                 </tbody>
+               </table>
+             </div>
+           </div>
+        </div>
       </div>
     </div>
   `
@@ -577,19 +560,15 @@ export class ManagerComponent implements OnInit {
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4.8 1.5 3 3.3 3 5.5V8l-1 1.5h10L11 8V5.5c0-2.2-1.8-4-4-4Z" stroke="#6A8A84" stroke-width="1.1"/><path d="M5.5 11c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="#6A8A84" stroke-width="1.1"/></svg>
             <div class="notif-dot-nexus"></div>
           </div>
-          <div class="nav-av-nexus">A</div>
+          <div class="nav-av-nexus">{{auth.currentUserValue?.fullName?.charAt(0)}}</div>
         </div>
       </div>
 
       <div class="body-frame">
-        <!-- SIDEBAR -->
-        <div class="sidebar-nexus">
+        <div class="sidebar-nexus" style="background: rgba(8,8,8,0.4);">
           <div class="sg-label-admin">Overview</div>
           <div class="sitem-nexus" [class.active]="tab === 'dashboard'" (click)="tab = 'dashboard'">
             <div class="sitem-l-nexus"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.6"/><rect x="7" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.4"/><rect x="1" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.4"/><rect x="7" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.3"/></svg>Dashboard</div>
-          </div>
-          <div class="sitem-nexus" [class.active]="tab === 'analytics'" (click)="tab = 'analytics'">
-            <div class="sitem-l-nexus"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 10L4 6l3 2 5-6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Analytics</div>
           </div>
 
           <div class="sg-label-admin">Management</div>
@@ -610,18 +589,23 @@ export class ManagerComponent implements OnInit {
 
           <div class="sg-label-admin" style="margin-top:auto;">System</div>
           <div class="sitem-nexus" [class.active]="tab === 'settings'" (click)="tab = 'settings'">
-            <div class="sitem-l-nexus"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1v1.2M6.5 10.8V12M1 6.5h1.2M10.8 6.5H12M2.6 2.6l.85.85M9.55 9.55l.85.85M2.6 10.4l.85-.85M9.55 3.45l.85-.85" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Settings</div>
+            <div class="sitem-l-nexus"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1v1.2M6.5 10.8V12M1 6.5h1.2M10.8 6.5H12M2.6 2.6l.85.85M9.55 9.55l.85.85M2.6 10.4l.85-.85M9.55 3.45l.85-.85" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Config</div>
           </div>
 
           <div class="sidebar-foot-nexus">
-            <div class="s-user-nexus">
-              <div class="nav-av-nexus" style="width:26px;height:26px;font-size:10px;flex-shrink:0;">A</div>
-              <div><div class="su-name-nexus">Admin</div><div class="su-role-nexus">Super Admin</div></div>
+            <div class="s-user-nexus" (click)="auth.logout()" title="Logout" style="cursor:pointer; margin-bottom: 8px;">
+              <div class="nav-av-nexus" style="width:26px;height:26px;font-size:10px;flex-shrink:0;">{{auth.currentUserValue?.fullName?.charAt(0)}}</div>
+              <div><div class="su-name-nexus">{{auth.currentUserValue?.fullName}}</div><div class="su-role-nexus">Admin · Logout</div></div>
             </div>
+            <button class="sc-btn-nexus" style="width:100%; border-radius:12px; font-size:10px; opacity:0.7;" [routerLink]="['/consumer']">← Shop View</button>
           </div>
         </div>
 
         <div class="main-nexus">
+          <div *ngIf="isLoading" style="padding:40px; text-align:center; color:var(--teal);">
+            <div class="set-spin" style="font-size:32px;">◌</div>
+            <div style="margin-top:12px; font-size:12px; letter-spacing:0.1em;">FETCHING PLATFORM DATA...</div>
+          </div>
           <!-- DASHBOARD PANEL -->
           <div class="panel-nexus" *ngIf="tab === 'dashboard'">
             <div class="top-bar-nexus">
@@ -633,10 +617,10 @@ export class ManagerComponent implements OnInit {
             </div>
 
             <div class="kpi-row-nexus">
-              <div class="kpi-nexus"><div class="kpi-label-nexus">Platform Revenue</div><div class="kpi-val-nexus">$847K</div><div class="kpi-delta-nexus up">↑ 22.4% this month</div></div>
-              <div class="kpi-nexus"><div class="kpi-label-nexus">Total Orders</div><div class="kpi-val-nexus">12,847</div><div class="kpi-delta-nexus up">↑ 14.2% this month</div></div>
-              <div class="kpi-nexus"><div class="kpi-label-nexus">Active Stores</div><div class="kpi-val-nexus">{{stores.length}}</div><div class="kpi-delta-nexus up">↑ 1 new this week</div></div>
-              <div class="kpi-nexus"><div class="kpi-label-nexus">Total Users</div><div class="kpi-val-nexus">24,391</div><div class="kpi-delta-nexus up">↑ 8.7% this month</div></div>
+              <div class="kpi-nexus"><div class="kpi-label-nexus">Platform Revenue</div><div class="kpi-val-nexus">{{stats.totalRevenue | currency}}</div><div class="kpi-delta-nexus up">↑ {{stats.revenueGrowth}}% this month</div></div>
+              <div class="kpi-nexus"><div class="kpi-label-nexus">Total Orders</div><div class="kpi-val-nexus">{{stats.totalOrders}}</div><div class="kpi-delta-nexus up">↑ Active</div></div>
+              <div class="kpi-nexus"><div class="kpi-label-nexus">Active Stores</div><div class="kpi-val-nexus">{{stats.totalStores}}</div><div class="kpi-delta-nexus up">↑ Online</div></div>
+              <div class="kpi-nexus"><div class="kpi-label-nexus">Total Users</div><div class="kpi-val-nexus">{{stats.totalUsers}}</div><div class="kpi-delta-nexus up">↑ {{stats.activeSessions}} live sessions</div></div>
             </div>
 
             <div class="chart-row-nexus">
@@ -715,12 +699,12 @@ export class ManagerComponent implements OnInit {
             <div class="store-grid-nexus">
               <div class="store-card-nexus" *ngFor="let s of stores">
                 <div class="sc-top-nexus">
-                  <div><div class="sc-name-nexus">{{s.name}}</div><div class="sc-owner-nexus">Owner: {{s.owner}}</div></div>
-                  <div class="sc-status-nexus sc-open"><div class="sc-dot-nexus green"></div>Open</div>
+                  <div><div class="sc-name-nexus">{{s.name}}</div><div class="sc-owner-nexus">Owner: {{s.ownerName}}</div></div>
+                  <div class="sc-status-nexus" [class.sc-open]="s.status === 'OPEN'"><div class="sc-dot-nexus" [class.green]="s.status === 'OPEN'"></div>{{s.status}}</div>
                 </div>
                 <div class="sc-stats-nexus">
-                  <div class="sc-stat-nexus"><div class="sc-stat-val-nexus">{{s.rev}}</div><div class="sc-stat-label-nexus">Revenue</div></div>
-                  <div class="sc-stat-nexus"><div class="sc-stat-val-nexus">{{s.orders}}</div><div class="sc-stat-label-nexus">Orders</div></div>
+                  <div class="sc-stat-nexus"><div class="sc-stat-val-nexus">{{s.totalRevenue | currency}}</div><div class="sc-stat-label-nexus">Revenue</div></div>
+                  <div class="sc-stat-nexus"><div class="sc-stat-val-nexus">{{s.orderCount}}</div><div class="sc-stat-label-nexus">Orders</div></div>
                   <div class="sc-stat-nexus"><div class="sc-stat-val-nexus">{{s.rating}}★</div><div class="sc-stat-label-nexus">Rating</div></div>
                 </div>
                 <div class="sc-actions-nexus">
@@ -742,7 +726,7 @@ export class ManagerComponent implements OnInit {
                 <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                   <tr *ngFor="let u of users">
-                    <td class="td-name-nexus">{{u.name}}</td>
+                    <td class="td-name-nexus">{{u.fullName}}</td>
                     <td>{{u.email}}</td>
                     <td><span class="spill-nexus sp-blue">{{u.role}}</span></td>
                     <td><span class="spill-nexus sp-green">Active</span></td>
@@ -799,125 +783,68 @@ export class ManagerComponent implements OnInit {
 
           <!-- SETTINGS PANEL -->
           <div class="panel-nexus" *ngIf="tab === 'settings'">
-            <div class="top-bar-nexus"><div><div class="page-title-nexus">System Settings</div><div class="page-sub-nexus">Platform configuration.</div></div></div>
-            <div style="max-width:480px; display:flex; flex-direction:column; gap:12px;">
-              <div class="gcard-nexus" style="padding:16px;">
-                <div class="gc-title-nexus" style="margin-bottom:12px;">Platform Controls</div>
-                <div style="display:flex; flex-direction:column; gap:12px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13px; color:var(--text2);">Maintenance Mode</span><div class="tog-nexus-mini off"></div></div>
-                  <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13px; color:var(--text2);">New Registrations</span><div class="tog-nexus-mini on"></div></div>
-                  <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13px; color:var(--text2);">AI Shopping Assistant</span><div class="tog-nexus-mini on"></div></div>
+            <div class="top-bar-nexus" style="margin-bottom:24px;">
+              <div><div class="page-title-nexus">System Settings</div><div class="page-sub-nexus">Configure platform-wide behavior and AI parameters.</div></div>
+              <button class="set-save-btn" (click)="saveSettings($event)" style="transform: scale(0.9);">Save Configuration</button>
+            </div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+              <div class="set-notif-list" style="border-radius:14px;">
+                <div style="padding:16px 20px; border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text3); font-weight:600;">Core Platform</div>
+                <div class="set-notif-row">
+                  <div class="set-notif-body">
+                    <div class="set-notif-title">Maintenance Mode</div>
+                    <div class="set-notif-desc">Disable public access to the storefront</div>
+                  </div>
+                  <div class="set-tog" [class.on]="sysSettings.maintenance" (click)="sysSettings.maintenance = !sysSettings.maintenance"><div class="set-tog-thumb"></div></div>
+                </div>
+                <div class="set-notif-row">
+                  <div class="set-notif-body">
+                    <div class="set-notif-title">New Registrations</div>
+                    <div class="set-notif-desc">Allow new users to create accounts</div>
+                  </div>
+                  <div class="set-tog" [class.on]="sysSettings.registrations" (click)="sysSettings.registrations = !sysSettings.registrations"><div class="set-tog-thumb"></div></div>
                 </div>
               </div>
+
+              <div class="set-notif-list" style="border-radius:14px;">
+                <div style="padding:16px 20px; border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text3); font-weight:600;">AI Engine</div>
+                <div class="set-notif-row">
+                  <div class="set-notif-body">
+                    <div class="set-notif-title">Text2SQL Assistant</div>
+                    <div class="set-notif-desc">Enable LangGraph-powered AI shopping assistant</div>
+                  </div>
+                  <div class="set-tog" [class.on]="sysSettings.aiAssistant" (click)="sysSettings.aiAssistant = !sysSettings.aiAssistant"><div class="set-tog-thumb"></div></div>
+                </div>
+                <div class="set-notif-row">
+                  <div class="set-notif-body">
+                    <div class="set-notif-title">Sentiment Analysis</div>
+                    <div class="set-notif-desc">Auto-calculate product sentiment on review</div>
+                  </div>
+                  <div class="set-tog" [class.on]="sysSettings.aiSentiment" (click)="sysSettings.aiSentiment = !sysSettings.aiSentiment"><div class="set-tog-thumb"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="set-danger-zone" style="margin-top:24px; border-radius:14px;">
+              <div class="set-dz-title">Advanced: Re-index Database</div>
+              <div class="set-dz-desc">Recalculate all AI embeddings and refresh search index. This may take several minutes and impact performance.</div>
+              <button class="set-dz-btn" (click)="reindex($event)">Re-index Now</button>
             </div>
           </div>
         </div>
       </div>
     </div>
-  `,
-  styles: [`
-    .page-frame{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);display:flex;flex-direction:column;height:calc(100vh - 20px); overflow:hidden;}
-    
-    .navbar-nexus{display:flex;align-items:center;justify-content:space-between;padding:12px 22px;border-bottom:1px solid var(--border);background:rgba(8,8,8,0.95);backdrop-filter:blur(20px);flex-shrink:0;z-index:20;}
-    .logo-admin{font-family:'Playfair Display',serif;font-style:italic;font-size:18px;color:var(--text);display:flex;align-items:center;gap:7px;}
-    .logo-dot-admin{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 6px var(--teal-glow);}
-    .admin-badge-nexus{background:var(--red-dim);border:1px solid var(--red-border);color:var(--red);font-size:9px;padding:2px 8px;border-radius:8px;letter-spacing:0.06em;text-transform:uppercase;}
-    .nav-r-nexus{display:flex;align-items:center;gap:10px;}
-    .nav-notif-nexus{width:32px;height:32px;border-radius:50%;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;}
-    .notif-dot-nexus{position:absolute;top:-1px;right:-1px;width:8px;height:8px;border-radius:50%;background:var(--red);border:1.5px solid var(--bg);}
-    .nav-av-nexus{width:30px;height:30px;border-radius:50%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.25);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--teal);}
-
-    .body-frame{display:flex;flex:1;overflow:hidden;}
-    .sidebar-nexus{width:200px;min-width:200px;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:14px 10px;background:rgba(8,8,8,0.6);}
-    .sg-label-admin{font-size:8.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);padding:0 10px;margin-bottom:5px;margin-top:14px;}
-    .sitem-nexus{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:20px;font-size:12.5px;color:var(--text2);cursor:pointer;transition:all 0.15s;margin-bottom:1px;justify-content:space-between;}
-    .sitem-nexus.active{background:var(--teal-dim);color:var(--teal2);border:1px solid rgba(62,207,178,0.18);}
-    .sitem-nexus:not(.active):hover{background:var(--glass2);color:var(--text);}
-    .sitem-l-nexus{display:flex;align-items:center;gap:8px;}
-    .sitem-badge-nexus{font-size:9px;padding:1px 6px;border-radius:8px;background:var(--red-dim);color:var(--red);border:1px solid var(--red-border);}
-    .sitem-badge-nexus.green{background:var(--green-dim);color:var(--green);border-color:rgba(62,201,138,0.2);}
-    .sidebar-foot-nexus{margin-top:auto;padding-top:10px;border-top:1px solid var(--border);}
-    .s-user-nexus{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:20px;background:var(--glass);border:1px solid var(--border);}
-    .su-name-nexus{font-size:11.5px;color:var(--text);font-weight:500;}
-    .su-role-nexus{font-size:9px;color:var(--text3);}
-
-    .main-nexus{flex:1;overflow-y:auto;background:transparent; padding:20px;}
-    .panel-nexus{display:block; animation:fadein 0.4s ease forwards;}
-    @keyframes fadein{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-
-    .top-bar-nexus{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px;}
-    .page-title-nexus{font-family:'Playfair Display',serif;font-size:20px;font-style:italic;color:var(--text);}
-    .page-sub-nexus{font-size:11px;color:var(--text3);margin-top:3px;}
-    .tbtn-nexus{padding:7px 14px;border-radius:20px;font-size:11.5px;cursor:pointer;font-family:inherit;transition:all 0.15s; border:none;}
-    .tbtn-nexus.ghost{background:var(--glass);border:1px solid var(--border2);color:var(--text2);}
-    .tbtn-nexus.primary{background:var(--teal);color:#080808;font-weight:600;}
-
-    .kpi-row-nexus{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
-    .kpi-nexus{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:13px 15px;position:relative;overflow:hidden;}
-    .kpi-label-nexus{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
-    .kpi-val-nexus{font-family:'Playfair Display',serif;font-size:22px;color:var(--text);line-height:1;margin-bottom:5px;}
-    .kpi-delta-nexus{font-size:10px;display:flex;align-items:center;gap:3px;}
-    .up{color:var(--green);}
-
-    .chart-row-nexus{display:grid;grid-template-columns:1fr 240px;gap:10px;margin-bottom:10px;}
-    .gcard-nexus{background:var(--glass);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-    .gc-head-nexus{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; height:40px;}
-    .gc-title-nexus{font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text2);}
-    .gc-link-nexus{font-size:10px;color:var(--text3);cursor:pointer;}
-    .gc-body-nexus{padding:12px 15px;}
-
-    .bar-chart-nexus{display:flex;align-items:flex-end;gap:5px;height:80px;}
-    .bc-col-nexus{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;}
-    .bc-bar-nexus{width:100%;border-radius:3px 3px 0 0;background:rgba(62,207,178,0.1);transition:all 0.3s;cursor:pointer;}
-    .bc-bar-nexus.active-bar{background:rgba(62,207,178,0.4);}
-    .bc-label-nexus{font-size:8px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
-
-    .donut-wrap-nexus{display:flex;align-items:center;gap:12px;}
-    .donut-legend-nexus{display:flex;flex-direction:column;gap:7px;}
-    .dl-item-nexus{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2);}
-    .dl-dot-nexus{width:7px;height:7px;border-radius:50%;}
-
-    .table-card-nexus{background:var(--glass);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
-    .tbl-nexus{width:100%;border-collapse:collapse;}
-    .tbl-nexus th{padding:8px 14px;font-size:8.5px;letter-spacing:0.11em;text-transform:uppercase;color:var(--text3);text-align:left;font-weight:400;border-bottom:1px solid var(--border);}
-    .tbl-nexus td{padding:8px 14px;font-size:12px;color:var(--text2);border-bottom:1px solid rgba(255,255,255,0.03);}
-    .td-name-nexus{color:var(--text);font-weight:500;}
-    .td-mono-nexus{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);opacity:0.8;}
-    .td-amt-nexus{color:var(--text);font-weight:500;}
-    .spill-nexus{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;}
-    .sp-green{background:var(--green-dim);color:var(--green);}
-    .sp-blue{background:var(--blue-dim);color:var(--blue);}
-    .sp-amber{background:var(--amber-dim);color:var(--amber);}
-    .sp-red{background:var(--red-dim);color:var(--red);}
-
-    .store-grid-nexus{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-    .store-card-nexus{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
-    .sc-top-nexus{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
-    .sc-name-nexus{font-size:13px;font-weight:500;color:var(--text);}
-    .sc-owner-nexus{font-size:11px;color:var(--text3);}
-    .sc-status-nexus{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 9px;border-radius:10px;}
-    .sc-open{background:var(--green-dim);color:var(--green);border:1px solid rgba(62,201,138,0.18);}
-    .sc-stats-nexus{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
-    .sc-stat-nexus{text-align:center;}
-    .sc-stat-val-nexus{font-size:14px;font-weight:500;color:var(--text);}
-    .sc-stat-label-nexus{font-size:9px;color:var(--text3);text-transform:uppercase;}
-    .sc-actions-nexus{display:flex;gap:6px;}
-    .sc-btn-nexus{flex:1;padding:6px 0;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--glass);color:var(--text2);}
-    .sc-btn-nexus.danger{color:var(--red);border-color:var(--red-border);}
-    .sc-dot-nexus{width:6px;height:6px;border-radius:50%;}
-    .sc-dot-nexus.green{background:var(--green);box-shadow:0 0 4px var(--green);}
-    
-    .tog-nexus-mini{width:28px; height:16px; border-radius:10px; position:relative; cursor:pointer;}
-    .tog-nexus-mini.on{background:var(--teal);}
-    .tog-nexus-mini.off{background:rgba(255,255,255,0.1);}
-    .tog-nexus-mini::after{content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#fff; transition:0.2s;}
-    .tog-nexus-mini.on::after{left:14px;}
-  `]
+  `
 })
 export class AdminComponent implements OnInit {
   tab = 'dashboard';
+  isLoading = true;
   auth = inject(AuthService);
   productService = inject(ProductService);
+  storeService = inject(StoreService);
+  adminService = inject(AdminService);
+  toast = inject(ToastService);
   
   months = [
     {label:'J', val:35}, {label:'F', val:52}, {label:'M', val:44}, {label:'A', val:68},
@@ -925,31 +852,78 @@ export class AdminComponent implements OnInit {
     {label:'S', val:65}, {label:'O', val:100}, {label:'N', val:74}, {label:'D', val:30}
   ];
   
-  stores = [
-    { name: 'Nexus Main Store', owner: 'Admin', rev: '$427K', orders: '6,421', rating: '4.9' },
-    { name: 'TechHub Store', owner: 'James W.', rev: '$218K', orders: '3,104', rating: '4.7' },
-    { name: 'GadgetPro', owner: 'Sara M.', rev: '$142K', orders: '2,089', rating: '4.8' },
-    { name: 'ByteShop', owner: 'Pending', rev: '$60K', orders: '1,233', rating: '4.5' }
-  ];
-
-  users = [
-    { name: 'Buse Ünal', email: 'buse@akdeniz.edu.tr', role: 'Super Admin' },
-    { name: 'James Wilson', email: 'james@techhub.com', role: 'Store Owner' },
-    { name: 'Sarah Miller', email: 'sarah@outlook.com', role: 'Consumer' }
-  ];
-
-  orders = [
-    { id: '#ORD-7821', customer: 'Buse Ü.', store: 'Nexus Main', amount: '$1,788', status: 'Shipped', class: 'sp-blue' },
-    { id: '#ORD-7820', customer: 'James W.', store: 'TechHub', amount: '$284', status: 'Delivered', class: 'sp-green' },
-    { id: '#ORD-7819', customer: 'Emily J.', store: 'Nexus Main', amount: '$432', status: 'Pending', class: 'sp-amber' },
-    { id: '#ORD-7818', customer: 'Ali K.', store: 'GadgetPro', amount: '$99', status: 'Delivered', class: 'sp-green' },
-    { id: '#ORD-7817', customer: 'Sarah M.', store: 'TechHub', amount: '$2,241', status: 'Cancelled', class: 'sp-red' }
-  ];
-
+  stores: any[] = [];
+  users: any[] = [];
+  orders: any[] = [];
   pagedProducts: any[] = [];
+  stats: any = {};
+
+  sysSettings = {
+    maintenance: false,
+    registrations: true,
+    aiAssistant: true,
+    aiSentiment: true
+  };
 
   ngOnInit() {
-    this.productService.getProducts().subscribe(res => this.pagedProducts = res);
+    this.refreshData();
+  }
+
+  refreshData() {
+    this.isLoading = true;
+    const reqs = [
+      this.productService.getProducts(),
+      this.storeService.getStores(),
+      this.adminService.getUsers(),
+      this.adminService.getOrders(),
+      this.adminService.getStats()
+    ];
+
+    import('rxjs').then(({ forkJoin }) => {
+      forkJoin(reqs).subscribe({
+        next: ([p, s, u, o, st]) => {
+          this.pagedProducts = p;
+          this.stores = s;
+          this.users = u;
+          this.orders = o;
+          this.stats = st;
+          if (st.monthlyRevenue) {
+             this.months = st.monthlyRevenue;
+          }
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.toast.show('Failed to fetch platform data', 'error');
+          this.isLoading = false;
+        }
+      });
+    });
+  }
+
+  saveSettings(event: any) {
+    const btn = event.currentTarget;
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="set-spin">◌</span> Saving...';
+    setTimeout(() => {
+      btn.innerHTML = '✓ Saved';
+      btn.style.background = 'var(--green)';
+      setTimeout(() => {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+        btn.style.background = '';
+      }, 2000);
+    }, 1000);
+  }
+
+  reindex(event: any) {
+    const btn = event.currentTarget;
+    btn.innerHTML = 'Indexleme Başladı...';
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.innerHTML = 'Re-index Now';
+      btn.disabled = false;
+    }, 5000);
   }
 }
 
@@ -958,74 +932,155 @@ export class AdminComponent implements OnInit {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <div class="set-body" style="display:flex; height:calc(100vh - 64px); width:100%;">
-      <div class="set-sidebar" style="width:200px; border-right:1px solid var(--border); padding:20px 10px; display:flex; flex-direction:column; gap:4px;">
-        <div class="sidebar-title">Account</div>
-        <div class="sitem" [class.active]="tab === 'personal'" (click)="tab = 'personal'">Personal Info</div>
-        <div class="sitem" [class.active]="tab === 'password'" (click)="tab = 'password'">Password</div>
-        <div class="sidebar-title">Preferences</div>
-        <div class="sitem" [class.active]="tab === 'notifs'" (click)="tab = 'notifs'">Notifications</div>
-        <div class="sitem" [class.active]="tab === 'privacy'" (click)="tab = 'privacy'">Privacy</div>
-        <div class="danger-item" (click)="tab = 'danger'" style="margin-top:auto; color:var(--red); font-size:12px; cursor:pointer; padding:10px;">
-          Danger Zone
+    <div class="page-frame">
+      <div class="navbar-nexus">
+        <div style="display:flex;align-items:center;gap:15px;">
+          <div class="logo-admin" routerLink="/consumer"><div class="logo-dot-admin"></div>Nexus Settings</div>
+        </div>
+        <div class="nav-r-nexus">
+          <div class="mag-pill" style="font-size:11px; padding:6px 14px; border-radius:12px;" (click)="goBack()">← Exit Settings</div>
         </div>
       </div>
-      <div class="set-main" style="flex:1; padding:24px; overflow-y:auto;">
-        <div *ngIf="tab === 'personal'">
-          <div class="sec-head" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
-            <div><div class="sec-title">Personal Info</div><div class="sec-sub">Update your profile details.</div></div>
-            <button class="save-btn" style="background:var(--teal); color:#080808; padding:10px 24px; border-radius:22px; border:none; font-weight:600; cursor:pointer;">Save Changes</button>
-          </div>
-          <div class="avatar-section-nexus">
-            <div class="av-circle-nexus">B</div>
-            <div class="av-info">
-              <div class="av-name" style="font-size:16px; font-weight:500;">Buse Ünal</div>
-              <div class="av-email" style="font-size:12px; color:var(--text3);">buse@akdeniz.edu.tr</div>
-            </div>
-            <button class="tbtn tbtn-ghost" style="background:var(--glass); border:1px solid var(--border2); color:var(--text2); padding:6px 12px; border-radius:20px; font-size:11px;">Change Photo</button>
-          </div>
-          <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-            <div class="field"><div class="fl" style="font-size:11px; color:var(--text2); margin-bottom:4px;">First Name</div><input class="fi" value="Buse"/></div>
-            <div class="field"><div class="fl" style="font-size:11px; color:var(--text2); margin-bottom:4px;">Last Name</div><input class="fi" value="Ünal"/></div>
-            <div class="field"><div class="fl" style="font-size:11px; color:var(--text2); margin-bottom:4px;">Email</div><input class="fi" value="buse@akdeniz.edu.tr"/></div>
-            <div class="field"><div class="fl" style="font-size:11px; color:var(--text2); margin-bottom:4px;">Phone</div><input class="fi" value="+90 555 123 45 67"/></div>
-          </div>
-        </div>
-        <div *ngIf="tab === 'notifs'">
-          <div class="sec-head" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
-            <div><div class="sec-title">Notifications</div><div class="sec-sub">Manage your alerts.</div></div>
-          </div>
-          <div class="notif-list" style="display:flex; flex-direction:column; gap:1px; border:1px solid var(--border); border-radius:12px; overflow:hidden;">
-            <div class="notif-row-nexus" *ngFor="let n of notifs">
-              <div class="notif-body" style="flex:1;">
-                <div class="notif-title" style="font-size:13px; font-weight:500;">{{n.title}}</div>
-                <div class="notif-desc" style="font-size:11px; color:var(--text3);">{{n.desc}}</div>
-              </div>
-              <div class="tog-nexus" [class.on]="n.on" [class.off]="!n.on" (click)="n.on = !n.on">
-                <div class="tog-nexus-thumb"></div>
-              </div>
+
+      <div class="body-frame">
+        <div class="sidebar-nexus" style="width:240px; min-width:240px; padding:20px 16px;">
+          <div class="sg-label-admin">Account</div>
+          <div class="sitem-nexus" [class.active]="tab === 'personal'" (click)="tab = 'personal'"><div class="sitem-l-nexus"><svg width="13" height="13" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="5" r="3" stroke="currentColor" stroke-width="1.1"/><path d="M2 13c0-3 2.5-4.5 5.5-4.5S13 10 13 13" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Personal Info</div></div>
+          <div class="sitem-nexus" [class.active]="tab === 'password'" (click)="tab = 'password'"><div class="sitem-l-nexus"><svg width="13" height="13" viewBox="0 0 15 15" fill="none"><rect x="2.5" y="6" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M5 6V4.5a2.5 2.5 0 0 1 5 0V6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Security</div></div>
+          
+          <div class="sg-label-admin">Shopping</div>
+          <div class="sitem-nexus" [class.active]="tab === 'addresses'" (click)="tab = 'addresses'"><div class="sitem-l-nexus"><svg width="13" height="13" viewBox="0 0 15 15" fill="none"><path d="M7.5 2C5.3 2 3.5 3.8 3.5 6c0 3.5 4 7 4 7s4-3.5 4-7c0-2.2-1.8-4-4-4Z" stroke="currentColor" stroke-width="1.1"/></svg>Addresses</div></div>
+          
+          <div class="sidebar-foot-nexus">
+            <div class="s-user-nexus" style="opacity:0.6;">
+              <div><div class="su-name-nexus">{{editUser.fullName}}</div><div class="su-role-nexus">{{editUser.role?.toLowerCase()}}</div></div>
             </div>
           </div>
         </div>
-        <div *ngIf="tab === 'danger'">
-          <div class="sec-head" style="margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
-            <div><div class="sec-title" style="color:var(--red);">Danger Zone</div><div class="sec-sub">Irreversible actions.</div></div>
+
+        <div class="main-nexus">
+          <div class="panel-nexus" [class.active]="tab === 'personal'" *ngIf="tab === 'personal'">
+            <div class="top-bar-nexus">
+              <div><div class="page-title-nexus">Personal Details</div><div class="page-sub-nexus">Manage your identification and contact info.</div></div>
+              <button class="sc-btn-nexus primary" (click)="saveProfile($event)">Save Changes</button>
+            </div>
+            
+            <div class="card-nexus" style="margin-top:20px; padding:24px;">
+              <div style="display:flex; align-items:center; gap:20px; margin-bottom:32px;">
+                <div class="nav-av-nexus" style="width:64px; height:64px; font-size:24px;">{{editUser.fullName?.charAt(0)}}</div>
+                <div>
+                  <div style="font-size:18px; font-weight:600; color:var(--text);">{{editUser.fullName}}</div>
+                  <div style="font-size:13px; color:var(--text3); margin-top:2px;">{{editUser.email}}</div>
+                </div>
+              </div>
+
+              <div class="grid-2-nexus" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                <div class="field-nexus"><label>Full Name</label><input [(ngModel)]="editUser.fullName" placeholder="Your full name"/></div>
+                <div class="field-nexus"><label>Email Address</label><input [(ngModel)]="editUser.email" type="email" placeholder="email@example.com"/></div>
+                <div class="field-nexus"><label>Phone Number</label><input [(ngModel)]="editUser.phone" placeholder="+90 5XX XXX XX XX"/></div>
+                <div class="field-nexus">
+                  <label>Role</label>
+                  <input [value]="editUser.role" disabled style="opacity:0.5; cursor:not-allowed;"/>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="danger-zone-nexus">
-            <div style="font-size:13px; font-weight:600; color:var(--red); margin-bottom:8px;">Deactivate Account</div>
-            <p style="font-size:12px; color:var(--text2); line-height:1.6; margin-bottom:16px;">Temporarily disable your account. You can reactivate anytime by logging back in.</p>
-            <button class="tbtn tbtn-ghost" style="border-color:var(--red-border); color:var(--red); padding:8px 16px; border-radius:20px; cursor:pointer;">Deactivate</button>
+
+          <div class="panel-nexus" *ngIf="tab === 'password'">
+             <div class="top-bar-nexus"><div><div class="page-title-nexus">Security</div><div class="page-sub-nexus">Change your access credentials.</div></div></div>
+             <div class="card-nexus" style="max-width:400px; padding:24px; margin-top:20px;">
+                <div class="field-nexus" style="margin-bottom:15px;"><label>Current Password</label><input type="password" placeholder="••••••••"/></div>
+                <div class="field-nexus" style="margin-bottom:15px;"><label>New Password</label><input type="password" placeholder="••••••••" (input)="updatePwStrength($event)"/></div>
+                <div style="display:flex; gap:4px; margin-bottom:15px;">
+                  <div *ngFor="let i of [1,2,3,4]" [style.background]="pwS >= i ? pwC : 'var(--glass)'" style="flex:1; height:3px; border-radius:2px;"></div>
+                </div>
+                <button class="sc-btn-nexus primary" style="width:100%;" (click)="saveProfile($event)">Update Password</button>
+             </div>
+          </div>
+
+          <div class="panel-nexus" *ngIf="tab === 'addresses'">
+             <div class="top-bar-nexus"><div><div class="page-title-nexus">Addresses</div><div class="page-sub-nexus">Manage your shipping locations.</div></div></div>
+             <div class="grid-2-nexus" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
+                <div class="card-nexus" style="padding:20px; border-color:var(--teal-glow);">
+                   <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                      <div style="font-weight:600; font-size:14px;">Home</div>
+                      <div class="spill-nexus sp-green">Default</div>
+                   </div>
+                   <div style="font-size:12px; color:var(--text2); margin-top:10px; line-height:1.5;">Halaskargazi Cad. No:42, Şişli/İstanbul</div>
+                </div>
+                <div class="card-nexus" style="padding:20px; border-style:dashed; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text3);">
+                   + Add New Address
+                </div>
+             </div>
           </div>
         </div>
       </div>
     </div>
-  `
+  `,
+  styles: [`
+    .page-frame { height: 100vh; display:flex; flex-direction:column; background:var(--bg); }
+    .navbar-nexus { padding:14px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); background:rgba(8,8,8,0.9); backdrop-filter:blur(20px); z-index:100; }
+    .body-frame { display:flex; flex:1; overflow:hidden; }
+    .sidebar-nexus { border-right:1px solid var(--border); background:rgba(8,8,8,0.2); }
+    .main-nexus { flex:1; overflow-y:auto; padding:32px; }
+    .panel-nexus { display:none; }
+    .panel-nexus.active { display:block; animation: fadeUp 0.4s ease; }
+    .card-nexus { background:var(--glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(20px); }
+    .field-nexus label { display:block; font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; font-weight:600; }
+    .field-nexus input { width:100%; background:var(--glass2); border:1px solid var(--border); border-radius:10px; padding:10px 14px; color:var(--text); font-size:13px; outline:none; transition:0.2s; }
+    .field-nexus input:focus { border-color:var(--teal); background:var(--glass); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  `]
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnInit {
   tab = 'personal';
-  notifs = [
-    { title: 'Order Confirmations', desc: 'When an order is placed', on: true },
-    { title: 'Shipping Updates', desc: 'Real-time tracking alerts', on: true },
-    { title: 'Deals & Offers', desc: 'Personalized sale alerts', on: false }
-  ];
+  editUser: any = {};
+  pwS = 0; pwC = '';
+  
+  auth = inject(AuthService);
+  toast = inject(ToastService);
+  router = inject(Router);
+
+  ngOnInit() {
+    this.auth.currentUser$.subscribe(u => {
+      if (u) {
+        this.editUser = { ...u };
+      }
+    });
+  }
+
+  goBack() {
+    const role = this.editUser.role || 'CONSUMER';
+    if(role === 'ADMIN') this.router.navigate(['/admin']);
+    else if(role === 'MANAGER') this.router.navigate(['/manager']);
+    else this.router.navigate(['/consumer']);
+  }
+
+  saveProfile(event: any) {
+    const btn = event.currentTarget;
+    const oldText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="set-spin">◌</span> Saving...';
+    
+    setTimeout(() => {
+      this.auth.updateUser(this.editUser);
+      this.toast.show('Profile updated successfully!', 'success');
+      btn.innerHTML = '✓ Saved';
+      setTimeout(() => {
+        btn.innerHTML = oldText;
+        btn.disabled = false;
+      }, 2000);
+    }, 1000);
+  }
+
+  updatePwStrength(ev: any) {
+    const v = ev.target.value || '';
+    this.pwS = 0;
+    if(v.length >= 6) this.pwS++;
+    if(v.length >= 10) this.pwS++;
+    if(/[0-9]/.test(v)) this.pwS++;
+    if(/[A-Z]/.test(v)) this.pwS++;
+    const colors = ['#E07070','#E8A94A','#E8A94A','#3EC98A'];
+    this.pwC = this.pwS > 0 ? colors[this.pwS-1] : '';
+  }
 }

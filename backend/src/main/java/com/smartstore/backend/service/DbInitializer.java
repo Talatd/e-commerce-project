@@ -4,6 +4,11 @@ import com.smartstore.backend.model.Product;
 import com.smartstore.backend.model.RegionalInventory;
 import com.smartstore.backend.repository.ProductRepository;
 import com.smartstore.backend.repository.RegionalInventoryRepository;
+import com.smartstore.backend.repository.StoreRepository;
+import com.smartstore.backend.repository.UserRepository;
+import com.smartstore.backend.model.Store;
+import com.smartstore.backend.model.User;
+import com.smartstore.backend.model.Role;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,11 +23,19 @@ public class DbInitializer {
 
     private final ProductRepository productRepository;
     private final RegionalInventoryRepository inventoryRepository;
+    private final StoreRepository storeRepository;
+    private final UserRepository userRepository;
 
     @PostConstruct
     public void init() {
         if (productRepository.count() < 10) {
             seedSmartwatches();
+        }
+        if (storeRepository.count() == 0) {
+            seedStores();
+        }
+        if (userRepository.count() < 2) {
+            seedUsers();
         }
     }
 
@@ -55,6 +68,19 @@ public class DbInitializer {
             inv.setStockQuantity(100);
             inventoryRepository.save(inv);
         }
+    }
+
+    @SuppressWarnings("null")
+    private void seedStores() {
+        storeRepository.save(Store.builder().name("Nexus Main Store").ownerName("Admin").totalRevenue(427000.0).orderCount(6421).rating(4.9).status("OPEN").build());
+        storeRepository.save(Store.builder().name("TechHub Store").ownerName("James Wilson").totalRevenue(218000.0).orderCount(3104).rating(4.7).status("OPEN").build());
+        storeRepository.save(Store.builder().name("GadgetPro").ownerName("Sarah Miller").totalRevenue(142000.0).orderCount(2089).rating(4.8).status("OPEN").build());
+    }
+
+    @SuppressWarnings("null")
+    private void seedUsers() {
+        userRepository.save(User.builder().fullName("Buse Ünal").email("buse@akdeniz.edu.tr").passwordHash("$2a$10$8.UnS8OWu7qL6E2Q31m0.Ok0.3u8.8.8.8.8.8.8.8.8.8.8").role(Role.ADMIN).build());
+        userRepository.save(User.builder().fullName("James Wilson").email("james@techhub.com").passwordHash("pass").role(Role.MANAGER).build());
     }
 
     private Product createProduct(String name, String cat, String brand, double price, String desc, String img) {

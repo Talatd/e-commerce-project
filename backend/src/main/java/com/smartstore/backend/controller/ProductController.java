@@ -21,6 +21,7 @@ public class ProductController {
 
     private final ProductRepository productRepository;
     private final ProductReviewRepository reviewRepository;
+    private final com.smartstore.backend.repository.UserRepository userRepository;
 
     @GetMapping
     @Operation(summary = "Get all products", description = "Retrieves the full product catalog from the database.")
@@ -57,5 +58,28 @@ public class ProductController {
             "sentimentLabel", sentimentLabel,
             "reviewCount", reviews.size()
         ));
+    }
+
+    @PostMapping("/{id}/reviews")
+    @Operation(summary = "Submit a product review", description = "Allows a consumer to post a rating and comment for a product.")
+    public ResponseEntity<ProductReview> submitReview(
+            @PathVariable @org.springframework.lang.NonNull Long id,
+            @RequestBody Map<String, Object> payload) {
+        
+        Product product = productRepository.findById(java.util.Objects.requireNonNull(id)).orElseThrow();
+        Long userIdRaw = Long.valueOf(payload.get("userId").toString());
+        com.smartstore.backend.model.User user = userRepository.findById(java.util.Objects.requireNonNull(userIdRaw)).orElseThrow();
+        
+        ProductReview review = new ProductReview();
+        review.setProduct(product);
+        review.setUser(user);
+        review.setRating((Integer) payload.get("rating"));
+        review.setComment((String) payload.get("comment"));
+        
+        // Mock sentiment analysis for now - in real life this would call the AI hub
+        double mockSentiment = review.getRating() >= 4 ? 0.9 : (review.getRating() <= 2 ? 0.2 : 0.5);
+        review.setSentimentScore(BigDecimal.valueOf(mockSentiment));
+        
+        return ResponseEntity.ok(reviewRepository.save(review));
     }
 }

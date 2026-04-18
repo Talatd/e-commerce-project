@@ -2,7 +2,7 @@
 <div id="cursor-ring"></div>
 
 <div class="wrap" [class.light-mode]="isLightMode" *ngIf="auth.currentUser$ | async as user; else noAuth">
-  <ng-container *ngIf="router.url !== '/login'; else standalonePage">
+  <ng-container *ngIf="router.url !== '/login' && router.url !== '/admin' && router.url !== '/settings'; else standalonePage">
     <div class="glow-tl"></div>
     <div class="glow-br"></div>
 
@@ -141,7 +141,12 @@
     </div>
   </div>
 
-  <div id="toast-container"></div>
+  <div id="toast-container">
+    <div class="toast-nexus" *ngFor="let t of activeToasts" [class]="t.type">
+      <div class="toast-dot"></div>
+      <div class="toast-msg">{{t.msg}}</div>
+    </div>
+  </div>
 </div>
 
 <ng-template #noAuth>
