@@ -82,4 +82,30 @@ public class ProductController {
         
         return ResponseEntity.ok(reviewRepository.save(review));
     }
+
+    @PostMapping
+    @Operation(summary = "Add a new product", description = "Creates a new electronics product in the catalog.")
+    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
+        return ResponseEntity.ok(productRepository.save(product));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Update product", description = "Updates an existing product's details and stock.")
+    public ResponseEntity<Product> updateProduct(@PathVariable @org.springframework.lang.NonNull Long id, @RequestBody Product productDetails) {
+        Product product = productRepository.findById(id).orElseThrow();
+        product.setName(productDetails.getName());
+        product.setDescription(productDetails.getDescription());
+        product.setBasePrice(productDetails.getBasePrice());
+        product.setStockQuantity(productDetails.getStockQuantity());
+        product.setCategory(productDetails.getCategory());
+        product.setImageUrl(productDetails.getImageUrl());
+        return ResponseEntity.ok(productRepository.save(product));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete product", description = "Removes a product from the catalog.")
+    public ResponseEntity<Void> deleteProduct(@PathVariable @org.springframework.lang.NonNull Long id) {
+        productRepository.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
 }

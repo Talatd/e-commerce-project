@@ -62,6 +62,18 @@ export class ProductService {
   submitReview(productId: number, userId: number, rating: number, comment: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/${productId}/reviews`, { userId, rating, comment });
   }
+
+  createProduct(product: any): Observable<any> {
+    return this.http.post(this.apiUrl, product);
+  }
+
+  updateProduct(id: number, product: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}`, product);
+  }
+
+  deleteProduct(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${id}`);
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -102,6 +114,14 @@ export class AdminService {
 
   getStats(): Observable<any> {
     return this.http.get('http://localhost:8080/api/v1/analytics/admin-stats');
+  }
+
+  banUser(id: number): Observable<any> {
+    return this.http.post(`http://localhost:8080/api/users/${id}/ban`, {});
+  }
+
+  deleteUser(id: number): Observable<any> {
+    return this.http.delete(`http://localhost:8080/api/users/${id}`);
   }
 }
 

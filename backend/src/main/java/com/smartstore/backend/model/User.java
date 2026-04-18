@@ -39,6 +39,9 @@ public class User {
     @Column(nullable = false)
     private Role role = Role.CONSUMER;
 
+    @Builder.Default
+    private boolean enabled = true;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
@@ -62,6 +65,9 @@ public class User {
 
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

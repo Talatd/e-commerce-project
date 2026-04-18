@@ -515,15 +515,18 @@ export class ConsumerComponent implements OnInit {
              </div>
 
              <div class="table-card-nexus">
-               <div class="gc-head-nexus"><div class="gc-title-nexus">Inventory Overview</div><button class="sc-btn-nexus primary" style="padding:6px 12px; font-size:10px;">+ Add Product</button></div>
+               <div class="gc-head-nexus"><div class="gc-title-nexus">Inventory Overview</div><button class="sc-btn-nexus primary" style="padding:6px 12px; font-size:10px;" (click)="addProduct()">+ Add Product</button></div>
                <table class="tbl-nexus">
-                 <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
+                 <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
                  <tbody>
                    <tr *ngFor="let p of products">
                      <td class="td-name-nexus">{{p.name}}</td>
                      <td>{{p.category}}</td>
                      <td class="td-mono-nexus">{{p.basePrice | currency}}</td>
                      <td><span class="spill-nexus" [class.sp-green]="p.stockQuantity > 10" [class.sp-amber]="p.stockQuantity <= 10">● {{p.stockQuantity}} units</span></td>
+                     <td>
+                       <button class="sc-btn-nexus danger" style="padding:2px 8px; font-size:9px;" (click)="deleteProduct(p)">Delete</button>
+                     </td>
                    </tr>
                  </tbody>
                </table>
@@ -538,8 +541,43 @@ export class ManagerComponent implements OnInit {
   products: any[] = [];
   productService = inject(ProductService);
   auth = inject(AuthService);
+  toast = inject(ToastService);
+
   ngOnInit() {
     this.productService.getProducts().subscribe(res => this.products = res);
+  }
+
+  addProduct() {
+    const name = prompt('Product Name:');
+    if (!name) return;
+    const price = prompt('Base Price:');
+    const category = prompt('Category:');
+    
+    const newProd = {
+      name,
+      basePrice: parseFloat(price || '0'),
+      category: category || 'Electronics',
+      stockQuantity: 10,
+      description: 'Newly added premium electronics item.'
+    };
+
+    this.productService.createProduct(newProd).subscribe({
+      next: (res) => {
+        this.products.push(res);
+        this.toast.show('Product added successfully!');
+      },
+      error: () => this.toast.show('Failed to add product', 'error')
+    });
+  }
+
+  deleteProduct(p: any) {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    this.productService.deleteProduct(p.productId).subscribe({
+      next: () => {
+        this.products = this.products.filter(item => item.productId !== p.productId);
+        this.toast.show('Product deleted');
+      }
+    });
   }
 }
 
@@ -733,7 +771,7 @@ export class ManagerComponent implements OnInit {
                     <td>
                       <div style="display:flex; gap:6px;">
                         <button class="sc-btn-nexus" style="padding:2px 8px; border-radius:8px;">Edit</button>
-                        <button class="sc-btn-nexus danger" style="padding:2px 8px; border-radius:8px;">Ban</button>
+                        <button class="sc-btn-nexus danger" style="padding:2px 8px; border-radius:8px;" (click)="banUser(u)">Ban</button>
                       </div>
                     </td>
                   </tr>
@@ -924,6 +962,26 @@ export class AdminComponent implements OnInit {
       btn.innerHTML = 'Re-index Now';
       btn.disabled = false;
     }, 5000);
+  }
+
+  banUser(u: any) {
+    if (!confirm(`Are you sure you want to ban ${u.fullName}?`)) return;
+    this.adminService.banUser(u.userId).subscribe({
+      next: () => {
+        this.toast.show(`User ${u.fullName} has been banned`, 'success');
+        this.refreshData();
+      }
+    });
+  }
+
+  deleteUser(u: any) {
+    if (!confirm(`Are you sure you want to delete ${u.fullName}?`)) return;
+    this.adminService.deleteUser(u.userId).subscribe({
+      next: () => {
+        this.toast.show('User deleted', 'success');
+        this.refreshData();
+      }
+    });
   }
 }
 
