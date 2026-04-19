@@ -67,6 +67,45 @@ export class AiService {
     }));
   }
 
+  queryStream(prompt: string, userId: number, role: string, history: string[],
+              onStep: (step: any) => void, onFinal: (result: any) => void, onError: (err: string) => void) {
+    const body = JSON.stringify({
+      query: prompt, user_id: userId, role, history, session_id: this.sessionId
+    });
+
+    fetch(`${AI_API}/api/v1/chatbot/query/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    }).then(async (response) => {
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) { onError('No response stream'); return; }
+
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.type === 'step') onStep(parsed);
+              else if (parsed.type === 'final') {
+                if (parsed.session_id) this.sessionId = parsed.session_id;
+                onFinal(parsed);
+              }
+              else if (parsed.type === 'error') onError(parsed.message);
+            } catch {}
+          }
+        }
+      }
+    }).catch(err => onError(err.message || 'Stream failed'));
+  }
+
   clearSession() {
     this.sessionId = null;
   }

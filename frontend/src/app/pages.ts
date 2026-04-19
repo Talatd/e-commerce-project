@@ -1424,10 +1424,17 @@ export class LoginComponent {
               </div>
             </div>
           </ng-container>
-          <!-- TYPING INDICATOR -->
+          <!-- TYPING / STREAMING INDICATOR -->
           <div class="typing-ind" *ngIf="isTyping">
             <div class="typing-av"><svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 5.5v7L9 16l7-3.5v-7L9 2Z" stroke="#3ECFB2" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
-            <div class="typing-dots"><div class="td-dot"></div><div class="td-dot"></div><div class="td-dot"></div></div>
+            <div *ngIf="streamSteps.length === 0" class="typing-dots"><div class="td-dot"></div><div class="td-dot"></div><div class="td-dot"></div></div>
+            <div *ngIf="streamSteps.length > 0" style="display:flex;flex-direction:column;gap:3px;">
+              <div *ngFor="let step of streamSteps" style="font-size:10px;color:var(--teal);display:flex;align-items:center;gap:5px;">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><circle cx="4" cy="4" r="3" stroke="#3ECFB2" stroke-width="1"/></svg>
+                {{step}}
+              </div>
+              <div class="typing-dots" style="margin-top:2px;"><div class="td-dot"></div><div class="td-dot"></div><div class="td-dot"></div></div>
+            </div>
           </div>
         </div>
 
@@ -1728,16 +1735,25 @@ export class ConsumerComponent implements OnInit {
     });
   }
 
+  streamSteps: string[] = [];
+
   sendQuery() {
     if (!this.prompt.trim()) return;
     const userMsg = this.prompt.trim();
     this.chatMessages.push({ sender: 'user', text: userMsg, time: this.getTimeNow() });
     this.prompt = '';
     this.isTyping = true;
+    this.streamSteps = [];
     const user = this.auth.currentUserValue || { userId: 1, role: 'CONSUMER' };
-    this.ai.query(userMsg, user.userId, user.role, this.history).subscribe({
-      next: (res: any) => {
+
+    this.ai.queryStream(
+      userMsg, user.userId, user.role, this.history,
+      (step) => {
+        this.streamSteps.push(step.message);
+      },
+      (res) => {
         this.isTyping = false;
+        this.streamSteps = [];
         const aiMsg: any = {
           sender: 'ai',
           text: res.response,
@@ -1754,11 +1770,12 @@ export class ConsumerComponent implements OnInit {
           setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
         }
       },
-      error: () => {
+      (err) => {
         this.isTyping = false;
+        this.streamSteps = [];
         this.chatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
       }
-    });
+    );
   }
 
   private renderPlotly(msgIndex: number, vizCode: string, data: any[]) {
@@ -2995,14 +3012,14 @@ export class AdminComponent implements OnInit, AfterViewInit {
         type: l.type,
         detail: l.detail
       })),
-      error: () => {}
+      error: () => { }
     });
   }
 
   logAudit(action: string, type: string, detail: string) {
     this.adminService.createAuditLog(action, type, detail).subscribe({
       next: () => this.loadAuditLogs(),
-      error: () => {}
+      error: () => { }
     });
   }
 

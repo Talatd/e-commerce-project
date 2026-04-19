@@ -75,6 +75,27 @@ def health_check():
 
 
 from agents import ai_graph
+from fastapi.responses import StreamingResponse
+import json as json_module
+import asyncio
+
+
+def _build_initial_state(query, history, session_id, user_id, role):
+    return {
+        "query": query,
+        "history": history,
+        "session_id": session_id,
+        "user_id": user_id,
+        "user_role": role,
+        "sql_query": "",
+        "results": [],
+        "response": "",
+        "next_step": "",
+        "is_in_scope": True,
+        "iteration_count": 0,
+        "visualization_code": "",
+        "error": "",
+    }
 
 
 @app.post("/api/v1/chatbot/query")
@@ -86,21 +107,9 @@ async def process_query(request: ChatRequest):
     last_n = merged_history[-20:]
 
     try:
-        initial_state = {
-            "query": request.query,
-            "history": last_n,
-            "session_id": session["id"],
-            "user_id": request.user_id,
-            "user_role": request.role,
-            "sql_query": "",
-            "results": [],
-            "response": "",
-            "next_step": "",
-            "is_in_scope": True,
-            "iteration_count": 0,
-            "visualization_code": "",
-            "error": "",
-        }
+        initial_state = _build_initial_state(
+            request.query, last_n, session["id"], request.user_id, request.role
+        )
 
         final_state = ai_graph.invoke(initial_state)
 
@@ -118,6 +127,67 @@ async def process_query(request: ChatRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/chatbot/query/stream")
+async def process_query_stream(request: ChatRequest):
+    """SSE streaming endpoint — sends agent progress events for transparency."""
+    cleanup_sessions()
+    session = get_or_create_session(request.session_id, request.user_id, request.role)
+    merged_history = session["history"] + request.history
+    last_n = merged_history[-20:]
+
+    async def event_generator():
+        try:
+            initial_state = _build_initial_state(
+                request.query, last_n, session["id"], request.user_id, request.role
+            )
+
+            step_names = {
+                "guardrails": "Checking query scope...",
+                "sql_writer": "Generating SQL query...",
+                "sql_executor": "Executing database query...",
+                "error_handler": "Fixing SQL error, retrying...",
+                "responder": "Analyzing results...",
+                "visualizer": "Generating visualization...",
+            }
+
+            yield f"data: {json_module.dumps({'type': 'step', 'step': 'start', 'message': 'Processing your question...'})}\n\n"
+            await asyncio.sleep(0.05)
+
+            current_state = initial_state
+            for step_output in ai_graph.stream(initial_state):
+                for node_name, node_state in step_output.items():
+                    current_state.update(node_state)
+                    msg = step_names.get(node_name, f"Running {node_name}...")
+                    yield f"data: {json_module.dumps({'type': 'step', 'step': node_name, 'message': msg})}\n\n"
+                    await asyncio.sleep(0.05)
+
+            session["history"].append("User: " + request.query)
+            session["history"].append("AI: " + current_state.get("response", ""))
+
+            results_data = current_state.get("results", [])
+            try:
+                json_module.dumps(results_data)
+            except (TypeError, ValueError):
+                results_data = []
+
+            final_payload = {
+                "type": "final",
+                "success": True,
+                "session_id": session["id"],
+                "query": request.query,
+                "response": current_state.get("response", ""),
+                "sql": current_state.get("sql_query", ""),
+                "data": results_data,
+                "visualization": current_state.get("visualization_code", ""),
+            }
+            yield f"data: {json_module.dumps(final_payload)}\n\n"
+
+        except Exception as e:
+            yield f"data: {json_module.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @app.get("/api/v1/chatbot/sessions/{session_id}")
