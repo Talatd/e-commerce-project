@@ -38,7 +38,12 @@ public class ProductReview {
     private String comment;
 
     @Column(precision = 3, scale = 2)
-    private BigDecimal sentimentScore; // AI tabanlı duygu skoru
+    private BigDecimal sentimentScore;
+
+    @Column(length = 1000)
+    private String storeResponse;
+
+    private LocalDateTime respondedAt;
 
     private LocalDateTime createdAt;
 

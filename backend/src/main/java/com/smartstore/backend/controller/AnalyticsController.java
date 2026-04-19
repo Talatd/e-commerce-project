@@ -1,5 +1,6 @@
 package com.smartstore.backend.controller;
 
+import com.smartstore.backend.repository.CustomerProfileRepository;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.StoreRepository;
 import com.smartstore.backend.repository.UserRepository;
@@ -25,6 +26,7 @@ public class AnalyticsController {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
+    private final CustomerProfileRepository profileRepository;
 
     @GetMapping("/admin-stats")
     @Operation(summary = "Get platform KPIs", description = "Returns revenue, orders, users and store counts.")
@@ -106,5 +108,43 @@ public class AnalyticsController {
                 (Double) b.get("revenue"), (Double) a.get("revenue")));
 
         return ResponseEntity.ok(comparison);
+    }
+
+    @GetMapping("/customer-segments")
+    @Operation(summary = "Customer segmentation", description = "Aggregates customer profiles by membership type, city, and spending tiers.")
+    public ResponseEntity<Map<String, Object>> getCustomerSegments() {
+        Map<String, Object> segments = new HashMap<>();
+
+        var profiles = profileRepository.findAll();
+
+        Map<String, Integer> byMembership = new HashMap<>();
+        Map<String, Integer> byCity = new HashMap<>();
+        Map<String, Integer> bySpendTier = new HashMap<>();
+        double totalSpend = 0;
+        int totalProfiles = profiles.size();
+
+        for (var p : profiles) {
+            String membership = p.getMembershipType() != null ? p.getMembershipType() : "Unknown";
+            byMembership.put(membership, byMembership.getOrDefault(membership, 0) + 1);
+            String city = p.getCity() != null ? p.getCity() : "Unknown";
+            byCity.put(city, byCity.getOrDefault(city, 0) + 1);
+            double spend = p.getTotalSpend() != null ? p.getTotalSpend().doubleValue() : 0;
+            totalSpend += spend;
+            String tier = spend >= 5000 ? "Premium (5000+)" : spend >= 1000 ? "Regular (1000-5000)" : "New (<1000)";
+            bySpendTier.put(tier, bySpendTier.getOrDefault(tier, 0) + 1);
+        }
+
+        segments.put("totalCustomers", totalProfiles);
+        segments.put("avgSpend", totalProfiles > 0 ? Math.round(totalSpend / totalProfiles) : 0);
+        segments.put("byMembership", byMembership);
+        segments.put("byCity", byCity.entrySet().stream()
+                .sorted(java.util.Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(10)
+                .collect(java.util.stream.Collectors.toMap(
+                        java.util.Map.Entry::getKey, java.util.Map.Entry::getValue,
+                        (a, b) -> a, java.util.LinkedHashMap::new)));
+        segments.put("bySpendTier", bySpendTier);
+
+        return ResponseEntity.ok(segments);
     }
 }

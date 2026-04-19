@@ -1972,6 +1972,9 @@ export class ConsumerComponent implements OnInit {
       <div class="msi" [class.act]="activePanel==='analytics'" (click)="activePanel='analytics'">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 10L4 6l3 2.5 5-6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Performance</div>
       </div>
+      <div class="msi" [class.act]="activePanel==='customers'" (click)="activePanel='customers'; loadSegments()">
+        <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1.5 11.5c0-2.7 2-4 5-4s5 1.3 5 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Customers</div>
+      </div>
       <div class="msl">Store</div>
       <div class="msi" [class.act]="activePanel==='settings'" (click)="activePanel='settings'">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1v1M6.5 11v1M1 6.5h1M11 6.5h1M2.6 2.6l.7.7M9.7 9.7l.7.7M2.6 10.4l.7-.7M9.7 3.3l.7-.7" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>Store Settings</div>
@@ -2006,9 +2009,28 @@ export class ConsumerComponent implements OnInit {
 
       <!-- REVIEWS -->
       <ng-container *ngIf="activePanel==='reviews'">
-        <div class="mtb"><div><div class="mpt">Customer Reviews</div><div class="mps">Manage product feedback</div></div></div>
-        <div style="text-align:center;padding:48px;color:var(--text3);font-size:12px;">
-          Review management is connected to the product review API.<br>Reviews appear on individual product pages.
+        <div class="mtb"><div><div class="mpt">Customer Reviews</div><div class="mps">{{reviews.length}} reviews · Manage product feedback</div></div></div>
+        <div class="mtc" *ngIf="reviews.length > 0">
+          <table class="mt">
+            <thead><tr><th>Product</th><th>Customer</th><th>Rating</th><th>Comment</th><th>Sentiment</th><th>Response</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let r of reviews">
+                <td class="mtn">{{r.product?.name || 'N/A'}}</td>
+                <td>{{r.user?.fullName || 'Anonymous'}}</td>
+                <td style="color:#E8A94A;">{{r.rating}}★</td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--text3);">{{r.comment || '—'}}</td>
+                <td><span style="padding:2px 6px;border-radius:4px;font-size:10px;" [style.background]="(r.sentimentScore || 0) >= 0.6 ? 'rgba(62,207,178,0.12)' : (r.sentimentScore || 0) <= 0.3 ? 'rgba(224,112,112,0.12)' : 'rgba(232,169,74,0.12)'" [style.color]="(r.sentimentScore || 0) >= 0.6 ? '#3ECFB2' : (r.sentimentScore || 0) <= 0.3 ? '#E07070' : '#E8A94A'">{{r.sentimentScore || 0 | number:'1.1-1'}}</span></td>
+                <td style="max-width:150px;font-size:11px;color:var(--text3);">{{r.storeResponse || '—'}}</td>
+                <td>
+                  <div *ngIf="!r.storeResponse" class="mtbtn mtbt" style="font-size:9px;padding:4px 8px;" (click)="respondToReview(r)">Reply</div>
+                  <span *ngIf="r.storeResponse" style="font-size:10px;color:#3ECFB2;">✓ Replied</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div *ngIf="reviews.length === 0" style="text-align:center;padding:48px;color:var(--text3);font-size:12px;">
+          No reviews yet for your products.
         </div>
       </ng-container>
 
@@ -2128,13 +2150,68 @@ export class ConsumerComponent implements OnInit {
         </div>
       </ng-container>
 
+      <!-- CUSTOMERS SEGMENTATION -->
+      <ng-container *ngIf="activePanel==='customers'">
+        <div class="mtb"><div><div class="mpt">Customer Insights</div><div class="mps">Segmentation & behavior analysis</div></div></div>
+        <div *ngIf="!segments" style="text-align:center;padding:48px;color:var(--text3);font-size:12px;">Loading...</div>
+        <ng-container *ngIf="segments">
+          <div class="mkr">
+            <div class="mkpi"><div class="mkl">Total Customers</div><div class="mkv">{{segments.totalCustomers}}</div></div>
+            <div class="mkpi"><div class="mkl">Avg. Spend</div><div class="mkv">{{segments.avgSpend | currency:'USD':'symbol':'1.0-0'}}</div></div>
+            <div class="mkpi"><div class="mkl">Segments</div><div class="mkv">{{segmentKeys(segments.byMembership).length}}</div></div>
+            <div class="mkpi"><div class="mkl">Top City</div><div class="mkv" style="font-size:16px;">{{segmentKeys(segments.byCity)[0] || '—'}}</div></div>
+          </div>
+          <div class="mcr">
+            <div class="mgc" style="flex:1;">
+              <div class="mgh"><div class="mgt">By Membership Type</div></div>
+              <div style="padding:16px;">
+                <div *ngFor="let key of segmentKeys(segments.byMembership)" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:12px;">{{key}}</span>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="height:6px;border-radius:3px;background:var(--teal);opacity:0.7;" [style.width.px]="segments.byMembership[key] * 4"></div>
+                    <span style="font-size:11px;color:var(--text3);min-width:24px;text-align:right;">{{segments.byMembership[key]}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mgc" style="flex:1;">
+              <div class="mgh"><div class="mgt">By Spending Tier</div></div>
+              <div style="padding:16px;">
+                <div *ngFor="let key of segmentKeys(segments.bySpendTier)" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:12px;">{{key}}</span>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="height:6px;border-radius:3px;background:#6BA8C8;opacity:0.7;" [style.width.px]="segments.bySpendTier[key] * 4"></div>
+                    <span style="font-size:11px;color:var(--text3);min-width:24px;text-align:right;">{{segments.bySpendTier[key]}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mtc">
+            <div class="mgh"><div class="mgt">Top Cities</div></div>
+            <table class="mt">
+              <thead><tr><th>City</th><th>Customers</th></tr></thead>
+              <tbody><tr *ngFor="let key of segmentKeys(segments.byCity)"><td class="mtn">{{key}}</td><td>{{segments.byCity[key]}}</td></tr></tbody>
+            </table>
+          </div>
+        </ng-container>
+      </ng-container>
+
       <!-- ANALYTICS -->
       <ng-container *ngIf="activePanel==='analytics'">
-        <div class="mtb"><div><div class="mpt">Store Performance</div><div class="mps">Sales analytics & revenue</div></div></div>
+        <div class="mtb">
+          <div><div class="mpt">Store Performance</div><div class="mps">Sales analytics & revenue</div></div>
+          <div class="mta" style="display:flex;gap:8px;align-items:center;">
+            <input type="date" [(ngModel)]="analyticsDateFrom" (change)="applyDateFilter()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:11px;"/>
+            <span style="color:var(--text3);font-size:11px;">to</span>
+            <input type="date" [(ngModel)]="analyticsDateTo" (change)="applyDateFilter()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:11px;"/>
+            <div class="mtbtn mtbg" (click)="resetDateFilter()" style="font-size:10px;padding:6px 12px;">Reset</div>
+          </div>
+        </div>
         <div class="mkr">
-          <div class="mkpi"><div class="mkl">Total Revenue</div><div class="mkv">{{totalRevenue | currency:'USD':'symbol':'1.0-0'}}</div><div class="mkd mup-c">↑ From orders</div></div>
-          <div class="mkpi"><div class="mkl">Total Orders</div><div class="mkv">{{storeOrders.length}}</div><div class="mkd mup-c">All time</div></div>
-          <div class="mkpi"><div class="mkl">Avg Order Value</div><div class="mkv">{{storeOrders.length > 0 ? (totalRevenue / storeOrders.length | currency:'USD':'symbol':'1.0-0') : '$0'}}</div><div class="mkd mup-c">Per order</div></div>
+          <div class="mkpi"><div class="mkl">Revenue (Filtered)</div><div class="mkv">{{filteredRevenue | currency:'USD':'symbol':'1.0-0'}}</div><div class="mkd mup-c">{{filteredOrders.length}} orders</div></div>
+          <div class="mkpi"><div class="mkl">Total Orders</div><div class="mkv">{{filteredOrders.length}}</div><div class="mkd mup-c">In range</div></div>
+          <div class="mkpi"><div class="mkl">Avg Order Value</div><div class="mkv">{{filteredOrders.length > 0 ? (filteredRevenue / filteredOrders.length | currency:'USD':'symbol':'1.0-0') : '$0'}}</div><div class="mkd mup-c">Per order</div></div>
           <div class="mkpi"><div class="mkl">Low Stock Items</div><div class="mkv">{{lowStockProducts.length}}</div><div class="mkd" [class.mdn]="lowStockProducts.length > 0" [class.mup-c]="lowStockProducts.length === 0">{{lowStockProducts.length > 0 ? '⚠ Alert' : '✓ OK'}}</div></div>
         </div>
         <div class="mcr">
@@ -2187,8 +2264,13 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   activePanel = 'dashboard';
   newProd: any = { name: '', brand: '', basePrice: 0, stockQuantity: 10, category: 'Electronics', description: '' };
   storeSettings = { open: true, acceptOrders: true, autoConfirm: false, newOrderAlerts: true, lowStockWarnings: true };
+  analyticsDateFrom = '';
+  analyticsDateTo = '';
+  filteredOrders: any[] = [];
+  segments: any = null;
   productService = inject(ProductService);
   orderService = inject(OrderService);
+  adminService = inject(AdminService);
   auth = inject(AuthService);
   toast = inject(ToastService);
   router = inject(Router);
@@ -2205,8 +2287,10 @@ export class ManagerComponent implements OnInit, AfterViewInit {
     });
     this.orderService.getOrders().subscribe(res => {
       this.storeOrders = res;
+      this.filteredOrders = [...res];
       this.buildRevenueChart();
     });
+    this.productService.getAllReviews().subscribe(res => this.reviews = res);
   }
 
   ngAfterViewInit() {
@@ -2276,6 +2360,54 @@ export class ManagerComponent implements OnInit, AfterViewInit {
 
   get totalRevenue(): number {
     return this.storeOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }
+
+  get filteredRevenue(): number {
+    return this.filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }
+
+  applyDateFilter() {
+    const from = this.analyticsDateFrom ? new Date(this.analyticsDateFrom) : null;
+    const to = this.analyticsDateTo ? new Date(this.analyticsDateTo) : null;
+    if (to) to.setHours(23, 59, 59);
+    this.filteredOrders = this.storeOrders.filter(o => {
+      const d = new Date(o.orderDate);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+  }
+
+  resetDateFilter() {
+    this.analyticsDateFrom = '';
+    this.analyticsDateTo = '';
+    this.filteredOrders = [...this.storeOrders];
+  }
+
+  respondToReview(r: any) {
+    const response = prompt('Write your reply to this review:');
+    if (response && response.trim()) {
+      this.productService.respondToReview(r.reviewId, response.trim()).subscribe({
+        next: (updated) => {
+          r.storeResponse = updated.storeResponse;
+          r.respondedAt = updated.respondedAt;
+          this.toast.show('Reply submitted');
+        },
+        error: () => this.toast.show('Failed to submit reply', 'error')
+      });
+    }
+  }
+
+  loadSegments() {
+    if (this.segments) return;
+    this.adminService.getCustomerSegments().subscribe({
+      next: (data) => this.segments = data,
+      error: () => this.toast.show('Failed to load segments', 'error')
+    });
+  }
+
+  segmentKeys(obj: any): string[] {
+    return obj ? Object.keys(obj) : [];
   }
 
   get pendingOrders() {
@@ -2832,10 +2964,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
 
   storeComparison: any[] = [];
   categories: any[] = [];
-  auditLogs = [
-    { time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'System', action: 'Startup', type: 'info', detail: 'Application initialized' },
-    { time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'Admin', action: 'Login', type: 'success', detail: 'Authenticated via JWT' },
-  ];
+  auditLogs: any[] = [];
 
   stores: any[] = [];
   users: any[] = [];
@@ -2853,6 +2982,28 @@ export class AdminComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     this.refreshData();
     this.categoryService.getAll().subscribe(res => this.categories = res);
+    this.loadAuditLogs();
+    this.logAudit('Login', 'success', 'Admin authenticated via JWT');
+  }
+
+  loadAuditLogs() {
+    this.adminService.getAuditLogs().subscribe({
+      next: (logs) => this.auditLogs = logs.map(l => ({
+        time: l.createdAt?.replace('T', ' ')?.slice(0, 19) || '',
+        user: l.username || 'System',
+        action: l.action,
+        type: l.type,
+        detail: l.detail
+      })),
+      error: () => {}
+    });
+  }
+
+  logAudit(action: string, type: string, detail: string) {
+    this.adminService.createAuditLog(action, type, detail).subscribe({
+      next: () => this.loadAuditLogs(),
+      error: () => {}
+    });
   }
 
   ngAfterViewInit() {
@@ -3005,7 +3156,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
     if (!confirm(`Ban ${u.fullName}?`)) return;
     this.adminService.banUser(u.userId).subscribe(() => {
       this.toast.show('User banned');
-      this.auditLogs.unshift({ time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'Admin', action: 'Ban User', type: 'warning', detail: `Banned ${u.fullName}` });
+      this.logAudit('Ban User', 'warning', `Banned ${u.fullName}`);
       this.refreshData();
     });
   }
@@ -3017,7 +3168,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
       next: (c) => {
         this.categories.push(c);
         this.toast.show('Category created');
-        this.auditLogs.unshift({ time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'Admin', action: 'Create Category', type: 'success', detail: name });
+        this.logAudit('Create Category', 'success', name);
       },
       error: (e) => this.toast.show(e.error?.message || 'Failed to create category', 'error')
     });
@@ -3029,7 +3180,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
       next: () => {
         this.categories = this.categories.filter(x => x.categoryId !== c.categoryId);
         this.toast.show('Category deleted');
-        this.auditLogs.unshift({ time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'Admin', action: 'Delete Category', type: 'warning', detail: c.name });
+        this.logAudit('Delete Category', 'warning', c.name);
       },
       error: () => this.toast.show('Failed to delete category', 'error')
     });

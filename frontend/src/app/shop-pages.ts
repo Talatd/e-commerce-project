@@ -249,8 +249,26 @@ import { ProductService, OrderService, AuthService, ToastService, ShipmentServic
             </div>
           </div>
 
+          <!-- PAYMENT METHOD SELECTION -->
+          <div class="section-title" style="margin-top:20px;margin-bottom:12px;">Payment Method</div>
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <div (click)="paymentMethod='card'" [style.border-color]="paymentMethod==='card' ? 'var(--teal)' : 'var(--border)'" style="flex:1;padding:12px;border:1.5px solid;border-radius:8px;cursor:pointer;text-align:center;background:var(--card);transition:border-color .2s;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-bottom:4px;"><rect x="2" y="5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M2 8h14" stroke="currentColor" stroke-width="1.1"/></svg>
+              <div style="font-size:10px;font-weight:500;">Credit Card</div>
+            </div>
+            <div (click)="paymentMethod='paypal'" [style.border-color]="paymentMethod==='paypal' ? 'var(--teal)' : 'var(--border)'" style="flex:1;padding:12px;border:1.5px solid;border-radius:8px;cursor:pointer;text-align:center;background:var(--card);transition:border-color .2s;">
+              <div style="font-size:14px;font-weight:700;color:#0070BA;margin-bottom:4px;">P</div>
+              <div style="font-size:10px;font-weight:500;">PayPal</div>
+            </div>
+            <div (click)="paymentMethod='bank'" [style.border-color]="paymentMethod==='bank' ? 'var(--teal)' : 'var(--border)'" style="flex:1;padding:12px;border:1.5px solid;border-radius:8px;cursor:pointer;text-align:center;background:var(--card);transition:border-color .2s;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-bottom:4px;"><path d="M9 2L2 7h14L9 2Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M4 10v4M7 10v4M11 10v4M14 10v4M2 16h14" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              <div style="font-size:10px;font-weight:500;">Bank Transfer</div>
+            </div>
+          </div>
+
           <!-- CARD INPUT FIELDS -->
-          <div class="section-title" style="margin-top:20px;margin-bottom:12px;">Card Details</div>
+          <ng-container *ngIf="paymentMethod === 'card'">
+          <div class="section-title" style="margin-bottom:12px;">Card Details</div>
           <div class="fields">
             <div class="field">
               <div class="field-label">Card Number</div>
@@ -283,6 +301,33 @@ import { ProductService, OrderService, AuthService, ToastService, ShipmentServic
               </div>
             </div>
           </div>
+          </ng-container>
+
+          <!-- PAYPAL -->
+          <ng-container *ngIf="paymentMethod === 'paypal'">
+            <div style="text-align:center;padding:24px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
+              <div style="font-size:24px;font-weight:700;color:#0070BA;margin-bottom:8px;">PayPal</div>
+              <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">You will be redirected to PayPal to complete payment securely.</div>
+              <input class="fi" placeholder="PayPal email address" [(ngModel)]="paypalEmail" style="max-width:300px;margin:0 auto;text-align:center;"/>
+            </div>
+          </ng-container>
+
+          <!-- BANK TRANSFER -->
+          <ng-container *ngIf="paymentMethod === 'bank'">
+            <div style="padding:20px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
+              <div style="font-size:12px;font-weight:500;margin-bottom:12px;">Bank Transfer Details</div>
+              <div style="font-size:11px;color:var(--text3);line-height:1.8;">
+                <div><strong>Bank:</strong> SmartStore International Bank</div>
+                <div><strong>IBAN:</strong> TR00 0000 0000 0000 0000 0000 00</div>
+                <div><strong>SWIFT:</strong> SMSTSTXX</div>
+                <div><strong>Reference:</strong> ORD-{{(Math.random() * 9999) | number:'1.0-0'}}</div>
+              </div>
+              <div style="margin-top:12px;font-size:10px;color:var(--teal);padding:8px;background:rgba(62,207,178,0.06);border-radius:6px;">
+                Your order will be processed once payment is confirmed (1-2 business days).
+              </div>
+            </div>
+          </ng-container>
+
         </div>
 
         <div class="right">
@@ -425,6 +470,10 @@ export class CartComponent implements OnInit, OnDestroy {
   discount = 0;
   discountPercent = 0;
 
+  Math = Math;
+  paymentMethod = 'card';
+  paypalEmail = '';
+
   // Payment Form State
   addrMode = 'saved';
   cardFlipped = false;
@@ -548,14 +597,16 @@ export class CartComponent implements OnInit, OnDestroy {
   }
 
   processPayment() {
-    const cleanNum = this.rawNum.replace(/\s/g, '');
-    let valid = true;
-
-    if (cleanNum.length < 16) { this.numErr = true; valid = false; }
-    if (this.rawExp.replace(/\D/g, '').length < 4) { this.expErr = true; valid = false; }
-    if (this.rawCvv.length < 3) { this.cvvErr = true; valid = false; }
-
-    if (!valid) return;
+    if (this.paymentMethod === 'card') {
+      const cleanNum = this.rawNum.replace(/\s/g, '');
+      let valid = true;
+      if (cleanNum.length < 16) { this.numErr = true; valid = false; }
+      if (this.rawExp.replace(/\D/g, '').length < 4) { this.expErr = true; valid = false; }
+      if (this.rawCvv.length < 3) { this.cvvErr = true; valid = false; }
+      if (!valid) return;
+    } else if (this.paymentMethod === 'paypal' && !this.paypalEmail.includes('@')) {
+      return;
+    }
 
     this.isProcessing = true;
     

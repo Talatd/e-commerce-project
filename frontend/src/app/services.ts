@@ -104,6 +104,14 @@ export class ProductService {
   deleteProduct(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`);
   }
+
+  getAllReviews(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/reviews/all`);
+  }
+
+  respondToReview(reviewId: number, response: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/reviews/${reviewId}/respond`, { response });
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -160,6 +168,18 @@ export class AdminService {
 
   getStoreComparison(): Observable<any[]> {
     return this.http.get<any[]>(`${API}/api/v1/analytics/store-comparison`);
+  }
+
+  getCustomerSegments(): Observable<any> {
+    return this.http.get(`${API}/api/v1/analytics/customer-segments`);
+  }
+
+  getAuditLogs(): Observable<any[]> {
+    return this.http.get<any[]>(`${API}/api/v1/admin/audit-logs`);
+  }
+
+  createAuditLog(action: string, type: string, detail: string): Observable<any> {
+    return this.http.post(`${API}/api/v1/admin/audit-logs`, { action, type, detail });
   }
 }
 

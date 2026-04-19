@@ -121,6 +121,23 @@ public class ProductController {
         return ResponseEntity.ok(saved);
     }
 
+    @PatchMapping("/reviews/{reviewId}/respond")
+    @Operation(summary = "Respond to a review", description = "Store owner responds to a customer review.")
+    public ResponseEntity<ProductReview> respondToReview(
+            @PathVariable Long reviewId,
+            @RequestBody Map<String, String> body) {
+        ProductReview review = reviewRepository.findById(Objects.requireNonNull(reviewId)).orElseThrow();
+        review.setStoreResponse(body.get("response"));
+        review.setRespondedAt(java.time.LocalDateTime.now());
+        return ResponseEntity.ok(reviewRepository.save(review));
+    }
+
+    @GetMapping("/reviews/all")
+    @Operation(summary = "Get all reviews", description = "Returns all product reviews for management.")
+    public ResponseEntity<java.util.List<ProductReview>> getAllReviews() {
+        return ResponseEntity.ok(reviewRepository.findAll());
+    }
+
     @PostMapping
     @Operation(summary = "Add a new product", description = "Creates a new electronics product in the catalog.")
     public ResponseEntity<Product> createProduct(@RequestBody Product product) {

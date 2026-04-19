@@ -86,7 +86,13 @@ def sql_agent(state: AgentState):
     if state["user_role"] == "CONSUMER":
         role_constraint = f"IMPORTANT: This user (user_id={state['user_id']}) can ONLY see their own orders, reviews, and profile. Always filter by user_id={state['user_id']}."
     elif state["user_role"] == "MANAGER":
-        role_constraint = "This is a store manager. They can see their store's products, orders, and customers but not other stores."
+        role_constraint = (
+            f"IMPORTANT: This is a store manager (user_id={state['user_id']}). "
+            f"They can ONLY see data related to their own store. "
+            f"Always JOIN with stores table and filter by stores.owner_id={state['user_id']} "
+            f"or filter orders/products belonging to their store. "
+            f"They cannot see other stores' data, other users' personal data, or platform-wide aggregates."
+        )
 
     prompt = f"""
     You are a MySQL expert for an e-commerce platform.
