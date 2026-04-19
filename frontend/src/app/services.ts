@@ -47,6 +47,10 @@ export class AuthService {
     localStorage.setItem('user', JSON.stringify(user));
     this.currentUserSubject.next(user);
   }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/change-password`, { currentPassword, newPassword });
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -164,6 +168,10 @@ export class OrderService {
 
   getOrders(): Observable<any[]> {
     return this.http.get<any[]>(this.apiUrl);
+  }
+
+  getMyOrders(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/my`);
   }
 }
 

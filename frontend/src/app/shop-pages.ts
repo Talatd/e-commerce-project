@@ -1127,7 +1127,7 @@ export class OrdersComponent implements OnInit {
   toast = inject(ToastService);
 
   ngOnInit() {
-    this.orderService.getOrders().subscribe(orders => {
+    this.orderService.getMyOrders().subscribe(orders => {
       this.myOrders = orders.sort((a: any, b: any) =>
         new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
       if (this.myOrders.length > 0) {

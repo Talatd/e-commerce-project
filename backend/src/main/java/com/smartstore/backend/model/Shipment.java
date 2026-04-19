@@ -1,5 +1,6 @@
 package com.smartstore.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,6 +24,7 @@ public class Shipment {
 
     @OneToOne
     @JoinColumn(name = "order_id", nullable = false, unique = true)
+    @JsonIgnoreProperties({"items", "user"})
     private Order order;
 
     @Column(nullable = false)

@@ -33,18 +33,20 @@ engine = create_engine(DB_URL)
 
 SCHEMA_DESCRIPTION = """
 Tables (MySQL, all column names use snake_case):
-- users (user_id PK, email, password_hash, full_name, role ENUM('ADMIN','MANAGER','CONSUMER'), enabled BOOLEAN, created_at)
-- products (product_id PK, name, description, brand, category, base_price DECIMAL, image_url, stock_quantity INT, created_at, updated_at)
-- orders (order_id PK, user_id FK→users, total_amount DECIMAL, shipping_address, status ENUM('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED'), order_date)
-- order_items (order_item_id PK, order_id FK→orders, product_id FK→products, quantity INT, price_at_purchase DECIMAL)
-- product_reviews (review_id PK, product_id FK→products, user_id FK→users, rating INT 1-5, comment TEXT, sentiment_score DECIMAL, store_response TEXT, responded_at, created_at)
-- regional_inventory (inventory_id PK, product_id FK→products, region VARCHAR, stock_quantity INT)
-- stores (id PK, name, owner_name, total_revenue DOUBLE, order_count INT, rating DOUBLE, status VARCHAR)
-- shipments (shipment_id PK, order_id FK→orders UNIQUE, warehouse_block, mode_of_shipment, carrier, tracking_number, status ENUM('PROCESSING','SHIPPED','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','RETURNED'), customer_care_calls INT, customer_rating INT, prior_purchases INT, on_time_delivery BOOLEAN, shipped_at, delivered_at, estimated_delivery, created_at)
-- categories (category_id PK, name, description, image_url, parent_id FK→categories NULL, display_order INT, active BOOLEAN)
-- customer_profiles (profile_id PK, user_id FK→users UNIQUE, gender, age INT, city, country, membership_type, total_spend DECIMAL, items_purchased INT, avg_rating DOUBLE, discount_applied BOOLEAN, satisfaction_level, preferred_payment_method, days_on_platform INT)
+- users (user_id INT PK, email VARCHAR, password_hash VARCHAR, full_name VARCHAR, role ENUM('ADMIN','MANAGER','CONSUMER'), created_at TIMESTAMP)
+- products (product_id INT PK, name VARCHAR, description TEXT, brand VARCHAR, category VARCHAR, base_price DECIMAL(10,2), created_at TIMESTAMP, updated_at TIMESTAMP)
+- regional_inventory (inventory_id INT PK, product_id INT FK→products, region VARCHAR, stock_quantity INT)
+- orders (order_id INT PK, user_id INT FK→users, total_amount DECIMAL(10,2), shipping_address TEXT, status ENUM('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED'), order_date TIMESTAMP)
+- order_items (order_item_id INT PK, order_id INT FK→orders, product_id INT FK→products, quantity INT, price_at_purchase DECIMAL(10,2))
+- product_reviews (review_id INT PK, product_id INT FK→products, user_id INT FK→users, rating TINYINT 1-5, comment TEXT, sentiment_score DECIMAL(3,2), created_at TIMESTAMP)
+- stores (id INT PK, name VARCHAR, owner_name VARCHAR, owner_id INT FK→users, total_revenue DECIMAL(12,2), order_count INT, rating DECIMAL(3,2), status ENUM('OPEN','CLOSED','PENDING'), created_at TIMESTAMP)
+- shipments (shipment_id INT PK, order_id INT FK→orders, warehouse_block VARCHAR, mode_of_shipment VARCHAR, carrier VARCHAR, tracking_number VARCHAR, status ENUM('PREPARING','SHIPPED','IN_TRANSIT','DELIVERED','RETURNED'), shipped_at TIMESTAMP, delivered_at TIMESTAMP, estimated_delivery TIMESTAMP, customer_care_calls INT, customer_rating TINYINT, cost_of_product DECIMAL(10,2), prior_purchases INT, product_importance ENUM('LOW','MEDIUM','HIGH'), discount_offered DECIMAL(5,2))
+- categories (category_id INT PK, name VARCHAR, description TEXT, parent_id INT FK→categories NULL, display_order INT, active BOOLEAN)
+- customer_profiles (profile_id INT PK, user_id INT FK→users UNIQUE, gender VARCHAR, age INT, city VARCHAR, country VARCHAR, membership_type ENUM('BASIC','SILVER','GOLD','PLATINUM'), total_spend DECIMAL(12,2), items_purchased INT, avg_rating DECIMAL(3,2), discount_applied BOOLEAN, satisfaction_level ENUM('UNSATISFIED','NEUTRAL','SATISFIED','VERY_SATISFIED'))
+- integration_logs (log_id INT PK, service_name VARCHAR, endpoint VARCHAR, status_code INT, message TEXT, created_at TIMESTAMP)
 
 IMPORTANT: Always use snake_case column names in SQL queries. Example: user_id NOT userId, base_price NOT basePrice, order_date NOT orderDate.
+Note: orders table has NO store_id column. To find orders related to a store, you cannot directly join orders to stores.
 """
 
 
@@ -70,7 +72,7 @@ def guardrails_agent(state: AgentState):
     resp = model.generate_content(prompt)
     answer = resp.text.strip().lower()
 
-    if "no" in answer:
+    if answer.startswith("no") or answer == "no":
         return {
             "is_in_scope": False,
             "response": "I'm specialized in e-commerce analytics. I can help with product data, orders, customers, sales, reviews, and inventory. Please ask a related question!",
@@ -120,7 +122,12 @@ def sql_agent(state: AgentState):
 def execution_agent(state: AgentState):
     """Executes SQL safely against the database."""
     if not state.get("sql_query"):
-        return {"next_step": "respond", "error": "No SQL query generated"}
+        return {
+            "next_step": "respond",
+            "error": "",
+            "response": state.get("response") or "I wasn't able to generate a query for that. Could you rephrase?",
+            "results": [],
+        }
     try:
         with engine.connect() as conn:
             result = conn.execute(text(state["sql_query"]))

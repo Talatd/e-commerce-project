@@ -1587,7 +1587,7 @@ export class ConsumerComponent implements OnInit {
   get cartCount(): number {
     try {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      return cart.reduce((sum: number, i: any) => sum + (i.quantity || 1), 0);
+      return cart.reduce((sum: number, i: any) => sum + (i.qty || i.quantity || 1), 0);
     } catch { return 0; }
   }
 
@@ -1640,7 +1640,7 @@ export class ConsumerComponent implements OnInit {
       this.categories = cats.map((c: any) => ({ name: c, checked: false }));
     });
 
-    this.orderService.getOrders().subscribe(res => {
+    this.orderService.getMyOrders().subscribe(res => {
       this.consumerOrders = res || [];
     });
   }
@@ -2071,10 +2071,10 @@ export class ConsumerComponent implements OnInit {
           <div class="malert-btn" (click)="activePanel='products'">View Products</div>
         </div>
         <div class="mkr">
-          <div class="mkpi"><div class="mkl">Store Revenue</div><div class="mkv">$218<em>K</em></div><div class="mkd mup-c">↑ 18% this month</div></div>
-          <div class="mkpi"><div class="mkl">Orders</div><div class="mkv">3,<em>104</em></div><div class="mkd mup-c">↑ 12% this month</div></div>
-          <div class="mkpi"><div class="mkl">Active Products</div><div class="mkv">{{products.length}}</div><div class="mkd mup-c">↑ Active</div></div>
-          <div class="mkpi"><div class="mkl">Store Rating</div><div class="mkv">4.<em>7★</em></div><div class="mkd mup-c">↑ 0.1 this month</div></div>
+          <div class="mkpi"><div class="mkl">Store Revenue</div><div class="mkv">{{filteredRevenue | currency:'USD':'symbol':'1.0-0'}}</div><div class="mkd mup-c">{{filteredOrders.length}} orders</div></div>
+          <div class="mkpi"><div class="mkl">Orders</div><div class="mkv">{{storeOrders.length}}</div><div class="mkd mup-c">{{pendingOrders.length}} pending</div></div>
+          <div class="mkpi"><div class="mkl">Active Products</div><div class="mkv">{{products.length}}</div><div class="mkd mup-c">{{lowStockProducts.length}} low stock</div></div>
+          <div class="mkpi"><div class="mkl">Reviews</div><div class="mkv">{{reviews.length}}</div><div class="mkd mup-c">Avg {{avgReviewRating}}★</div></div>
         </div>
         <div class="mcr">
           <div class="mgc">
@@ -2106,9 +2106,14 @@ export class ConsumerComponent implements OnInit {
           <div class="mgh"><div class="mgt">Recent Orders</div><div class="mgm" style="cursor:pointer;" (click)="activePanel='orders'">View all →</div></div>
           <table class="mt"><thead><tr><th>Order</th><th>Customer</th><th>Product</th><th>Amount</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td class="mtm">#ORD-7821</td><td class="mtn">Buse Ü.</td><td>MacBook Pro 14"</td><td class="mtp">$1,039</td><td><span class="msp mspb">Shipped</span></td></tr>
-            <tr><td class="mtm">#ORD-7820</td><td class="mtn">James W.</td><td>AirPods Pro Max</td><td class="mtp">$479</td><td><span class="msp mspg">Delivered</span></td></tr>
-            <tr><td class="mtm">#ORD-7818</td><td class="mtn">Ali K.</td><td>Keychron Q1 Pro</td><td class="mtp">$199</td><td><span class="msp mspa">Pending</span></td></tr>
+            <tr *ngFor="let o of storeOrders.slice(0,5)">
+              <td class="mtm">#{{o.orderId}}</td>
+              <td class="mtn">{{o.user?.fullName || 'Customer'}}</td>
+              <td>{{o.items?.length || 0}} items</td>
+              <td class="mtp">{{o.totalAmount | currency}}</td>
+              <td><span class="msp" [class.mspg]="o.status==='DELIVERED'" [class.mspb]="o.status==='SHIPPED' || o.status==='PROCESSING'" [class.mspa]="o.status==='PENDING'">{{o.status}}</span></td>
+            </tr>
+            <tr *ngIf="storeOrders.length === 0"><td colspan="5" style="text-align:center;color:var(--text3);">No orders yet</td></tr>
           </tbody></table>
         </div>
       </ng-container>
@@ -2310,7 +2315,7 @@ export class ManagerComponent implements OnInit, AfterViewInit {
       this.products = res;
       this.buildCategoryChart();
     });
-    this.orderService.getOrders().subscribe(res => {
+    this.orderService.getMyOrders().subscribe(res => {
       this.storeOrders = res;
       this.filteredOrders = [...res];
       this.buildRevenueChart();
@@ -2437,6 +2442,12 @@ export class ManagerComponent implements OnInit, AfterViewInit {
 
   get lowStockAlert(): string {
     return this.lowStockProducts.slice(0, 3).map((p: any) => p.name + ' (' + p.stockQuantity + ' left)').join(', ');
+  }
+
+  get avgReviewRating(): string {
+    if (!this.reviews?.length) return '—';
+    const sum = this.reviews.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0);
+    return (sum / this.reviews.length).toFixed(1);
   }
 
   get pendingOrders() {
@@ -3298,19 +3309,21 @@ export class AdminComponent implements OnInit, AfterViewInit {
             </div>
           </div>
 
-          <div class="panel-nexus" *ngIf="tab === 'password'">
+          <div class="panel-nexus" [class.active]="tab === 'password'" *ngIf="tab === 'password'">
              <div class="top-bar-nexus"><div><div class="page-title-nexus">Security</div><div class="page-sub-nexus">Change your access credentials.</div></div></div>
              <div class="card-nexus" style="max-width:400px; padding:24px; margin-top:20px;">
-                <div class="field-nexus" style="margin-bottom:15px;"><label>Current Password</label><input type="password" placeholder="••••••••"/></div>
-                <div class="field-nexus" style="margin-bottom:15px;"><label>New Password</label><input type="password" placeholder="••••••••" (input)="updatePwStrength($event)"/></div>
+                <div class="field-nexus" style="margin-bottom:15px;"><label>Current Password</label><input type="password" placeholder="••••••••" [(ngModel)]="currentPassword"/></div>
+                <div class="field-nexus" style="margin-bottom:15px;"><label>New Password</label><input type="password" placeholder="••••••••" [(ngModel)]="newPassword" (input)="updatePwStrength($event)"/></div>
                 <div style="display:flex; gap:4px; margin-bottom:15px;">
                   <div *ngFor="let i of [1,2,3,4]" [style.background]="pwS >= i ? pwC : 'var(--glass)'" style="flex:1; height:3px; border-radius:2px;"></div>
                 </div>
-                <button class="sc-btn-nexus primary" style="width:100%;" (click)="saveProfile($event)">Update Password</button>
+                <p *ngIf="pwError" style="color:var(--red);font-size:12px;margin-bottom:10px;">{{pwError}}</p>
+                <p *ngIf="pwSuccess" style="color:var(--green);font-size:12px;margin-bottom:10px;">{{pwSuccess}}</p>
+                <button class="sc-btn-nexus primary" style="width:100%;" (click)="changePassword()">Update Password</button>
              </div>
           </div>
 
-          <div class="panel-nexus" *ngIf="tab === 'addresses'">
+          <div class="panel-nexus" [class.active]="tab === 'addresses'" *ngIf="tab === 'addresses'">
              <div class="top-bar-nexus"><div><div class="page-title-nexus">Addresses</div><div class="page-sub-nexus">Manage your shipping locations.</div></div></div>
              <div class="grid-2-nexus" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
                 <div class="card-nexus" style="padding:20px; border-color:var(--teal-glow);">
@@ -3356,6 +3369,10 @@ export class SettingsComponent implements OnInit {
   profile: any = { gender: '', age: null, city: '', country: '', membershipType: 'BASIC' };
   pwS = 0; pwC = '';
   breakdown: any = { categories: [] };
+  currentPassword = '';
+  newPassword = '';
+  pwError = '';
+  pwSuccess = '';
 
   auth = inject(AuthService);
   adminService = inject(AdminService);
@@ -3405,6 +3422,30 @@ export class SettingsComponent implements OnInit {
         this.auth.updateUser(this.editUser);
         this.toast.show('Profile updated (local only)', 'info');
         btn.innerHTML = oldText; btn.disabled = false;
+      }
+    });
+  }
+
+  changePassword() {
+    this.pwError = '';
+    this.pwSuccess = '';
+    if (!this.currentPassword || !this.newPassword) {
+      this.pwError = 'Please fill in both fields.';
+      return;
+    }
+    if (this.newPassword.length < 6) {
+      this.pwError = 'New password must be at least 6 characters.';
+      return;
+    }
+    this.auth.changePassword(this.currentPassword, this.newPassword).subscribe({
+      next: () => {
+        this.pwSuccess = 'Password changed successfully!';
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.pwS = 0;
+      },
+      error: (err: any) => {
+        this.pwError = err?.error?.message || 'Failed to change password.';
       }
     });
   }

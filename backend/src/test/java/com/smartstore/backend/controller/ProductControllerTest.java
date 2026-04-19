@@ -62,9 +62,10 @@ class ProductControllerTest {
     }
 
     @Test
-    void getProduct_NotFound_Throws() {
+    void getProduct_NotFound_Returns404() {
         when(productRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(Exception.class, () -> controller.getProduct(99L));
+        ResponseEntity<Product> response = controller.getProduct(99L);
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test

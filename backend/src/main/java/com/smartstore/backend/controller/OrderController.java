@@ -5,10 +5,13 @@ import com.smartstore.backend.model.OrderItem;
 import com.smartstore.backend.model.Product;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.ProductRepository;
+import com.smartstore.backend.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,11 +25,19 @@ public class OrderController {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
 
     @GetMapping
     @Operation(summary = "List all orders")
     public ResponseEntity<List<Order>> getAllOrders() {
         return ResponseEntity.ok(orderRepository.findAll());
+    }
+
+    @GetMapping("/my")
+    @Operation(summary = "List orders for the current user")
+    public ResponseEntity<List<Order>> getMyOrders(@AuthenticationPrincipal UserDetails principal) {
+        var user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+        return ResponseEntity.ok(orderRepository.findByUser(user));
     }
 
     @GetMapping("/{id}")
