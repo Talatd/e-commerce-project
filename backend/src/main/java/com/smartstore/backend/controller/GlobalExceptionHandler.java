@@ -44,6 +44,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, "Access denied");
     }
 
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthenticationException(
+            org.springframework.security.core.AuthenticationException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");

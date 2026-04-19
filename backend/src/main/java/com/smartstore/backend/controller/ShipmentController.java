@@ -68,6 +68,9 @@ public class ShipmentController {
     public ResponseEntity<Shipment> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         Shipment shipment = shipmentRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         String newStatus = body.get("status");
+        if (newStatus == null || newStatus.isBlank()) {
+            throw new IllegalArgumentException("Status is required");
+        }
         shipment.setStatus(Shipment.ShipmentStatus.valueOf(newStatus.toUpperCase()));
 
         if (shipment.getStatus() == Shipment.ShipmentStatus.SHIPPED && shipment.getShippedAt() == null) {

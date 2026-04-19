@@ -44,13 +44,14 @@ public class OrderController {
             for (OrderItem item : order.getItems()) {
                 Product product = productRepository.findById(
                         Objects.requireNonNull(item.getProduct().getProductId())).orElseThrow();
-                if (product.getStockQuantity() < item.getQuantity()) {
+                int stock = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
+                if (stock < item.getQuantity()) {
                     throw new IllegalArgumentException(
                             "Insufficient stock for " + product.getName()
                                     + " (available: " + product.getStockQuantity()
                                     + ", requested: " + item.getQuantity() + ")");
                 }
-                product.setStockQuantity(product.getStockQuantity() - item.getQuantity());
+                product.setStockQuantity(stock - item.getQuantity());
                 productRepository.save(product);
                 item.setOrder(order);
             }

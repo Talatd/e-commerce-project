@@ -151,13 +151,13 @@ import { ProductService, OrderService, AuthService, ToastService, ShipmentServic
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M1 6h12" stroke="currentColor" stroke-width="1.1"/></svg>
               Card
             </div>
-            <div class="nx-pay-method" [class.active]="payMethod === 'crypto'" (click)="payMethod = 'crypto'">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.1"/><path d="M4.5 7h5M7 4.5v5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-              Crypto
+            <div class="nx-pay-method" [class.active]="payMethod === 'paypal'" (click)="payMethod = 'paypal'">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.1"/><path d="M5 4h2.5c1.2 0 2 .8 2 2s-.8 2-2 2H6L5.5 10" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              PayPal
             </div>
-            <div class="nx-pay-method" [class.active]="payMethod === 'wallet'" (click)="payMethod = 'wallet'">
+            <div class="nx-pay-method" [class.active]="payMethod === 'bank'" (click)="payMethod = 'bank'">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="4" width="10" height="6" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M5 4V3a2 2 0 0 1 4 0v1" stroke="currentColor" stroke-width="1.1"/></svg>
-              Wallet
+              Bank
             </div>
           </div>
 
@@ -551,6 +551,7 @@ export class CartComponent implements OnInit, OnDestroy {
   }
 
   goStep2() {
+    this.paymentMethod = this.payMethod;
     this.step = 2;
   }
 

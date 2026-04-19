@@ -46,6 +46,9 @@ public class ChatController {
         aiRequest.put("user_id", user.getUserId());
         aiRequest.put("role", user.getRole().name());
         aiRequest.put("history", payload.getOrDefault("history", List.of()));
+        if (payload.containsKey("session_id")) {
+            aiRequest.put("session_id", payload.get("session_id"));
+        }
 
         RestTemplate restTemplate = new RestTemplate();
         try {
@@ -73,12 +76,15 @@ public class ChatController {
 
         new Thread(() -> {
             try {
-                String jsonBody = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(Map.of(
-                        "query", payload.get("query"),
-                        "user_id", user.getUserId(),
-                        "role", user.getRole().name(),
-                        "history", payload.getOrDefault("history", List.of())
-                ));
+                Map<String, Object> reqBody = new HashMap<>();
+                reqBody.put("query", payload.get("query"));
+                reqBody.put("user_id", user.getUserId());
+                reqBody.put("role", user.getRole().name());
+                reqBody.put("history", payload.getOrDefault("history", List.of()));
+                if (payload.containsKey("session_id")) {
+                    reqBody.put("session_id", payload.get("session_id"));
+                }
+                String jsonBody = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(reqBody);
 
                 URL url = java.net.URI.create(aiServiceUrl + "/api/v1/chatbot/query/stream").toURL();
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();

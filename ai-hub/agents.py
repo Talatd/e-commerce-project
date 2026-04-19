@@ -32,17 +32,19 @@ DB_URL = (
 engine = create_engine(DB_URL)
 
 SCHEMA_DESCRIPTION = """
-Tables:
-- users (userId, email, passwordHash, fullName, role [ADMIN/MANAGER/CONSUMER], enabled, createdAt)
-- products (productId, name, description, brand, category, basePrice, imageUrl, stockQuantity, createdAt, updatedAt)
-- orders (orderId, user_id, totalAmount, shippingAddress, status [PENDING/PROCESSING/SHIPPED/DELIVERED/CANCELLED], orderDate)
-- order_items (orderItemId, order_id, product_id, quantity, priceAtPurchase)
-- product_reviews (reviewId, product_id, user_id, rating, comment, sentimentScore, createdAt)
-- regional_inventory (inventoryId, product_id, region, stockQuantity)
-- stores (id, name, ownerName, totalRevenue, orderCount, rating, status)
-- shipments (shipmentId, order_id, warehouseBlock, modeOfShipment, carrier, trackingNumber, status, shippedAt, deliveredAt, estimatedDelivery)
-- categories (categoryId, name, description, parent_id, displayOrder, active)
-- customer_profiles (profileId, user_id, gender, age, city, country, membershipType, totalSpend, itemsPurchased, avgRating, satisfactionLevel)
+Tables (MySQL, all column names use snake_case):
+- users (user_id PK, email, password_hash, full_name, role ENUM('ADMIN','MANAGER','CONSUMER'), enabled BOOLEAN, created_at)
+- products (product_id PK, name, description, brand, category, base_price DECIMAL, image_url, stock_quantity INT, created_at, updated_at)
+- orders (order_id PK, user_id FK→users, total_amount DECIMAL, shipping_address, status ENUM('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED'), order_date)
+- order_items (order_item_id PK, order_id FK→orders, product_id FK→products, quantity INT, price_at_purchase DECIMAL)
+- product_reviews (review_id PK, product_id FK→products, user_id FK→users, rating INT 1-5, comment TEXT, sentiment_score DECIMAL, store_response TEXT, responded_at, created_at)
+- regional_inventory (inventory_id PK, product_id FK→products, region VARCHAR, stock_quantity INT)
+- stores (id PK, name, owner_name, total_revenue DOUBLE, order_count INT, rating DOUBLE, status VARCHAR)
+- shipments (shipment_id PK, order_id FK→orders UNIQUE, warehouse_block, mode_of_shipment, carrier, tracking_number, status ENUM('PROCESSING','SHIPPED','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','RETURNED'), customer_care_calls INT, customer_rating INT, prior_purchases INT, on_time_delivery BOOLEAN, shipped_at, delivered_at, estimated_delivery, created_at)
+- categories (category_id PK, name, description, image_url, parent_id FK→categories NULL, display_order INT, active BOOLEAN)
+- customer_profiles (profile_id PK, user_id FK→users UNIQUE, gender, age INT, city, country, membership_type, total_spend DECIMAL, items_purchased INT, avg_rating DOUBLE, discount_applied BOOLEAN, satisfaction_level, preferred_payment_method, days_on_platform INT)
+
+IMPORTANT: Always use snake_case column names in SQL queries. Example: user_id NOT userId, base_price NOT basePrice, order_date NOT orderDate.
 """
 
 
@@ -107,8 +109,11 @@ def sql_agent(state: AgentState):
     ONLY RETURN THE RAW SQL CODE, no markdown formatting.
     """
     model = genai.GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content(prompt)
-    sql = response.text.replace("```sql", "").replace("```", "").strip()
+    try:
+        response = model.generate_content(prompt)
+        sql = response.text.replace("```sql", "").replace("```", "").strip()
+    except Exception as e:
+        return {"sql_query": "", "error": f"AI model error: {str(e)}", "next_step": "end"}
     return {"sql_query": sql, "next_step": "execute"}
 
 
@@ -159,8 +164,11 @@ def error_agent(state: AgentState):
     Fix the SQL query. ONLY RETURN THE RAW SQL CODE.
     """
     model = genai.GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content(prompt)
-    fixed_sql = response.text.replace("```sql", "").replace("```", "").strip()
+    try:
+        response = model.generate_content(prompt)
+        fixed_sql = response.text.replace("```sql", "").replace("```", "").strip()
+    except Exception as e:
+        return {"sql_query": "", "error": f"AI model error: {str(e)}", "next_step": "end", "response": "Sorry, I could not process your request right now."}
     return {
         "sql_query": fixed_sql,
         "next_step": "execute",
@@ -188,8 +196,12 @@ def response_agent(state: AgentState):
     - Be concise but informative
     """
     model = genai.GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content(prompt)
-    return {"response": response.text, "next_step": "visualize"}
+    try:
+        response = model.generate_content(prompt)
+        answer = response.text
+    except Exception as e:
+        answer = f"I retrieved the data but encountered an error generating the analysis: {str(e)}"
+    return {"response": answer, "next_step": "visualize"}
 
 
 def visualization_agent(state: AgentState):
@@ -207,8 +219,11 @@ def visualization_agent(state: AgentState):
     If no chart is needed, respond with exactly "NO_CHART".
     """
     model = genai.GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content(prompt)
-    code = response.text.strip()
+    try:
+        response = model.generate_content(prompt)
+        code = response.text.strip()
+    except Exception:
+        return {"visualization_code": "", "next_step": "end"}
 
     if "NO_CHART" in code:
         return {"visualization_code": "", "next_step": "end"}

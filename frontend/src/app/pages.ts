@@ -290,6 +290,7 @@ export class LoginComponent {
     setTimeout(() => {
       this.auth.login({ email: this.email, password: this.password }).subscribe({
         next: (user) => {
+          this.isLoading = false;
           if (user.role === 'ADMIN') this.router.navigate(['/admin']);
           else if (user.role === 'MANAGER') this.router.navigate(['/manager']);
           else this.router.navigate(['/consumer']);
@@ -877,7 +878,7 @@ export class LoginComponent {
       </div>
       <div class="nav-icon" routerLink="/cart">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="#6A8A84"/><circle cx="10" cy="11" r="1.2" fill="#6A8A84"/></svg>
-        <div class="nb">3</div>
+        <div class="nb" *ngIf="cartCount > 0">{{cartCount}}</div>
       </div>
       <div class="user-pill" (click)="activeTab='settings'">
         <div class="uav">{{auth.currentUserValue?.fullName?.substring(0,2)?.toUpperCase()}}</div>
@@ -1583,6 +1584,13 @@ export class ConsumerComponent implements OnInit {
   toast = inject(ToastService);
   router = inject(Router);
 
+  get cartCount(): number {
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      return cart.reduce((sum: number, i: any) => sum + (i.quantity || 1), 0);
+    } catch { return 0; }
+  }
+
   get consumerTotalSpent(): number {
     return this.consumerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   }
@@ -2059,7 +2067,7 @@ export class ConsumerComponent implements OnInit {
         </div>
         <div class="malert" *ngIf="lowStockProducts.length > 0">
           <div class="malert-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5L1.5 12h11L7 1.5Z" stroke="#E8A94A" stroke-width="1.1" stroke-linejoin="round"/><path d="M7 6v3M7 11v.3" stroke="#E8A94A" stroke-width="1.1" stroke-linecap="round"/></svg></div>
-          <div class="malert-text"><strong>{{lowStockProducts.length}} products low on stock</strong> — {{lowStockProducts.slice(0,3).map(p => p.name + ' (' + p.stockQuantity + ' left)').join(', ')}}</div>
+          <div class="malert-text"><strong>{{lowStockProducts.length}} products low on stock</strong> — {{lowStockAlert}}</div>
           <div class="malert-btn" (click)="activePanel='products'">View Products</div>
         </div>
         <div class="mkr">
@@ -2427,6 +2435,10 @@ export class ManagerComponent implements OnInit, AfterViewInit {
     return obj ? Object.keys(obj) : [];
   }
 
+  get lowStockAlert(): string {
+    return this.lowStockProducts.slice(0, 3).map((p: any) => p.name + ' (' + p.stockQuantity + ' left)').join(', ');
+  }
+
   get pendingOrders() {
     return this.storeOrders.filter(o => o.status === 'PENDING');
   }
@@ -2706,11 +2718,11 @@ export class ManagerComponent implements OnInit, AfterViewInit {
             <thead><tr><th>Order</th><th>Customer</th><th>Store</th><th>Amount</th><th>Status</th></tr></thead>
             <tbody>
               <tr *ngFor="let o of orders.slice(0,5)">
-                <td class="td-mono-a">{{o.id}}</td>
-                <td class="td-name-a">{{o.customer}}</td>
-                <td>{{o.store}}</td>
-                <td>{{o.amount}}</td>
-                <td><span class="spill-a" [ngClass]="o.class">● {{o.status}}</span></td>
+                <td class="td-mono-a">#{{o.orderId}}</td>
+                <td class="td-name-a">{{o.user?.fullName || 'N/A'}}</td>
+                <td>{{o.items?.length || 0}} items</td>
+                <td>{{o.totalAmount | currency}}</td>
+                <td><span class="spill-a" [class.sp-green-a]="o.status==='DELIVERED'" [class.sp-blue-a]="o.status==='SHIPPED' || o.status==='PROCESSING'" [class.sp-amber-a]="o.status==='PENDING'" [class.sp-red-a]="o.status==='CANCELLED'">● {{o.status}}</span></td>
               </tr>
             </tbody>
           </table>
@@ -3095,6 +3107,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
           this.stores = results[1];
           this.users = results[2];
           this.allOrders = results[3];
+          this.orders = results[3].slice(0, 10);
           this.stats = results[4];
           this.isLoading = false;
           setTimeout(() => this.buildAdminCharts(), 200);
@@ -3279,7 +3292,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
                 </div>
                 <div class="field-nexus">
                   <label>Total Spend</label>
-                  <input [value]="(profile.totalSpend || 0 | currency)" disabled style="opacity:0.5; cursor:not-allowed;"/>
+                  <input [value]="((profile.totalSpend || 0) | currency)" disabled style="opacity:0.5; cursor:not-allowed;"/>
                 </div>
               </div>
             </div>
