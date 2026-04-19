@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService, AiService, ProductService, StoreService, AdminService, OrderService, CategoryService, CustomerProfileService, ToastService } from './services';
+import { NexusLogoComponent } from './nexus-logo.component';
+import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -10,7 +12,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <div class="scene">
   <div class="bg-glow-1"></div>
@@ -19,16 +21,11 @@ Chart.register(...registerables);
   <div class="bg-grid"></div>
 
   <div class="card">
+    <div class="card-theme-corner">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
+    </div>
     <div class="card-logo">
-      <div class="logo-icon">
-        <svg width="24" height="24" viewBox="0 0 44 44" fill="none">
-          <path d="M22 4L38 13V31L22 40L6 31V13L22 4Z" stroke="#3ECFB2" stroke-width="2" fill="rgba(62,207,178,0.1)"/>
-          <circle cx="22" cy="22" r="4" fill="#3ECFB2">
-            <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite" />
-          </circle>
-        </svg>
-      </div>
-      Nexus
+      <app-nexus-logo size="md" wordmark="Nexus"></app-nexus-logo>
     </div>
 
     <!-- TOGGLE -->
@@ -165,9 +162,15 @@ Chart.register(...registerables);
     }
     @keyframes card-in{from{opacity:0;transform:translateY(24px) scale(0.98);}to{opacity:1;transform:translateY(0) scale(1);}}
     
+    .card-theme-corner{position:absolute;top:18px;right:18px;z-index:4;}
     .card-logo{
       font-family:'Playfair Display',serif;font-style:italic; font-size:24px; color:var(--text);
       display:flex; align-items:center; gap:12px; margin-bottom:32px;
+    }
+    :host-context(html.light-mode) .scene{background:#F5F2ED;color:#1A1916;}
+    :host-context(html.light-mode) .card{
+      background:rgba(255,255,255,0.94);border-color:rgba(0,0,0,0.1);
+      box-shadow:0 24px 64px rgba(0,0,0,0.1),0 0 0 1px rgba(0,0,0,0.04) inset;
     }
 
     /* TOGGLE STYLES */
@@ -334,7 +337,7 @@ export class LoginComponent {
 @Component({
   selector: 'app-consumer',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
 :host {
@@ -348,6 +351,19 @@ export class LoginComponent {
   --blue:#6BA8C8;--blue-dim:rgba(107,168,200,0.08);
   --purple:#A78BCC;
 }
+:host-context(html.light-mode){
+  --bg:#F5F2ED;--glass:rgba(0,0,0,0.04);--glass2:rgba(0,0,0,0.07);
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --teal:#2BA898;--teal2:#1EA393;--teal-dim:rgba(43,168,152,0.15);--teal-glow:rgba(43,168,152,0.2);
+  --text:#1A1916;--text2:#8A8070;--text3:#A09888;
+  --green:#2BA871;--green-dim:rgba(43,168,113,0.15);--green-border:rgba(43,168,113,0.2);
+  --red:#C74A4A;--red-dim:rgba(199,74,74,0.12);--red-border:rgba(199,74,74,0.2);
+  --amber:#E8A94A;--amber-dim:rgba(232,169,74,0.12);
+  --blue:#4A8AC7;--blue-dim:rgba(74,138,199,0.12);
+  --purple:#A78BCC;
+}
+:host-context(html.light-mode) .navbar{background:rgba(245,242,237,0.96);}
+:host-context(html.light-mode) .hero-stat{background:rgba(255,255,255,0.92);border-color:var(--border2);}
 
 .page{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);overflow:hidden;display:flex;flex-direction:column;height:100vh;}
 
@@ -862,7 +878,7 @@ export class LoginComponent {
 <div class="page">
   <!-- NAVBAR -->
   <div class="navbar">
-    <div class="logo" (click)="activeTab='home'; selectedProduct=null;"><div class="logo-dot"></div>Nexus</div>
+    <div class="logo" (click)="activeTab='home'; selectedProduct=null;"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
     <div class="nav-pills">
       <div class="npill" [class.active]="activeTab === 'home'" (click)="activeTab='home'; selectedProduct=null;">Home</div>
       <div class="npill" [class.active]="activeTab === 'shop' && !selectedProduct" (click)="activeTab='shop'; selectedProduct=null;">Shop</div>
@@ -879,6 +895,7 @@ export class LoginComponent {
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="#6A8A84"/><circle cx="10" cy="11" r="1.2" fill="#6A8A84"/></svg>
         <div class="nb" *ngIf="cartCount > 0">{{cartCount}}</div>
       </div>
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
       <div class="user-pill" (click)="activeTab='settings'">
         <div class="uav">{{auth.currentUserValue?.fullName?.substring(0,2)?.toUpperCase()}}</div>
         <span style="font-size:12px;color:var(--text);font-weight:500;">{{auth.currentUserValue?.fullName}}</span>
@@ -1821,7 +1838,7 @@ export class ConsumerComponent implements OnInit {
 @Component({
   selector: 'app-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
 :host{
@@ -1834,6 +1851,18 @@ export class ConsumerComponent implements OnInit {
   --amber:#E8A94A;--amber-dim:rgba(232,169,74,0.08);
   --blue:#6BA8C8;--blue-dim:rgba(107,168,200,0.08);
 }
+:host-context(html.light-mode){
+  --bg:#F5F2ED;--glass:rgba(0,0,0,0.04);--glass2:rgba(0,0,0,0.07);
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --teal:#2BA898;--teal2:#1EA393;--teal-dim:rgba(43,168,152,0.15);--teal-glow:rgba(43,168,152,0.2);
+  --text:#1A1916;--text2:#8A8070;--text3:#A09888;
+  --green:#2BA871;--green-dim:rgba(43,168,113,0.15);--green-border:rgba(43,168,113,0.2);
+  --red:#C74A4A;--red-dim:rgba(199,74,74,0.12);--red-border:rgba(199,74,74,0.2);
+  --amber:#E8A94A;--amber-dim:rgba(232,169,74,0.12);
+  --blue:#4A8AC7;--blue-dim:rgba(74,138,199,0.12);
+}
+:host-context(html.light-mode) .mn{background:rgba(245,242,237,0.96);}
+:host-context(html.light-mode) .msb{background:rgba(245,242,237,0.55);}
 .mp{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);overflow:hidden;display:flex;flex-direction:column;height:100vh;}
 .mn{display:flex;align-items:center;justify-content:space-between;padding:12px 22px;border-bottom:1px solid var(--border);background:rgba(8,8,8,0.95);backdrop-filter:blur(20px);flex-shrink:0;z-index:20;}
 .mlogo{font-family:'Playfair Display',serif;font-style:italic;font-size:18px;color:var(--text);display:flex;align-items:center;gap:7px;}
@@ -1959,10 +1988,11 @@ export class ConsumerComponent implements OnInit {
   <!-- NAVBAR -->
   <div class="mn">
     <div style="display:flex;align-items:center;gap:10px;">
-      <div class="mlogo"><div class="mlogo-dot"></div>Nexus</div>
+      <div class="mlogo"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
       <div class="mbadge">Manager</div>
     </div>
     <div class="mnr">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
       <div class="mni">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4.8 1.5 3 3.3 3 5.5V8l-1 1.5h10L11 8V5.5c0-2.2-1.8-4-4-4Z" stroke="#6A8A84" stroke-width="1.1"/><path d="M5.5 11c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="#6A8A84" stroke-width="1.1"/></svg>
         <div class="mnb">3</div>
@@ -2497,10 +2527,12 @@ export class ManagerComponent implements OnInit, AfterViewInit {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
 .admin-page { background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+:host-context(html.light-mode) .navbar-a{background:rgba(245,242,237,0.96);}
+:host-context(html.light-mode) .sidebar-a{background:rgba(245,242,237,0.55);}
 .navbar-a { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; border-bottom:1px solid var(--border); background:rgba(8,8,8,0.95); backdrop-filter:blur(20px); flex-shrink:0; z-index:100; }
 .logo-a { font-family:'Playfair Display',serif; font-style:italic; font-size:18px; color:var(--text); display:flex; align-items:center; gap:8px; }
 .logo-dot-a { width:6px; height:6px; border-radius:50%; background:var(--teal); box-shadow:0 0 8px var(--teal-glow); }
@@ -2630,10 +2662,11 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   <!-- NAVBAR -->
   <div class="navbar-a">
     <div style="display:flex;align-items:center;gap:12px;">
-      <div class="logo-a"><div class="logo-dot-a"></div>Nexus</div>
+      <div class="logo-a"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
       <div class="badge-a">Admin</div>
     </div>
     <div class="nav-r-a">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
       <div class="nav-notif-a" style="position:relative; width:34px; height:34px; background:var(--glass); border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5c-2.2 0-4 1.8-4 4V9l-1 1.5h10l-1-1.5V5.5c0-2.2-1.8-4-4-4Z" stroke="var(--text2)" stroke-width="1.1"/><path d="M6 12c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="var(--text2)" stroke-width="1.1"/></svg>
         <div style="position:absolute; top:-1px; right:-1px; width:8px; height:8px; border-radius:50%; background:var(--red); border:1.5px solid #080808;"></div>
@@ -3243,14 +3276,15 @@ export class AdminComponent implements OnInit, AfterViewInit {
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
     <div class="page-frame">
       <div class="navbar-nexus">
         <div style="display:flex;align-items:center;gap:15px;">
-          <div class="logo-admin" routerLink="/consumer"><div class="logo-dot-admin"></div>Nexus Settings</div>
+          <div class="logo-admin" routerLink="/consumer"><app-nexus-logo size="sm" wordmark="Nexus Settings"></app-nexus-logo></div>
         </div>
-        <div class="nav-r-nexus">
+        <div class="nav-r-nexus" style="display:flex;align-items:center;gap:10px;">
+          <app-nexus-theme-toggle></app-nexus-theme-toggle>
           <div class="mag-pill" style="font-size:11px; padding:6px 14px; border-radius:12px;" (click)="goBack()">← Exit Settings</div>
         </div>
       </div>
@@ -3472,7 +3506,7 @@ export class SettingsComponent implements OnInit {
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
 .landing-page-full {
@@ -3490,6 +3524,23 @@ export class SettingsComponent implements OnInit {
   --border2: rgba(255,255,255,0.12);
   --glass: rgba(255,255,255,0.04);
 }
+:host-context(html.light-mode) .landing-page-full {
+  background:#F5F2ED;color:#1A1916;
+  --text-dim:#8A8070;--text-deep:#A09888;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --glass:rgba(0,0,0,0.04);
+  --teal:#2BA898;--teal2:#1EA393;--teal-dim:rgba(43,168,152,0.15);--teal-glow:rgba(43,168,152,0.2);
+}
+:host-context(html.light-mode) .navbar-l{background:rgba(255,255,255,0.95);}
+:host-context(html.light-mode) .hero-title-l,
+:host-context(html.light-mode) .stat-val-l,
+:host-context(html.light-mode) .section-title-l,
+:host-context(html.light-mode) .feat-title-l,
+:host-context(html.light-mode) .sc-name-l,
+:host-context(html.light-mode) .sc-price-l,
+:host-context(html.light-mode) .cta-title-l{color:#1A1916;}
+:host-context(html.light-mode) .feat-card-l{background:#F0EDE6;}
+:host-context(html.light-mode) .feat-card-l:hover{background:rgba(0,0,0,0.04);}
 
 .navbar-l {
   display: flex; align-items: center; justify-content: space-between;
@@ -3619,7 +3670,7 @@ export class SettingsComponent implements OnInit {
 <div class="landing-page-full">
   <!-- NAVBAR -->
   <div class="navbar-l">
-    <div class="logo-l"><div class="logo-dot-l"></div>Nexus</div>
+    <div class="logo-l"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
     <div class="nav-pills-l">
       <a class="npill-l active" routerLink="/">Home</a>
       <a class="npill-l" routerLink="/consumer">Shop</a>
@@ -3627,6 +3678,7 @@ export class SettingsComponent implements OnInit {
       <a class="npill-l" href="#">Contact</a>
     </div>
     <div class="nav-r-l">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
       <a class="nbtn-l nbtn-ghost-l" routerLink="/login">Login</a>
       <a class="nbtn-l nbtn-teal-l" routerLink="/login">Sign Up</a>
     </div>
@@ -3772,7 +3824,7 @@ export class SettingsComponent implements OnInit {
 
   <!-- FOOTER -->
   <div class="footer-l">
-    <div class="footer-logo-l">Nexus</div>
+    <div class="footer-logo-l" style="display:flex;align-items:center;"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
     <div class="footer-links-l">
       <div class="footer-link-l">About</div>
       <div class="footer-link-l">Privacy</div>

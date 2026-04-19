@@ -2,11 +2,13 @@ import { Component, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterModule, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, ProductService, ToastService } from './services';
+import { NexusLogoComponent } from './nexus-logo.component';
+import { ThemeService } from './theme.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterModule, CommonModule],
+  imports: [RouterOutlet, RouterModule, CommonModule, NexusLogoComponent],
   templateUrl: './app.html'
 })
 export class AppComponent implements OnInit {
@@ -14,8 +16,8 @@ export class AppComponent implements OnInit {
   router = inject(Router);
   toastService = inject(ToastService);
   productService = inject(ProductService);
+  theme = inject(ThemeService);
   private allProducts: any[] = [];
-  isLightMode = false;
   activeToasts: any[] = [];
 
   get shouldShowGlobalSidebar(): boolean {
@@ -25,11 +27,7 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit() {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'light') {
-      this.isLightMode = true;
-      document.documentElement.classList.add('light-mode');
-    }
+    this.theme.initFromStorage();
 
     // Redirect if already logged in and on login page
     this.auth.currentUser$.subscribe(u => {
@@ -112,14 +110,7 @@ export class AppComponent implements OnInit {
   }
 
   toggleTheme() {
-    this.isLightMode = !this.isLightMode;
-    if (this.isLightMode) {
-      document.documentElement.classList.add('light-mode');
-      localStorage.setItem('theme', 'light');
-    } else {
-      document.documentElement.classList.remove('light-mode');
-      localStorage.setItem('theme', 'dark');
-    }
+    this.theme.toggle();
   }
 
   isSearchOpen = false;

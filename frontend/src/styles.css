@@ -718,6 +718,24 @@ body {
 .nx-trust-icon{font-size:16px;margin-bottom:4px;display:flex;align-items:center;justify-content:center;}
 .nx-trust-label{font-size:9px;color:var(--text3);letter-spacing:0.04em;line-height:1.4;}
 
+/* Cart / checkout: hardcoded dark rgba → follow theme when `html.light-mode` */
+:root.light-mode .nx-navbar{background:rgba(245,242,237,0.95);}
+:root.light-mode .nx-nav-pills{background:var(--glass);border-color:var(--border);}
+:root.light-mode .nx-npill.active{border-color:var(--teal-glow);}
+:root.light-mode .nx-coupon-btn:hover{border-color:var(--border2);}
+:root.light-mode .nx-delivery-opt.active{background:var(--teal-dim);}
+:root.light-mode .nx-pay-method.active{border-color:var(--teal-glow);}
+
+/* Route transitions: activated component is the first sibling after <router-outlet> */
+@keyframes nexus-route-enter {
+  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+router-outlet + * {
+  display: block;
+  animation: nexus-route-enter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
 /* SCROLLBARS */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -768,7 +786,9 @@ body {
 @media (max-width: 767px) {
   /* Global nav / header */
   .nx-nav { padding: 0 12px !important; }
-  .nx-logo span { display: none; }
+  /* Hide wordmark only; keep hex mark (do not target all spans — breaks SVG) */
+  .nx-logo .nexus-wordmark,
+  .nx-logo .nexus-divider { display: none !important; }
   .nx-search-container { max-width: 160px !important; }
   .nx-actions { gap: 8px !important; }
 

@@ -3,17 +3,19 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { ProductService, OrderService, AuthService, ToastService, ShipmentService } from './services';
+import { NexusLogoComponent } from './nexus-logo.component';
+import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
 
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
     <div class="nx-page">
 
       <!-- NAVBAR -->
       <div class="nx-navbar">
-        <div class="nx-logo" routerLink="/consumer"><div class="nx-logo-dot"></div>Nexus</div>
+        <div class="nx-logo" routerLink="/consumer"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
         <div class="nx-nav-pills">
           <div class="nx-npill" routerLink="/consumer">Home</div>
           <div class="nx-npill active">Shop</div>
@@ -21,6 +23,7 @@ import { ProductService, OrderService, AuthService, ToastService, ShipmentServic
           <div class="nx-npill" routerLink="/settings">Settings</div>
         </div>
         <div class="nx-nav-r">
+          <app-nexus-theme-toggle></app-nexus-theme-toggle>
           <div class="nx-icon-btn">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.5" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1" fill="#6A8A84"/><circle cx="10" cy="11" r="1" fill="#6A8A84"/></svg>
             <div class="nx-cart-badge" *ngIf="totalQty > 0">{{totalQty}}</div>
@@ -731,8 +734,11 @@ export class CartComponent implements OnInit, OnDestroy {
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NexusThemeToggleComponent],
   template: `
+    <div class="nx-floating-theme" style="position:fixed;bottom:22px;right:22px;z-index:2000;">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
+    </div>
     <div class="page-head" *ngIf="product">
       <div>
         <div class="page-title">{{product.name}}</div>
@@ -891,8 +897,11 @@ export class ProductDetailComponent implements OnInit {
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NexusThemeToggleComponent],
   template: `
+    <div class="nx-floating-theme" style="position:fixed;bottom:22px;right:22px;z-index:2000;">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
+    </div>
     <div class="page-head">
       <div>
         <div class="page-title">My Orders</div>
