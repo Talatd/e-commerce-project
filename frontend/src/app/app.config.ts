@@ -1,6 +1,7 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, provideZoneChangeDetection, inject } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, HttpErrorResponse } from '@angular/common/http';
+import { catchError, throwError } from 'rxjs';
 
 import { routes } from './app.routes';
 
@@ -16,7 +17,16 @@ export const appConfig: ApplicationConfig = {
             setHeaders: { Authorization: `Bearer ${token}` }
           });
         }
-        return next(req);
+        return next(req).pipe(
+          catchError((error: HttpErrorResponse) => {
+            if (error.status === 401) {
+              localStorage.removeItem('user');
+              localStorage.removeItem('token');
+              window.location.href = '/login';
+            }
+            return throwError(() => error);
+          })
+        );
       }
     ]))
   ]

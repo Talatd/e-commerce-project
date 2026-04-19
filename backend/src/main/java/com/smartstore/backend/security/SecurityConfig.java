@@ -36,7 +36,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/manager/**").hasAnyRole("ADMIN", "MANAGER")
                 .anyRequest().authenticated()
@@ -72,7 +74,7 @@ public class SecurityConfig {
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
         configuration.setAllowedOrigins(java.util.List.of("http://localhost:4200"));
-        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();

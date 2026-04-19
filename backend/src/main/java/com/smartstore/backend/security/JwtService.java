@@ -22,6 +22,8 @@ public class JwtService {
     @Value("${smartstore.jwt.expiration}")
     private long jwtExpiration;
 
+    private static final long REFRESH_EXPIRATION = 7 * 24 * 60 * 60 * 1000L; // 7 days
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -43,6 +45,25 @@ public class JwtService {
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSignInKey())
                 .compact();
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        return Jwts.builder()
+                .subject(userDetails.getUsername())
+                .claim("type", "refresh")
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + REFRESH_EXPIRATION))
+                .signWith(getSignInKey())
+                .compact();
+    }
+
+    public boolean isRefreshToken(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            return "refresh".equals(claims.get("type", String.class));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {

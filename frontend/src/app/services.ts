@@ -1,12 +1,16 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, Subject } from 'rxjs';
+import { environment } from './environment';
+
+const API = environment.apiUrl;
+const AI_API = environment.aiUrl;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/v1/auth';
-  
+  private apiUrl = `${API}/api/v1/auth`;
+
   private currentUserSubject = new BehaviorSubject<any>(JSON.parse(localStorage.getItem('user') || 'null'));
   currentUser$ = this.currentUserSubject.asObservable();
 
@@ -33,6 +37,7 @@ export class AuthService {
   logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('cart');
     this.currentUserSubject.next(null);
   }
 
@@ -49,17 +54,30 @@ export class AuthService {
 @Injectable({ providedIn: 'root' })
 export class AiService {
   private http = inject(HttpClient);
-  private aiUrl = 'http://localhost:8000/api/v1/chatbot/query';
+  private aiUrl = `${AI_API}/api/v1/chatbot/query`;
+  sessionId: string | null = null;
 
   query(prompt: string, userId: number, role: string, history: string[]): Observable<any> {
-    return this.http.post(this.aiUrl, { query: prompt, user_id: userId, role: role, history: history });
+    return this.http.post(this.aiUrl, {
+      query: prompt,
+      user_id: userId,
+      role: role,
+      history: history,
+      session_id: this.sessionId,
+    }).pipe(tap((res: any) => {
+      if (res.session_id) this.sessionId = res.session_id;
+    }));
+  }
+
+  clearSession() {
+    this.sessionId = null;
   }
 }
 
 @Injectable({ providedIn: 'root' })
 export class ProductService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/v1/products';
+  private apiUrl = `${API}/api/v1/products`;
 
   getProducts(): Observable<any[]> {
     return this.http.get<any[]>(this.apiUrl);
@@ -69,8 +87,8 @@ export class ProductService {
     return this.http.get(`${this.apiUrl}/${productId}/reviews/sentiment`);
   }
 
-  submitReview(productId: number, userId: number, rating: number, comment: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/${productId}/reviews`, { userId, rating, comment });
+  submitReview(productId: number, rating: number, comment: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${productId}/reviews`, { rating, comment });
   }
 
   createProduct(product: any): Observable<any> {
@@ -89,7 +107,7 @@ export class ProductService {
 @Injectable({ providedIn: 'root' })
 export class OrderService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/orders';
+  private apiUrl = `${API}/api/v1/orders`;
 
   createOrder(order: any): Observable<any> {
     return this.http.post(this.apiUrl, order);
@@ -103,7 +121,7 @@ export class OrderService {
 @Injectable({ providedIn: 'root' })
 export class StoreService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/stores';
+  private apiUrl = `${API}/api/v1/stores`;
 
   getStores(): Observable<any[]> {
     return this.http.get<any[]>(this.apiUrl);
@@ -113,29 +131,104 @@ export class StoreService {
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private http = inject(HttpClient);
-  
+
   getUsers(): Observable<any[]> {
-    return this.http.get<any[]>('http://localhost:8080/api/users');
+    return this.http.get<any[]>(`${API}/api/v1/admin/users`);
   }
 
   getOrders(): Observable<any[]> {
-    return this.http.get<any[]>('http://localhost:8080/api/orders');
+    return this.http.get<any[]>(`${API}/api/v1/orders`);
   }
 
   getStats(): Observable<any> {
-    return this.http.get('http://localhost:8080/api/v1/analytics/admin-stats');
+    return this.http.get(`${API}/api/v1/analytics/admin-stats`);
   }
 
   banUser(id: number): Observable<any> {
-    return this.http.post(`http://localhost:8080/api/users/${id}/ban`, {});
+    return this.http.post(`${API}/api/v1/admin/users/${id}/ban`, {});
   }
 
   deleteUser(id: number): Observable<any> {
-    return this.http.delete(`http://localhost:8080/api/users/${id}`);
+    return this.http.delete(`${API}/api/v1/admin/users/${id}`);
   }
 
   getSalesBreakdown(): Observable<any> {
-    return this.http.get('http://localhost:8080/api/v1/analytics/sales-breakdown');
+    return this.http.get(`${API}/api/v1/analytics/sales-breakdown`);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class ShipmentService {
+  private http = inject(HttpClient);
+  private apiUrl = `${API}/api/v1/shipments`;
+
+  getAll(): Observable<any[]> {
+    return this.http.get<any[]>(this.apiUrl);
+  }
+
+  getByOrder(orderId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/order/${orderId}`);
+  }
+
+  track(trackingNumber: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/track/${trackingNumber}`);
+  }
+
+  updateStatus(id: number, status: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/status`, { status });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class CategoryService {
+  private http = inject(HttpClient);
+  private apiUrl = `${API}/api/v1/categories`;
+
+  getAll(): Observable<any[]> {
+    return this.http.get<any[]>(this.apiUrl);
+  }
+
+  getTree(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/tree`);
+  }
+
+  create(category: any): Observable<any> {
+    return this.http.post(this.apiUrl, category);
+  }
+
+  update(id: number, category: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}`, category);
+  }
+
+  delete(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${id}`);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class CustomerProfileService {
+  private http = inject(HttpClient);
+  private apiUrl = `${API}/api/v1/profiles`;
+
+  getMyProfile(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/me`);
+  }
+
+  getByUser(userId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/user/${userId}`);
+  }
+
+  save(profile: any): Observable<any> {
+    return this.http.post(this.apiUrl, profile);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class ChatService {
+  private http = inject(HttpClient);
+
+  ask(query: string, history: string[] = []): Observable<any> {
+    return this.http.post(`${API}/api/v1/chat/ask`, { query, history });
   }
 }
 

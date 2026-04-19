@@ -82,6 +82,7 @@ public class DbInitializer {
 
     @SuppressWarnings("null")
     private void seedUsers() {
+        updateOrSaveUser("System Admin", "admin@smartstore.com", "admin123", Role.ADMIN);
         updateOrSaveUser("Buse Ünal", "buse@akdeniz.edu.tr", "admin123", Role.ADMIN);
         updateOrSaveUser("James Wilson", "james@techhub.com", "manager123", Role.MANAGER);
         updateOrSaveUser("Manager User", "manager@nexus.com", "manager123", Role.MANAGER);

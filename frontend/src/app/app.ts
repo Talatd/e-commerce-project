@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterModule, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { AuthService, ToastService } from './services';
+import { AuthService, ProductService, ToastService } from './services';
 
 @Component({
   selector: 'app-root',
@@ -13,6 +13,8 @@ export class AppComponent implements OnInit {
   auth = inject(AuthService);
   router = inject(Router);
   toastService = inject(ToastService);
+  productService = inject(ProductService);
+  private allProducts: any[] = [];
   isLightMode = false;
   activeToasts: any[] = [];
 
@@ -173,13 +175,24 @@ export class AppComponent implements OnInit {
 
   onSearchInput(e: any) {
     this.searchQuery = e.target?.value || '';
-    if(this.searchQuery.trim().length > 0) {
-      this.searchResults = [
-         { productId: 1, name: 'MacBook Pro 14"', category: 'Electronics', basePrice: 1039 },
-         { productId: 3, name: 'AirPods Pro Max', category: 'Accessories', basePrice: 479 },
-      ];
+    if (this.searchQuery.trim().length > 0) {
+      if (this.allProducts.length === 0) {
+        this.productService.getProducts().subscribe(res => {
+          this.allProducts = res;
+          this.filterSearchResults();
+        });
+      } else {
+        this.filterSearchResults();
+      }
     } else {
       this.searchResults = [];
     }
+  }
+
+  private filterSearchResults() {
+    const q = this.searchQuery.toLowerCase();
+    this.searchResults = this.allProducts
+      .filter(p => p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q))
+      .slice(0, 6);
   }
 }

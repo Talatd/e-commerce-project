@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
@@ -25,8 +27,24 @@ public class ProductController {
     private final com.smartstore.backend.repository.UserRepository userRepository;
 
     @GetMapping
-    @Operation(summary = "Get all products", description = "Retrieves the full product catalog from the database.")
-    public ResponseEntity<List<Product>> getAllProducts() {
+    @Operation(summary = "Get all products", description = "Retrieves the product catalog, optionally paginated.")
+    public ResponseEntity<?> getAllProducts(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        if (page > 0 || size != 50 || search != null || category != null) {
+            org.springframework.data.domain.Pageable pageable =
+                    org.springframework.data.domain.PageRequest.of(page, size,
+                            org.springframework.data.domain.Sort.by("createdAt").descending());
+            if (search != null && !search.isBlank()) {
+                return ResponseEntity.ok(productRepository.findByNameContainingIgnoreCase(search, pageable));
+            }
+            if (category != null && !category.isBlank()) {
+                return ResponseEntity.ok(productRepository.findByCategory(category, pageable));
+            }
+            return ResponseEntity.ok(productRepository.findAll(pageable));
+        }
         return ResponseEntity.ok(productRepository.findAll());
     }
 
@@ -65,22 +83,33 @@ public class ProductController {
     @Operation(summary = "Submit a product review", description = "Allows a consumer to post a rating and comment for a product.")
     public ResponseEntity<ProductReview> submitReview(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> payload) {
-        
+            @RequestBody Map<String, Object> payload,
+            @AuthenticationPrincipal UserDetails principal) {
+
         Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
-        Long userIdRaw = Long.valueOf(payload.get("userId").toString());
-        com.smartstore.backend.model.User user = userRepository.findById(Objects.requireNonNull(userIdRaw)).orElseThrow();
-        
+
+        com.smartstore.backend.model.User user;
+        if (principal != null) {
+            user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+        } else {
+            Long userIdRaw = Long.valueOf(payload.get("userId").toString());
+            user = userRepository.findById(Objects.requireNonNull(userIdRaw)).orElseThrow();
+        }
+
+        Integer rating = (Integer) payload.get("rating");
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new IllegalArgumentException("Rating must be between 1 and 5");
+        }
+
         ProductReview review = new ProductReview();
         review.setProduct(product);
         review.setUser(user);
-        review.setRating((Integer) payload.get("rating"));
+        review.setRating(rating);
         review.setComment((String) payload.get("comment"));
-        
-        // Mock sentiment analysis for now - in real life this would call the AI hub
+
         double mockSentiment = review.getRating() >= 4 ? 0.9 : (review.getRating() <= 2 ? 0.2 : 0.5);
         review.setSentimentScore(BigDecimal.valueOf(mockSentiment));
-        
+
         ProductReview saved = reviewRepository.save(review);
         return ResponseEntity.ok(saved);
     }

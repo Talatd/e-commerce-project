@@ -2,43 +2,53 @@ package com.smartstore.backend.controller;
 
 import com.smartstore.backend.model.User;
 import com.smartstore.backend.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/v1/admin/users")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Users", description = "Admin-only user management endpoints")
 public class UserController {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    @Operation(summary = "List all users")
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userRepository.findAll());
     }
 
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable @org.springframework.lang.NonNull Long id, @RequestBody User userDetails) {
+    @Operation(summary = "Update a user")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
         User user = userRepository.findById(id).orElseThrow();
         user.setFullName(userDetails.getFullName());
         user.setEmail(userDetails.getEmail());
         user.setRole(userDetails.getRole());
         user.setEnabled(userDetails.isEnabled());
-        return userRepository.save(user);
+        return ResponseEntity.ok(userRepository.save(user));
     }
 
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable @org.springframework.lang.NonNull Long id) {
+    @Operation(summary = "Delete a user")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userRepository.deleteById(id);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/ban")
-    public User banUser(@PathVariable @org.springframework.lang.NonNull Long id) {
+    @Operation(summary = "Ban a user")
+    public ResponseEntity<User> banUser(@PathVariable Long id) {
         User user = userRepository.findById(id).orElseThrow();
         user.setEnabled(false);
-        return userRepository.save(user);
+        return ResponseEntity.ok(userRepository.save(user));
     }
 }

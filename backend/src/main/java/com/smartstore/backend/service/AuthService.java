@@ -21,6 +21,10 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse register(User userRequest) {
+        if (userRepository.existsByEmail(userRequest.getEmail())) {
+            throw new IllegalStateException("An account with this email already exists");
+        }
+
         User user = new User();
         user.setFullName(userRequest.getFullName());
         user.setEmail(userRequest.getEmail());
@@ -29,11 +33,13 @@ public class AuthService {
         user.setEnabled(true);
 
         userRepository.save(user);
-        var jwtToken = jwtService.generateToken(new org.springframework.security.core.userdetails.User(
-                user.getEmail(), user.getPasswordHash(), java.util.Collections.emptyList()));
-        
+        var userDetails = new org.springframework.security.core.userdetails.User(
+                user.getEmail(), user.getPasswordHash(), java.util.Collections.emptyList());
+
         return AuthResponse.builder()
-                .token(jwtToken)
+                .token(jwtService.generateToken(userDetails))
+                .refreshToken(jwtService.generateRefreshToken(userDetails))
+                .userId(user.getUserId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole().name())
@@ -45,11 +51,33 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
         var user = userRepository.findByEmail(request.getEmail()).orElseThrow();
-        var jwtToken = jwtService.generateToken(new org.springframework.security.core.userdetails.User(
-                user.getEmail(), user.getPasswordHash(), java.util.Collections.emptyList()));
-        
+        var userDetails = new org.springframework.security.core.userdetails.User(
+                user.getEmail(), user.getPasswordHash(), java.util.Collections.emptyList());
+
         return AuthResponse.builder()
-                .token(jwtToken)
+                .token(jwtService.generateToken(userDetails))
+                .refreshToken(jwtService.generateRefreshToken(userDetails))
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole().name())
+                .build();
+    }
+
+    public AuthResponse refreshToken(String refreshToken) {
+        String email = jwtService.extractUsername(refreshToken);
+        var user = userRepository.findByEmail(email).orElseThrow();
+        var userDetails = new org.springframework.security.core.userdetails.User(
+                user.getEmail(), user.getPasswordHash(), java.util.Collections.emptyList());
+
+        if (!jwtService.isTokenValid(refreshToken, userDetails) || !jwtService.isRefreshToken(refreshToken)) {
+            throw new IllegalArgumentException("Invalid refresh token");
+        }
+
+        return AuthResponse.builder()
+                .token(jwtService.generateToken(userDetails))
+                .refreshToken(jwtService.generateRefreshToken(userDetails))
+                .userId(user.getUserId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole().name())

@@ -2,27 +2,31 @@ package com.smartstore.backend.controller;
 
 import com.smartstore.backend.model.Store;
 import com.smartstore.backend.repository.StoreRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/stores")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/v1/stores")
+@RequiredArgsConstructor
+@Tag(name = "Stores", description = "Store management endpoints")
 public class StoreController {
 
-    @Autowired
-    private StoreRepository storeRepository;
+    private final StoreRepository storeRepository;
 
     @GetMapping
-    public List<Store> getAllStores() {
-        return storeRepository.findAll();
+    @Operation(summary = "List all stores")
+    public ResponseEntity<List<Store>> getAllStores() {
+        return ResponseEntity.ok(storeRepository.findAll());
     }
 
     @PostMapping
-    @SuppressWarnings("null")
-    public Store createStore(@RequestBody Store store) {
-        return storeRepository.save(store);
+    @Operation(summary = "Create a store")
+    public ResponseEntity<Store> createStore(@RequestBody Store store) {
+        return ResponseEntity.ok(storeRepository.save(store));
     }
 }

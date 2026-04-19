@@ -1,0 +1,68 @@
+package com.smartstore.backend.controller;
+
+import com.smartstore.backend.model.CustomerProfile;
+import com.smartstore.backend.repository.CustomerProfileRepository;
+import com.smartstore.backend.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/profiles")
+@RequiredArgsConstructor
+@Tag(name = "Customer Profiles", description = "Extended customer data and analytics")
+public class CustomerProfileController {
+
+    private final CustomerProfileRepository profileRepository;
+    private final UserRepository userRepository;
+
+    @GetMapping
+    @Operation(summary = "List all profiles (admin)")
+    public ResponseEntity<List<CustomerProfile>> getAll() {
+        return ResponseEntity.ok(profileRepository.findAll());
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Get current user's profile")
+    public ResponseEntity<CustomerProfile> getMyProfile(@AuthenticationPrincipal UserDetails principal) {
+        var user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+        return profileRepository.findByUser(user)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/user/{userId}")
+    @Operation(summary = "Get profile by user ID")
+    public ResponseEntity<CustomerProfile> getByUser(@PathVariable Long userId) {
+        var user = userRepository.findById(userId).orElseThrow();
+        return profileRepository.findByUser(user)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    @Operation(summary = "Create or update a customer profile")
+    public ResponseEntity<CustomerProfile> createOrUpdate(@RequestBody CustomerProfile profile) {
+        if (profile.getUser() != null) {
+            var existing = profileRepository.findByUser(profile.getUser());
+            if (existing.isPresent()) {
+                CustomerProfile p = existing.get();
+                p.setGender(profile.getGender());
+                p.setAge(profile.getAge());
+                p.setCity(profile.getCity());
+                p.setCountry(profile.getCountry());
+                p.setMembershipType(profile.getMembershipType());
+                p.setSatisfactionLevel(profile.getSatisfactionLevel());
+                p.setPreferredPaymentMethod(profile.getPreferredPaymentMethod());
+                return ResponseEntity.ok(profileRepository.save(p));
+            }
+        }
+        return ResponseEntity.ok(profileRepository.save(profile));
+    }
+}

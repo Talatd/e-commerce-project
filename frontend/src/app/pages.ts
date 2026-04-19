@@ -1,8 +1,11 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { AuthService, AiService, ProductService, StoreService, AdminService, ToastService } from './services';
+import { AuthService, AiService, ProductService, StoreService, AdminService, OrderService, CategoryService, CustomerProfileService, ToastService } from './services';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-login',
@@ -1424,6 +1427,11 @@ export class LoginComponent {
                   </div>
                   <!-- TEXT -->
                   <div [innerHTML]="m.text"></div>
+                  <!-- PLOTLY VISUALIZATION -->
+                  <div *ngIf="m.visualization" class="plotly-wrap">
+                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;">AI-Generated Chart</div>
+                    <div [id]="'plotly-chart-' + i" style="width:100%;min-height:300px;background:rgba(255,255,255,0.02);border-radius:10px;overflow:hidden;"></div>
+                  </div>
                   <!-- PRODUCT CHIPS -->
                   <div class="prod-chips" *ngIf="m.results && m.results.length > 0">
                     <div class="prod-chip" *ngFor="let r of m.results.slice(0,3)" (click)="selectProduct(r)">
@@ -1583,6 +1591,7 @@ export class ConsumerComponent implements OnInit {
   auth = inject(AuthService);
   ai = inject(AiService);
   productService = inject(ProductService);
+  toast = inject(ToastService);
   router = inject(Router);
 
   private getTimeNow(): string {
@@ -1678,8 +1687,12 @@ export class ConsumerComponent implements OnInit {
   }
 
   addToCart(p: any) {
-    console.log('Added to cart:', p.name);
-    this.chatMessages.push({ sender: 'ai', text: 'Great choice! I\'ve added the ' + p.name + ' to your cart.' });
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let existing = cart.find((item: any) => item.productId === p.productId);
+    if (existing) existing.qty++;
+    else cart.push({ ...p, qty: 1 });
+    localStorage.setItem('cart', JSON.stringify(cart));
+    this.toast.show(p.name + ' added to cart');
   }
 
   sendSuggestion(s: string) {
@@ -1690,6 +1703,7 @@ export class ConsumerComponent implements OnInit {
   clearChat() {
     this.chatMessages = [];
     this.history = [];
+    this.ai.clearSession();
     const userName = this.auth.currentUserValue?.fullName || 'there';
     this.chatMessages.push({
       sender: 'ai',
@@ -1712,19 +1726,41 @@ export class ConsumerComponent implements OnInit {
           sender: 'ai',
           text: res.response,
           time: this.getTimeNow(),
-          steps: ['Intent analyzed → Product search', 'SQL query generated', 'Database queried', 'Response formatted'],
+          steps: ['Guardrails check', 'SQL generated', 'Query executed', 'Response formatted'],
           duration: '0.8s'
         };
         if (res.sql) aiMsg.sql = res.sql;
-        if (res.results && res.results.length > 0) aiMsg.results = res.results;
+        if (res.data && res.data.length > 0) aiMsg.results = res.data;
+        if (res.visualization) aiMsg.visualization = res.visualization;
         this.chatMessages.push(aiMsg);
         this.history.push('User: ' + userMsg, 'AI: ' + res.response);
+        if (res.visualization) {
+          setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
+        }
       },
       error: () => {
         this.isTyping = false;
         this.chatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
       }
     });
+  }
+
+  private renderPlotly(msgIndex: number, vizCode: string, data: any[]) {
+    const Plotly = (window as any)['Plotly'];
+    if (!Plotly) return;
+    const containerId = 'plotly-chart-' + msgIndex;
+    try {
+      const plotlyJson = JSON.parse(vizCode);
+      if (plotlyJson.data) {
+        const layout = { ...(plotlyJson.layout || {}), paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: { color: '#7A918D' } };
+        Plotly.newPlot(containerId, plotlyJson.data, layout, { responsive: true, displayModeBar: false });
+        return;
+      }
+    } catch { /* not JSON, try executing as code */ }
+    try {
+      const fn = new Function('data', 'Plotly', 'containerId', vizCode.replace('fig.to_json()', `Plotly.newPlot(containerId, fig.data, {...fig.layout, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#7A918D'}}, {responsive:true, displayModeBar:false})`));
+      fn(data, Plotly, containerId);
+    } catch { /* visualization rendering failed silently */ }
   }
 
   logout() {
@@ -1907,6 +1943,12 @@ export class ConsumerComponent implements OnInit {
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h1.5l2 7h5.5l1.3-4.5H4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="11" r="1" fill="currentColor"/><circle cx="9.5" cy="11" r="1" fill="currentColor"/></svg>Orders</div>
         <div class="msib red">5</div>
       </div>
+      <div class="msi" [class.act]="activePanel==='inventory'" (click)="activePanel='inventory'">
+        <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 10V3h9v7H2Z" stroke="currentColor" stroke-width="1.1"/><path d="M5 6h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Inventory<span *ngIf="lowStockProducts.length > 0" style="margin-left:auto;background:rgba(232,169,74,0.15);color:#E8A94A;font-size:9px;padding:1px 6px;border-radius:8px;">{{lowStockProducts.length}}</span></div>
+      </div>
+      <div class="msi" [class.act]="activePanel==='reviews'" (click)="activePanel='reviews'">
+        <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L8 5h4.5l-3.5 2.5 1.3 4.5L6.5 9.5 2.7 12l1.3-4.5L.5 5H5L6.5 1Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>Reviews</div>
+      </div>
       <div class="msi" [class.act]="activePanel==='addprod'" (click)="activePanel='addprod'">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Add Product</div>
       </div>
@@ -1929,10 +1971,35 @@ export class ConsumerComponent implements OnInit {
     <!-- MAIN -->
     <div class="mmain">
 
+      <!-- INVENTORY ALERTS -->
+      <ng-container *ngIf="activePanel==='inventory'">
+        <div class="mtb"><div><div class="mpt">Inventory Alerts</div><div class="mps">{{lowStockProducts.length}} products need attention</div></div></div>
+        <div class="mtc">
+          <table class="mt"><thead><tr><th>Product</th><th>Category</th><th>Current Stock</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let p of lowStockProducts">
+              <td class="mtn">{{p.name}}</td>
+              <td>{{p.category}}</td>
+              <td class="mtp">{{p.stockQuantity}}</td>
+              <td><span class="msp" [class.mspa]="p.stockQuantity <= 5" [class.mspb]="p.stockQuantity > 5">{{p.stockQuantity <= 5 ? '⚠ Critical' : 'Low'}}</span></td>
+            </tr>
+            <tr *ngIf="lowStockProducts.length === 0"><td colspan="4" style="text-align:center;color:var(--text3);padding:32px;">All products are well stocked.</td></tr>
+          </tbody></table>
+        </div>
+      </ng-container>
+
+      <!-- REVIEWS -->
+      <ng-container *ngIf="activePanel==='reviews'">
+        <div class="mtb"><div><div class="mpt">Customer Reviews</div><div class="mps">Manage product feedback</div></div></div>
+        <div style="text-align:center;padding:48px;color:var(--text3);font-size:12px;">
+          Review management is connected to the product review API.<br>Reviews appear on individual product pages.
+        </div>
+      </ng-container>
+
       <!-- DASHBOARD -->
       <ng-container *ngIf="activePanel==='dashboard'">
         <div class="mtb">
-          <div><div class="mpt">My Store Dashboard</div><div class="mps">{{products.length}} products · Active</div></div>
+          <div><div class="mpt">My Store Dashboard</div><div class="mps">{{products.length}} products · {{storeOrders.length}} orders</div></div>
           <div class="mta"><div class="mtbtn mtbg">Download Report</div><div class="mtbtn mtbt" (click)="activePanel='addprod'">+ Add Product</div></div>
         </div>
         <div class="malert" *ngIf="lowStockProducts.length > 0">
@@ -2007,17 +2074,21 @@ export class ConsumerComponent implements OnInit {
       <!-- ORDERS -->
       <ng-container *ngIf="activePanel==='orders'">
         <div class="mtb">
-          <div><div class="mpt">Store Orders</div><div class="mps">5 pending action</div></div>
+          <div><div class="mpt">Store Orders</div><div class="mps">{{pendingOrders.length}} pending action</div></div>
           <div class="mta"><div class="mtbtn mtbg">Export</div></div>
         </div>
         <div class="mtc">
-          <table class="mt"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+          <table class="mt"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td class="mtm">#ORD-7821</td><td class="mtn">Buse Ü.</td><td>3</td><td class="mtp">$1,788</td><td>Apr 17</td><td><span class="msp mspb">Shipped</span></td><td><span style="font-size:11px;color:var(--text3);cursor:pointer;">Track</span></td></tr>
-            <tr><td class="mtm">#ORD-7820</td><td class="mtn">James W.</td><td>1</td><td class="mtp">$479</td><td>Apr 17</td><td><span class="msp mspg">Delivered</span></td><td><span style="font-size:11px;color:var(--text3);cursor:pointer;">View</span></td></tr>
-            <tr><td class="mtm">#ORD-7818</td><td class="mtn">Ali K.</td><td>2</td><td class="mtp">$298</td><td>Apr 16</td><td><span class="msp mspa">Pending</span></td><td><span style="font-size:11px;color:var(--teal2);cursor:pointer;font-weight:500;">Process →</span></td></tr>
-            <tr><td class="mtm">#ORD-7815</td><td class="mtn">Sara M.</td><td>1</td><td class="mtp">$99</td><td>Apr 15</td><td><span class="msp mspg">Delivered</span></td><td><span style="font-size:11px;color:var(--text3);cursor:pointer;">View</span></td></tr>
-            <tr><td class="mtm">#ORD-7812</td><td class="mtn">Emily J.</td><td>1</td><td class="mtp">$999</td><td>Apr 14</td><td><span class="msp mspa">Pending</span></td><td><span style="font-size:11px;color:var(--teal2);cursor:pointer;font-weight:500;">Process →</span></td></tr>
+            <tr *ngFor="let o of storeOrders">
+              <td class="mtm">#ORD-{{o.orderId}}</td>
+              <td class="mtn">{{o.user?.fullName || 'N/A'}}</td>
+              <td>{{o.items?.length || 0}}</td>
+              <td class="mtp">{{o.totalAmount | currency}}</td>
+              <td>{{o.orderDate | date:'mediumDate'}}</td>
+              <td><span class="msp" [class.mspg]="o.status === 'DELIVERED'" [class.mspb]="o.status === 'SHIPPED' || o.status === 'PROCESSING'" [class.mspa]="o.status === 'PENDING'">{{o.status}}</span></td>
+            </tr>
+            <tr *ngIf="storeOrders.length === 0"><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">No orders yet.</td></tr>
           </tbody></table>
         </div>
       </ng-container>
@@ -2043,18 +2114,28 @@ export class ConsumerComponent implements OnInit {
 
       <!-- ANALYTICS -->
       <ng-container *ngIf="activePanel==='analytics'">
-        <div class="mtb"><div><div class="mpt">Store Performance</div><div class="mps">Last 30 days</div></div></div>
+        <div class="mtb"><div><div class="mpt">Store Performance</div><div class="mps">Sales analytics & revenue</div></div></div>
         <div class="mkr">
-          <div class="mkpi"><div class="mkl">Conversion Rate</div><div class="mkv">3.<em>8%</em></div><div class="mkd mup-c">↑ 0.3%</div></div>
-          <div class="mkpi"><div class="mkl">Avg Order Value</div><div class="mkv">$<em>284</em></div><div class="mkd mup-c">↑ $22</div></div>
-          <div class="mkpi"><div class="mkl">Return Rate</div><div class="mkv">3.<em>2%</em></div><div class="mkd mdn">↑ 0.1%</div></div>
-          <div class="mkpi"><div class="mkl">Page Views</div><div class="mkv">24<em>K</em></div><div class="mkd mup-c">↑ 18%</div></div>
+          <div class="mkpi"><div class="mkl">Total Revenue</div><div class="mkv">{{totalRevenue | currency:'USD':'symbol':'1.0-0'}}</div><div class="mkd mup-c">↑ From orders</div></div>
+          <div class="mkpi"><div class="mkl">Total Orders</div><div class="mkv">{{storeOrders.length}}</div><div class="mkd mup-c">All time</div></div>
+          <div class="mkpi"><div class="mkl">Avg Order Value</div><div class="mkv">{{storeOrders.length > 0 ? (totalRevenue / storeOrders.length | currency:'USD':'symbol':'1.0-0') : '$0'}}</div><div class="mkd mup-c">Per order</div></div>
+          <div class="mkpi"><div class="mkl">Low Stock Items</div><div class="mkv">{{lowStockProducts.length}}</div><div class="mkd" [class.mdn]="lowStockProducts.length > 0" [class.mup-c]="lowStockProducts.length === 0">{{lowStockProducts.length > 0 ? '⚠ Alert' : '✓ OK'}}</div></div>
+        </div>
+        <div class="mcr">
+          <div class="mgc" style="flex:2;">
+            <div class="mgh"><div class="mgt">Revenue by Month</div></div>
+            <div class="mgb" style="height:260px;"><canvas #mgrRevenueChart></canvas></div>
+          </div>
+          <div class="mgc" style="flex:1;">
+            <div class="mgh"><div class="mgt">Category Split</div></div>
+            <div class="mgb" style="height:260px;"><canvas #mgrCategoryChart></canvas></div>
+          </div>
         </div>
         <div class="mtc">
-          <div class="mgh"><div class="mgt">Top Products by Revenue</div></div>
-          <table class="mt"><thead><tr><th>Product</th><th>Units Sold</th><th>Revenue</th><th>Rating</th></tr></thead>
+          <div class="mgh"><div class="mgt">Products by Price</div></div>
+          <table class="mt"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
           <tbody>
-            <tr *ngFor="let p of products.slice(0,4)"><td class="mtn">{{p.name}}</td><td>{{p.stockQuantity}}</td><td class="mtp">{{p.basePrice * 20 | currency:'USD':'symbol':'1.0-0'}}</td><td style="color:var(--amber);">4.8★</td></tr>
+            <tr *ngFor="let p of products.slice(0,8)"><td class="mtn">{{p.name}}</td><td>{{p.category}}</td><td class="mtp">{{p.basePrice | currency}}</td><td [style.color]="p.stockQuantity <= 10 ? '#E8A94A' : 'var(--text2)'">{{p.stockQuantity}}</td></tr>
           </tbody></table>
         </div>
       </ng-container>
@@ -2083,22 +2164,106 @@ export class ConsumerComponent implements OnInit {
 </div>
   `
 })
-export class ManagerComponent implements OnInit {
+export class ManagerComponent implements OnInit, AfterViewInit {
   products: any[] = [];
+  storeOrders: any[] = [];
+  reviews: any[] = [];
   activePanel = 'dashboard';
   newProd: any = { name: '', brand: '', basePrice: 0, stockQuantity: 10, category: 'Electronics', description: '' };
   storeSettings = { open: true, acceptOrders: true, autoConfirm: false, newOrderAlerts: true, lowStockWarnings: true };
   productService = inject(ProductService);
+  orderService = inject(OrderService);
   auth = inject(AuthService);
   toast = inject(ToastService);
   router = inject(Router);
 
+  @ViewChild('mgrRevenueChart') revenueCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('mgrCategoryChart') categoryCanvas!: ElementRef<HTMLCanvasElement>;
+  private revenueChart: Chart | null = null;
+  private categoryChart: Chart | null = null;
+
   ngOnInit() {
-    this.productService.getProducts().subscribe(res => this.products = res);
+    this.productService.getProducts().subscribe(res => {
+      this.products = res;
+      this.buildCategoryChart();
+    });
+    this.orderService.getOrders().subscribe(res => {
+      this.storeOrders = res;
+      this.buildRevenueChart();
+    });
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.buildRevenueChart();
+      this.buildCategoryChart();
+    }, 500);
+  }
+
+  private buildRevenueChart() {
+    if (!this.revenueCanvas?.nativeElement) return;
+    if (this.revenueChart) this.revenueChart.destroy();
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const revenueByMonth = new Array(12).fill(0);
+    this.storeOrders.forEach((o: any) => {
+      const d = new Date(o.orderDate);
+      if (!isNaN(d.getTime())) revenueByMonth[d.getMonth()] += o.totalAmount || 0;
+    });
+    this.revenueChart = new Chart(this.revenueCanvas.nativeElement, {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [{
+          label: 'Revenue ($)',
+          data: revenueByMonth,
+          backgroundColor: 'rgba(62,207,178,0.35)',
+          borderColor: '#3ECFB2',
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+        }
+      }
+    });
+  }
+
+  private buildCategoryChart() {
+    if (!this.categoryCanvas?.nativeElement) return;
+    if (this.categoryChart) this.categoryChart.destroy();
+    const catMap: Record<string, number> = {};
+    this.products.forEach((p: any) => { catMap[p.category || 'Other'] = (catMap[p.category || 'Other'] || 0) + 1; });
+    const labels = Object.keys(catMap);
+    const data = Object.values(catMap);
+    const palette = ['#3ECFB2','#6BA8C8','#E8A94A','#E07070','#A78BFA','#34D399','#F472B6'];
+    this.categoryChart = new Chart(this.categoryCanvas.nativeElement, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: palette.slice(0, labels.length), borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: '#7A918D', padding: 12, font: { size: 10 } } } }
+      }
+    });
   }
 
   get lowStockProducts() {
     return this.products.filter(p => p.stockQuantity <= 10);
+  }
+
+  get totalRevenue(): number {
+    return this.storeOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }
+
+  get pendingOrders() {
+    return this.storeOrders.filter(o => o.status === 'PENDING');
   }
 
   submitProduct() {
@@ -2308,7 +2473,14 @@ export class ManagerComponent implements OnInit {
         <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h1.5l2 7h6l1.5-4.5H4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="11" r="1" fill="currentColor"/><circle cx="10" cy="11" r="1" fill="currentColor"/></svg>Orders</div>
       </div>
 
+      <div class="sitem-a" [class.active]="tab === 'categories'" (click)="tab = 'categories'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h4v4H2zM7 2h4v4H7zM2 7h4v4H2zM7 7h4v4H7z" stroke="currentColor" stroke-width="1.1"/></svg>Categories</div>
+      </div>
+
       <div class="sg-label-a">System</div>
+      <div class="sitem-a" [class.active]="tab === 'auditlogs'" (click)="tab = 'auditlogs'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 2h7v9H3z" stroke="currentColor" stroke-width="1.1"/><path d="M5 5h3M5 7h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>Audit Logs</div>
+      </div>
       <div class="sitem-a" [class.active]="tab === 'settings'" (click)="tab = 'settings'">
         <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1v1.2M6.5 10.8V12M1 6.5h1.2M10.8 6.5H12M2.6 2.6l.85.85M9.55 9.55l.85.85M2.6 10.4l.85-.85M9.55 3.45l.85-.85" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Config</div>
       </div>
@@ -2351,32 +2523,11 @@ export class ManagerComponent implements OnInit {
         <div class="chart-row-a">
           <div class="gcard-a">
             <div class="gc-head-a"><div class="gc-title-a">Revenue by Month</div><div class="gc-link-a">Full report →</div></div>
-            <div class="gc-body-a">
-              <div class="bar-chart-a">
-                <div class="bc-col-a" *ngFor="let m of months; let i = index">
-                  <div class="bc-bar-a" [class.active]="i === 9" [style.height.%]="m.val"></div>
-                  <div class="bc-label-a" [style.color]="i === 9 ? 'var(--teal2)' : 'var(--text3)'">{{m.label}}</div>
-                </div>
-              </div>
-            </div>
+            <div class="gc-body-a" style="height:260px;"><canvas #adminRevenueChart></canvas></div>
           </div>
           <div class="gcard-a">
             <div class="gc-head-a"><div class="gc-title-a">Revenue Split</div></div>
-            <div class="gc-body-a">
-              <div class="donut-wrap-a">
-                <svg width="84" height="84" viewBox="0 0 72 72">
-                  <circle cx="36" cy="36" r="26" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="11"/>
-                  <circle cx="36" cy="36" r="26" fill="none" stroke="#3ECFB2" stroke-width="11" stroke-dasharray="72 163" stroke-dashoffset="0" transform="rotate(-90 36 36)"/>
-                  <circle cx="36" cy="36" r="26" fill="none" stroke="#6BA8C8" stroke-width="11" stroke-dasharray="32 163" stroke-dashoffset="-72" transform="rotate(-90 36 36)"/>
-                  <circle cx="36" cy="36" r="26" fill="none" stroke="#E8A94A" stroke-width="11" stroke-dasharray="23 163" stroke-dashoffset="-104" transform="rotate(-90 36 36)"/>
-                </svg>
-                <div class="donut-legend-a">
-                  <div class="dl-item-a"><div class="dl-dot-a" style="background:var(--teal)"></div>Elect. 44%</div>
-                  <div class="dl-item-a"><div class="dl-dot-a" style="background:var(--blue)"></div>Acc. 20%</div>
-                  <div class="dl-item-a"><div class="dl-dot-a" style="background:var(--amber)"></div>Periph. 14%</div>
-                </div>
-              </div>
-            </div>
+            <div class="gc-body-a" style="height:260px;"><canvas #adminCategoryChart></canvas></div>
           </div>
         </div>
 
@@ -2503,6 +2654,74 @@ export class ManagerComponent implements OnInit {
         </div>
       </div>
 
+      <!-- ORDERS PANEL -->
+      <div class="panel-a" [class.active]="tab === 'orders'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Order Management</div><div class="page-sub-a">View and manage all platform orders.</div></div>
+        </div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let o of allOrders">
+                <td class="td-mono-a">#ORD-{{o.orderId}}</td>
+                <td class="td-name-a">{{o.user?.fullName || 'N/A'}}</td>
+                <td>{{o.totalAmount | currency}}</td>
+                <td><span class="spill-a" [ngClass]="{'sp-green-a': o.status === 'DELIVERED', 'sp-blue-a': o.status === 'PROCESSING' || o.status === 'SHIPPED', 'sp-amber-a': o.status === 'PENDING'}">● {{o.status}}</span></td>
+                <td>{{o.orderDate | date:'short'}}</td>
+              </tr>
+              <tr *ngIf="allOrders.length === 0">
+                <td colspan="5" style="text-align:center;color:var(--text3);padding:32px;">No orders yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CATEGORIES PANEL -->
+      <div class="panel-a" [class.active]="tab === 'categories'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Category Management</div><div class="page-sub-a">Manage product taxonomy.</div></div>
+          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a" (click)="addCategory()">+ Add Category</button></div>
+        </div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>Category</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let c of categories">
+                <td class="td-name-a">{{c.name}}</td>
+                <td>{{c.description || '—'}}</td>
+                <td><span class="spill-a" [class.sp-green-a]="c.active" [class.sp-amber-a]="!c.active">{{c.active ? 'Active' : 'Inactive'}}</span></td>
+                <td>
+                  <div style="display:flex;gap:6px;">
+                    <button class="sc-btn-a danger" style="padding:4px 10px;font-size:10px;" (click)="deleteCategory(c)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="categories.length === 0"><td colspan="4" style="text-align:center;color:var(--text3);padding:32px;">No categories. Add one to get started.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AUDIT LOGS PANEL -->
+      <div class="panel-a" [class.active]="tab === 'auditlogs'">
+        <div class="top-bar-a"><div><div class="page-title-a">Audit Logs</div><div class="page-sub-a">Platform activity monitoring.</div></div></div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let log of auditLogs">
+                <td style="font-family:'JetBrains Mono',monospace;font-size:10px;">{{log.time}}</td>
+                <td class="td-name-a">{{log.user}}</td>
+                <td><span class="spill-a" [class.sp-green-a]="log.type==='success'" [class.sp-blue-a]="log.type==='info'" [class.sp-amber-a]="log.type==='warning'">{{log.action}}</span></td>
+                <td style="color:var(--text3);font-size:11px;">{{log.detail}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- CONFIG PANEL -->
       <div class="panel-a" [class.active]="tab === 'settings'">
         <div class="top-bar-a"><div><div class="page-title-a">System Config</div><div class="page-sub-a">Manage platform behavior.</div></div></div>
@@ -2530,28 +2749,35 @@ export class ManagerComponent implements OnInit {
 </div>
   `,
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, AfterViewInit {
   tab = 'dashboard';
   isLoading = true;
   auth = inject(AuthService);
   productService = inject(ProductService);
   storeService = inject(StoreService);
   adminService = inject(AdminService);
+  categoryService = inject(CategoryService);
   toast = inject(ToastService);
   router = inject(Router);
-  
-  months = [
-    {label:'J', val:35}, {label:'F', val:52}, {label:'M', val:44}, {label:'A', val:68},
-    {label:'M', val:55}, {label:'J', val:72}, {label:'J', val:61}, {label:'A', val:80},
-    {label:'S', val:65}, {label:'O', val:100}, {label:'N', val:74}, {label:'D', val:30}
+
+  @ViewChild('adminRevenueChart') adminRevenueCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('adminCategoryChart') adminCategoryCanvas!: ElementRef<HTMLCanvasElement>;
+  private revChart: Chart | null = null;
+  private catChart: Chart | null = null;
+
+  categories: any[] = [];
+  auditLogs = [
+    { time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'System', action: 'Startup', type: 'info', detail: 'Application initialized' },
+    { time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'Admin', action: 'Login', type: 'success', detail: 'Authenticated via JWT' },
   ];
-  
+
   stores: any[] = [];
   users: any[] = [];
   orders: any[] = [];
+  allOrders: any[] = [];
   pagedProducts: any[] = [];
   stats: any = {};
-  
+
   sysSettings = {
     maintenance: false,
     registrations: true,
@@ -2560,6 +2786,64 @@ export class AdminComponent implements OnInit {
 
   ngOnInit() {
     this.refreshData();
+    this.categoryService.getAll().subscribe(res => this.categories = res);
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => this.buildAdminCharts(), 800);
+  }
+
+  private buildAdminCharts() {
+    if (this.adminRevenueCanvas?.nativeElement) {
+      if (this.revChart) this.revChart.destroy();
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const revenueByMonth = new Array(12).fill(0);
+      this.allOrders.forEach((o: any) => {
+        const d = new Date(o.orderDate);
+        if (!isNaN(d.getTime())) revenueByMonth[d.getMonth()] += o.totalAmount || 0;
+      });
+      this.revChart = new Chart(this.adminRevenueCanvas.nativeElement, {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [{
+            label: 'Revenue ($)',
+            data: revenueByMonth,
+            borderColor: '#3ECFB2',
+            backgroundColor: 'rgba(62,207,178,0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#3ECFB2',
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+          }
+        }
+      });
+    }
+
+    if (this.adminCategoryCanvas?.nativeElement) {
+      if (this.catChart) this.catChart.destroy();
+      const catMap: Record<string, number> = {};
+      this.pagedProducts.forEach((p: any) => { catMap[p.category || 'Other'] = (catMap[p.category || 'Other'] || 0) + 1; });
+      const labels = Object.keys(catMap);
+      const data = Object.values(catMap);
+      const palette = ['#3ECFB2','#6BA8C8','#E8A94A','#E07070','#A78BFA','#34D399','#F472B6'];
+      this.catChart = new Chart(this.adminCategoryCanvas.nativeElement, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: palette.slice(0, labels.length), borderWidth: 0 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#7A918D', padding: 12, font: { size: 10 } } } }
+        }
+      });
+    }
   }
 
   refreshData() {
@@ -2576,9 +2860,10 @@ export class AdminComponent implements OnInit {
           this.pagedProducts = results[0];
           this.stores = results[1];
           this.users = results[2];
-          this.orders = results[3];
+          this.allOrders = results[3];
           this.stats = results[4];
           this.isLoading = false;
+          setTimeout(() => this.buildAdminCharts(), 200);
         },
         error: () => {
           this.toast.show('Error fetching data', 'error');
@@ -2604,7 +2889,33 @@ export class AdminComponent implements OnInit {
     if(!confirm(`Ban ${u.fullName}?`)) return;
     this.adminService.banUser(u.userId).subscribe(() => {
       this.toast.show('User banned');
+      this.auditLogs.unshift({ time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'Admin', action: 'Ban User', type: 'warning', detail: `Banned ${u.fullName}` });
       this.refreshData();
+    });
+  }
+
+  addCategory() {
+    const name = prompt('Category name:');
+    if (!name) return;
+    this.categoryService.create({ name, description: '', active: true }).subscribe({
+      next: (c) => {
+        this.categories.push(c);
+        this.toast.show('Category created');
+        this.auditLogs.unshift({ time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'Admin', action: 'Create Category', type: 'success', detail: name });
+      },
+      error: (e) => this.toast.show(e.error?.message || 'Failed to create category', 'error')
+    });
+  }
+
+  deleteCategory(c: any) {
+    if (!confirm(`Delete category "${c.name}"?`)) return;
+    this.categoryService.delete(c.categoryId).subscribe({
+      next: () => {
+        this.categories = this.categories.filter(x => x.categoryId !== c.categoryId);
+        this.toast.show('Category deleted');
+        this.auditLogs.unshift({ time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'Admin', action: 'Delete Category', type: 'warning', detail: c.name });
+      },
+      error: () => this.toast.show('Failed to delete category', 'error')
     });
   }
 
