@@ -20,6 +20,16 @@ export class AuthService {
     );
   }
 
+  register(data: { email: string; fullName: string; passwordHash: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/register`, data).pipe(
+      tap((user: any) => {
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('token', user.token);
+        this.currentUserSubject.next(user);
+      })
+    );
+  }
+
   logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');

@@ -82,8 +82,9 @@ public class DbInitializer {
 
     @SuppressWarnings("null")
     private void seedUsers() {
-        updateOrSaveUser("Buse Ünal", "buse@akdeniz.edu.tr", "$2a$10$8.UnS8OWu7qL6E2Q31m0.Ok0.3u8.8.8.8.8.8.8.8.8.8.8", Role.ADMIN);
+        updateOrSaveUser("Buse Ünal", "buse@akdeniz.edu.tr", "admin123", Role.ADMIN);
         updateOrSaveUser("James Wilson", "james@techhub.com", "manager123", Role.MANAGER);
+        updateOrSaveUser("Manager User", "manager@nexus.com", "manager123", Role.MANAGER);
         updateOrSaveUser("Elif Buse", "elif@akdeniz.edu.tr", "user123", Role.CONSUMER);
     }
 
@@ -95,9 +96,8 @@ public class DbInitializer {
         });
         user.setFullName(name);
         user.setRole(role);
-        
-        // Always attempt to encode if a plain string is provided.
-        // If it already looks like a hash, we use it as is.
+        user.setEnabled(true);
+
         if (pass.startsWith("$2a$")) {
             user.setPasswordHash(pass);
         } else {

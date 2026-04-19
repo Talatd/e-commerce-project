@@ -101,20 +101,20 @@ import { AuthService, AiService, ProductService, StoreService, AdminService, Toa
         <div class="name-row">
           <div class="field">
             <label class="field-label">First name</label>
-            <input class="fi" placeholder="Buse"/>
+            <input class="fi" [(ngModel)]="regFirstName" placeholder="Buse"/>
           </div>
           <div class="field">
             <label class="field-label">Last name</label>
-            <input class="fi" placeholder="U."/>
+            <input class="fi" [(ngModel)]="regLastName" placeholder="U."/>
           </div>
         </div>
         <div class="field">
           <label class="field-label">Email Address</label>
-          <input class="fi" placeholder="you@example.com" type="email"/>
+          <input class="fi" [(ngModel)]="regEmail" placeholder="you@example.com" type="email"/>
         </div>
         <div class="field">
           <label class="field-label">Create Password</label>
-          <input class="fi" placeholder="Min. 8 characters" type="password" (input)="pwStrength($event)"/>
+          <input class="fi" [(ngModel)]="regPassword" placeholder="Min. 8 characters" type="password" (input)="pwStrength($event)" (keyup.enter)="onRegister()"/>
           <div class="pw-bars">
             <div class="pw-bar" [style.background]="s >= 1 ? c : 'rgba(255,255,255,0.05)'"></div>
             <div class="pw-bar" [style.background]="s >= 2 ? c : 'rgba(255,255,255,0.05)'"></div>
@@ -122,8 +122,12 @@ import { AuthService, AiService, ProductService, StoreService, AdminService, Toa
             <div class="pw-bar" [style.background]="s >= 4 ? c : 'rgba(255,255,255,0.05)'"></div>
           </div>
         </div>
-        <button class="submit" (click)="setMode('login')">
-          Create Account →
+
+        <p *ngIf="regError" class="error-msg">{{regError}}</p>
+
+        <button class="submit" (click)="onRegister()" [disabled]="isLoading">
+          <span *ngIf="!isLoading">Create Account →</span>
+          <span *ngIf="isLoading" class="spin">◌</span>
         </button>
         <p class="terms-text">
           By signing up you agree to our <a>Terms</a> and <a>Privacy Policy</a>.
@@ -250,11 +254,19 @@ export class LoginComponent {
   c = 'rgba(255,255,255,0.05)';
   isLoading = false;
 
+  regFirstName = '';
+  regLastName = '';
+  regEmail = '';
+  regPassword = '';
+  regError = '';
+
   auth = inject(AuthService);
   router = inject(Router);
 
   setMode(m: string) {
     this.mode = m;
+    this.error = '';
+    this.regError = '';
   }
 
   pwStrength(event: any) {
@@ -285,6 +297,34 @@ export class LoginComponent {
         }
       });
     }, 600);
+  }
+
+  onRegister() {
+    const fullName = `${this.regFirstName} ${this.regLastName}`.trim();
+    if (!fullName || !this.regEmail || !this.regPassword) {
+      this.regError = 'Please fill in all fields.';
+      return;
+    }
+    if (this.regPassword.length < 6) {
+      this.regError = 'Password must be at least 6 characters.';
+      return;
+    }
+
+    this.isLoading = true;
+    this.regError = '';
+
+    this.auth.register({ email: this.regEmail, fullName, passwordHash: this.regPassword }).subscribe({
+      next: (user) => {
+        this.isLoading = false;
+        if (user.role === 'ADMIN') this.router.navigate(['/admin']);
+        else if (user.role === 'MANAGER') this.router.navigate(['/manager']);
+        else this.router.navigate(['/consumer']);
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.regError = err.error?.message || 'Registration failed. Please try again.';
+      }
+    });
   }
 }
 @Component({

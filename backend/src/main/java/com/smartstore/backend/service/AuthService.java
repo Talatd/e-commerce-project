@@ -25,8 +25,9 @@ public class AuthService {
         user.setFullName(userRequest.getFullName());
         user.setEmail(userRequest.getEmail());
         user.setPasswordHash(passwordEncoder.encode(userRequest.getPasswordHash()));
-        user.setRole(userRequest.getRole());
-        
+        user.setRole(userRequest.getRole() != null ? userRequest.getRole() : com.smartstore.backend.model.Role.CONSUMER);
+        user.setEnabled(true);
+
         userRepository.save(user);
         var jwtToken = jwtService.generateToken(new org.springframework.security.core.userdetails.User(
                 user.getEmail(), user.getPasswordHash(), java.util.Collections.emptyList()));

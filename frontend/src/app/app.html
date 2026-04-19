@@ -1,8 +1,8 @@
 <div id="cursor"></div>
 <div id="cursor-ring"></div>
 
-<div class="wrap" [class.light-mode]="isLightMode" [class.standalone]="router.url === '/' || router.url === '/login' || router.url === '/admin' || router.url === '/manager' || router.url === '/consumer' || router.url === '/settings'" *ngIf="auth.currentUser$ | async as user; else noAuth">
-  <ng-container *ngIf="router.url !== '/' && router.url !== '/login' && router.url !== '/admin' && router.url !== '/manager' && router.url !== '/consumer' && router.url !== '/settings'; else standalonePage">
+<div class="wrap" [class.light-mode]="isLightMode" [class.standalone]="router.url === '/' || router.url === '/login' || router.url === '/admin' || router.url === '/manager' || router.url === '/consumer' || router.url === '/settings' || router.url === '/cart'" *ngIf="auth.currentUser$ | async as user; else noAuth">
+  <ng-container *ngIf="router.url !== '/' && router.url !== '/login' && router.url !== '/admin' && router.url !== '/manager' && router.url !== '/consumer' && router.url !== '/settings' && router.url !== '/cart'; else standalonePage">
     <div class="glow-tl"></div>
     <div class="glow-br"></div>
 

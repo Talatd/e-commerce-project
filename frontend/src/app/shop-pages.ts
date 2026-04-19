@@ -1,87 +1,198 @@
 import { Component, inject, OnInit, ViewChild, ElementRef, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { ProductService, OrderService, AuthService, ToastService } from './services';
 
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <div class="page-head" style="display:flex;justify-content:space-between;" *ngIf="step < 3">
-      <div>
-        <div class="page-title">{{ step === 1 ? 'Your Cart' : 'Secure Checkout' }}</div>
-        <div class="page-sub">{{ step === 1 ? 'Review your items' : 'Complete your payment' }}</div>
-      </div>
-      <div class="secure-badge" *ngIf="step === 2">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L2 2.8v3.5c0 2.5 1.8 4.5 4 5.2 2.2-.7 4-2.7 4-5.2V2.8L6 1Z" stroke="#344844" stroke-width="1"/></svg>
-        256-bit SSL encrypted
-      </div>
-    </div>
-    <div class="app-content" [style.padding]="step === 3 ? '0' : '20px'">
-      <div class="steps" style="margin-bottom:20px;" *ngIf="step < 3">
-        <div class="step">
-          <div class="step-num done"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <span class="step-label done">Cart</span>
+    <div class="nx-page">
+
+      <!-- NAVBAR -->
+      <div class="nx-navbar">
+        <div class="nx-logo" routerLink="/consumer"><div class="nx-logo-dot"></div>Nexus</div>
+        <div class="nx-nav-pills">
+          <div class="nx-npill" routerLink="/consumer">Home</div>
+          <div class="nx-npill active">Shop</div>
+          <div class="nx-npill" routerLink="/orders">Orders</div>
+          <div class="nx-npill" routerLink="/settings">Settings</div>
         </div>
-        <div class="step-line done"></div>
-        <div class="step">
-          <div class="step-num" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">
-             <span *ngIf="step <= 2">2</span>
-             <svg *ngIf="step > 2" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="nx-nav-r">
+          <div class="nx-icon-btn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.5" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1" fill="#6A8A84"/><circle cx="10" cy="11" r="1" fill="#6A8A84"/></svg>
+            <div class="nx-cart-badge" *ngIf="totalQty > 0">{{totalQty}}</div>
           </div>
-          <span class="step-label" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">Payment</span>
+          <div class="nx-nbtn" routerLink="/consumer">← Back to Shop</div>
         </div>
-        <div class="step-line" [class.done]="step > 2" [class.idle]="step <= 2"></div>
-        <div class="step"><div class="step-num idle">3</div><span class="step-label idle">Confirmation</span></div>
       </div>
 
-      <!-- STEP 1: CART -->
-      <div class="row2" *ngIf="step === 1">
-        <div class="gcard" style="padding: 20px;">
-          <h3 style="margin-bottom:15px;font-family:'Playfair Display',serif;font-weight:400;font-style:italic;">Items ({{cartItems.length}})</h3>
-          
-          <div class="c-item tilt-card" *ngFor="let item of cartItems; let i = index" style="padding:16px; margin-bottom:10px; border:1px solid var(--border); box-shadow:none;">
-            <div class="card-glow"></div>
-            <div class="c-info" style="position:relative; z-index:2;">
-              <div class="c-brand">{{item.category}}</div>
-              <div class="c-name">{{item.name}}</div>
-              <div class="c-price">{{item.basePrice | currency}}</div>
-              <div class="stock-wrap" style="margin-top:8px;">
-                <div class="stock-row">
-                  <div class="stock-label"><div class="stock-dot ok"></div><span class="stock-text ok">Available</span></div>
-                  <div class="stock-count ok">In Stock</div>
-                </div>
-                <div class="stock-bar"><div class="stock-bar-fill ok" style="width:75%"></div></div>
-              </div>
+      <!-- STEPS -->
+      <div class="nx-steps" *ngIf="step < 3">
+        <div class="nx-step">
+          <div class="nx-step-num done"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="nx-step-label done">Cart</span>
+        </div>
+        <div class="nx-step-line done"></div>
+        <div class="nx-step">
+          <div class="nx-step-num" [class.active]="step === 1" [class.done]="step > 1" [class.idle]="false">
+            <span *ngIf="step <= 1">2</span>
+            <svg *ngIf="step > 1" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="nx-step-label" [class.active]="step === 1" [class.done]="step > 1">Checkout</span>
+        </div>
+        <div class="nx-step-line" [class.done]="step > 1"></div>
+        <div class="nx-step">
+          <div class="nx-step-num" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">
+            <span *ngIf="step <= 2">3</span>
+            <svg *ngIf="step > 2" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="nx-step-label" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">Payment</span>
+        </div>
+        <div class="nx-step-line" [class.done]="step > 2"></div>
+        <div class="nx-step">
+          <div class="nx-step-num idle">4</div>
+          <span class="nx-step-label idle">Confirmation</span>
+        </div>
+      </div>
+
+      <!-- STEP 1: CART + CHECKOUT -->
+      <div class="nx-cart-main" *ngIf="step === 1">
+        <div class="nx-cart-left">
+          <div class="section-title">Your Cart ({{totalQty}})</div>
+
+          <div class="nx-cart-item" *ngFor="let item of cartItems; let i = index">
+            <div class="nx-item-img">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="8" width="28" height="18" rx="3" stroke="#3ECFB2" stroke-width="1.2" opacity="0.5"/><rect x="13" y="26" width="10" height="2.5" rx="1.2" fill="rgba(62,207,178,0.2)"/><rect x="7" y="11" width="22" height="12" rx="1.5" fill="rgba(62,207,178,0.05)"/></svg>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px; position:relative; z-index:2;">
+            <div class="nx-item-info">
+              <div class="nx-item-brand">{{item.category}}</div>
+              <div class="nx-item-name">{{item.name}}</div>
+              <div class="nx-item-variant">{{item.variant || item.description || '—'}}</div>
+            </div>
+            <div class="nx-item-right">
+              <div class="nx-item-price">{{item.basePrice * item.qty | currency}}</div>
               <div class="qty-box">
                 <div class="qty-btn" (click)="updateQty(i, -1)">−</div>
                 <div class="qty-val">{{item.qty}}</div>
                 <div class="qty-btn" (click)="updateQty(i, 1)">+</div>
               </div>
-              <div class="remove-btn" (click)="removeItem(i)" style="font-size:10px;color:var(--red);cursor:pointer;">Remove</div>
+              <div class="nx-remove-btn" (click)="removeItem(i)">Remove</div>
             </div>
           </div>
-          <div *ngIf="cartItems.length === 0" style="padding: 2rem;text-align:center;color:var(--text3);">Your cart is empty.</div>
+
+          <div *ngIf="cartItems.length === 0" style="padding:3rem;text-align:center;color:var(--text3);font-size:13px;">Your cart is empty.</div>
+
+          <!-- COUPON -->
+          <div class="nx-coupon-row" *ngIf="cartItems.length > 0">
+            <input class="nx-coupon-input" placeholder="Enter coupon code..." [(ngModel)]="couponCode"/>
+            <div class="nx-coupon-btn" (click)="applyCoupon()">Apply</div>
+          </div>
+
+          <!-- DELIVERY METHOD -->
+          <div class="nx-delivery-section" *ngIf="cartItems.length > 0">
+            <div class="nx-delivery-title">Delivery Method</div>
+            <div class="nx-delivery-opts">
+              <div class="nx-delivery-opt" [class.active]="deliveryMethod === 'standard'" (click)="deliveryMethod = 'standard'; deliveryCost = 0">
+                <div class="nx-delivery-left">
+                  <div class="nx-delivery-radio"><div class="nx-delivery-radio-dot" *ngIf="deliveryMethod === 'standard'"></div></div>
+                  <div>
+                    <div class="nx-delivery-name">Standard Shipping</div>
+                    <div class="nx-delivery-eta">3–5 business days</div>
+                  </div>
+                </div>
+                <div class="nx-delivery-free">Free</div>
+              </div>
+              <div class="nx-delivery-opt" [class.active]="deliveryMethod === 'express'" (click)="deliveryMethod = 'express'; deliveryCost = 9.99">
+                <div class="nx-delivery-left">
+                  <div class="nx-delivery-radio"><div class="nx-delivery-radio-dot" *ngIf="deliveryMethod === 'express'"></div></div>
+                  <div>
+                    <div class="nx-delivery-name">Express Shipping</div>
+                    <div class="nx-delivery-eta">1–2 business days</div>
+                  </div>
+                </div>
+                <div class="nx-delivery-price">$9.99</div>
+              </div>
+              <div class="nx-delivery-opt" [class.active]="deliveryMethod === 'sameday'" (click)="deliveryMethod = 'sameday'; deliveryCost = 19.99">
+                <div class="nx-delivery-left">
+                  <div class="nx-delivery-radio"><div class="nx-delivery-radio-dot" *ngIf="deliveryMethod === 'sameday'"></div></div>
+                  <div>
+                    <div class="nx-delivery-name">Same Day Delivery</div>
+                    <div class="nx-delivery-eta">Today by 9 PM</div>
+                  </div>
+                </div>
+                <div class="nx-delivery-price">$19.99</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div>
-          <div class="summary-card">
-            <h3 style="font-family:'Playfair Display',serif;font-weight:400;margin-bottom:20px;font-style:italic;">Order Summary</h3>
-            <div class="summary-line"><span class="sl-label">Subtotal</span><span class="sl-val">{{subtotal | currency}}</span></div>
-            <div class="summary-line"><span class="sl-label">Shipping</span><span class="sl-val green">Free</span></div>
+        <!-- RIGHT: ORDER SUMMARY -->
+        <div class="nx-cart-right">
+          <div class="section-title">Order Summary</div>
+
+          <div class="nx-summary-card">
+            <div class="summary-line"><span class="sl-label">Subtotal ({{totalQty}} items)</span><span class="sl-val">{{subtotal | currency}}</span></div>
+            <div class="summary-line" *ngIf="discount > 0"><span class="sl-label">Discount (−{{discountPercent}}%)</span><span class="sl-val nx-green">−{{discount | currency}}</span></div>
+            <div class="summary-line"><span class="sl-label">Shipping</span><span class="sl-val" [class.nx-green]="deliveryCost === 0">{{deliveryCost === 0 ? 'Free' : (deliveryCost | currency)}}</span></div>
+            <div class="summary-line"><span class="sl-label">Tax (8%)</span><span class="sl-val">{{tax | currency}}</span></div>
             <div class="summary-divider"></div>
-            <div class="summary-line" style="margin-top:14px;"><span class="sl-label" style="font-size:14px;color:var(--text);font-weight:500;">Total</span><span class="total-val">{{subtotal | currency}}</span></div>
-            <button class="ripple-btn primary" style="width:100%; margin-top:20px;" (click)="goStep2()" [disabled]="cartItems.length === 0">Proceed to Payment →</button>
+            <div class="nx-total-line">
+              <span class="nx-total-label">Total</span>
+              <span class="total-val">{{grandTotal | currency}}</span>
+            </div>
+          </div>
+
+          <div class="nx-pay-title">Payment Method</div>
+          <div class="nx-pay-methods">
+            <div class="nx-pay-method" [class.active]="payMethod === 'card'" (click)="payMethod = 'card'">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M1 6h12" stroke="currentColor" stroke-width="1.1"/></svg>
+              Card
+            </div>
+            <div class="nx-pay-method" [class.active]="payMethod === 'crypto'" (click)="payMethod = 'crypto'">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.1"/><path d="M4.5 7h5M7 4.5v5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              Crypto
+            </div>
+            <div class="nx-pay-method" [class.active]="payMethod === 'wallet'" (click)="payMethod = 'wallet'">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="4" width="10" height="6" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M5 4V3a2 2 0 0 1 4 0v1" stroke="currentColor" stroke-width="1.1"/></svg>
+              Wallet
+            </div>
+          </div>
+
+          <button class="nx-checkout-btn" (click)="goStep2()" [disabled]="cartItems.length === 0">Proceed to Payment →</button>
+
+          <div class="nx-secure-note">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1L2 2.5v3c0 2.2 1.5 4 3.5 4.5C7.5 9.5 9 7.7 9 5.5v-3L5.5 1Z" stroke="#344844" stroke-width="1.1"/></svg>
+            Secure checkout · 256-bit SSL
+          </div>
+
+          <div class="nx-trust-row">
+            <div class="nx-trust-item">
+              <div class="nx-trust-icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9h12M9 3v12" stroke="#344844" stroke-width="1.2" stroke-linecap="round"/><rect x="2" y="2" width="14" height="14" rx="3" stroke="#344844" stroke-width="1.2"/></svg>
+              </div>
+              <div class="nx-trust-label">Free<br>Returns</div>
+            </div>
+            <div class="nx-trust-item">
+              <div class="nx-trust-icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L3 5v5c0 3.3 2.7 5.8 6 6.8 3.3-1 6-3.5 6-6.8V5L9 2Z" stroke="#344844" stroke-width="1.2"/></svg>
+              </div>
+              <div class="nx-trust-label">2 Year<br>Warranty</div>
+            </div>
+            <div class="nx-trust-item">
+              <div class="nx-trust-icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6.5" stroke="#344844" stroke-width="1.2"/><path d="M6 9l2 2 4-4" stroke="#344844" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="nx-trust-label">Verified<br>Products</div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- STEP 2: PAYMENT GATEWAY -->
-      <div class="main" *ngIf="step === 2" style="grid-template-columns: 1fr 340px;">
+      <div class="nx-cart-main" *ngIf="step === 2">
         <div class="left">
           
           <!-- CARD VISUAL -->
@@ -306,6 +417,14 @@ export class CartComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   toast = inject(ToastService);
 
+  // Cart Step 1 State
+  couponCode = '';
+  deliveryMethod = 'standard';
+  deliveryCost = 0;
+  payMethod = 'card';
+  discount = 0;
+  discountPercent = 0;
+
   // Payment Form State
   addrMode = 'saved';
   cardFlipped = false;
@@ -352,6 +471,28 @@ export class CartComponent implements OnInit, OnDestroy {
 
   calculateTotal() {
     this.subtotal = this.cartItems.reduce((acc, item) => acc + (item.basePrice * item.qty), 0);
+  }
+
+  get totalQty(): number {
+    return this.cartItems.reduce((acc, item) => acc + item.qty, 0);
+  }
+
+  get tax(): number {
+    return (this.subtotal - this.discount) * 0.08;
+  }
+
+  get grandTotal(): number {
+    return this.subtotal - this.discount + this.deliveryCost + this.tax;
+  }
+
+  applyCoupon() {
+    if (this.couponCode.toUpperCase() === 'NEXUS20') {
+      this.discountPercent = 20;
+      this.discount = this.subtotal * 0.2;
+      this.toast.show('Coupon applied! 20% off');
+    } else if (this.couponCode.trim()) {
+      this.toast.show('Invalid coupon code', 'error');
+    }
   }
 
   goStep2() {
