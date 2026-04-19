@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400&display=swap');
+/* Fonts: see index.html — avoid @import here for production bundle budgets. */
 
 /* Settings Specific Design System */
 .set-page{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);border-radius:16px;overflow:hidden;border:1px solid var(--border); display:flex; flex-direction:column; height: 100vh;}

@@ -957,7 +957,7 @@ export class ProductDetailComponent implements OnInit {
           </div>
           <div class="progress-labels">
             <span class="prog-label" [class.active]="isStepDone('PENDING')">Confirmed</span>
-            <span class="prog-label" [class.active]="isStepDone('PROCESSING')">Processing</span>
+            <span class="prog-label" [class.active]="isStepDone('PREPARING')">Preparing</span>
             <span class="prog-label" [class.active]="isStepDone('SHIPPED')">Shipped</span>
             <span class="prog-label" [class.active]="isStepDone('IN_TRANSIT')">In Transit</span>
             <span class="prog-label" [class.active]="isStepDone('DELIVERED')">Delivered</span>
@@ -973,9 +973,13 @@ export class ProductDetailComponent implements OnInit {
               <div class="tl-left"><div class="tl-dot done"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5" stroke="#3ECFB2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
               <div class="tl-right"><div class="tl-title done">Order Confirmed <span class="tl-time">{{selectedOrder.orderDate | date:'shortTime'}}</span></div><div class="tl-desc">Payment verified. Order confirmed.</div></div>
             </div>
-            <div class="tl-item" [class.done]="isStepDone('PROCESSING')" [class.idle]="!isStepDone('PROCESSING')">
-              <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('PROCESSING')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5" [attr.stroke]="isStepDone('PROCESSING') ? '#3ECFB2' : '#344844'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
-              <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('PROCESSING')">Processing</div><div class="tl-desc">Items being packed at warehouse.</div></div>
+            <div class="tl-item" [class.done]="isStepDone('PREPARING')" [class.idle]="!isStepDone('PREPARING')">
+              <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('PREPARING')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5" [attr.stroke]="isStepDone('PREPARING') ? '#3ECFB2' : '#344844'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+              <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('PREPARING')">Preparing</div><div class="tl-desc">Items being packed at warehouse.</div></div>
+            </div>
+            <div class="tl-item" [class.done]="isStepDone('IN_TRANSIT')" [class.idle]="!isStepDone('IN_TRANSIT')">
+              <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('IN_TRANSIT')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" [attr.stroke]="isStepDone('IN_TRANSIT') ? '#3ECFB2' : '#344844'" stroke-width="1.3" stroke-linecap="round"/></svg></div></div>
+              <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('IN_TRANSIT')">In transit</div><div class="tl-desc">On the way to you.</div></div>
             </div>
             <div class="tl-item" [class.done]="isStepDone('SHIPPED')" [class.active]="selectedOrder.status === 'SHIPPED'" [class.idle]="!isStepDone('SHIPPED')">
               <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('SHIPPED')" [class.active]="selectedOrder.status === 'SHIPPED'"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" [attr.stroke]="isStepDone('SHIPPED') ? '#3ECFB2' : '#344844'" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
@@ -1118,7 +1122,8 @@ export class OrdersComponent implements OnInit {
   shipmentData: any = null;
   reviewProductId: number | null = null;
 
-  private statusOrder = ['PENDING','PROCESSING','SHIPPED','IN_TRANSIT','DELIVERED'];
+  /** Order + shipment lifecycle (aligned with backend shipment statuses where applicable). */
+  private readonly trackingSteps = ['PENDING', 'PREPARING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED'];
 
   productService = inject(ProductService);
   orderService = inject(OrderService);
@@ -1148,17 +1153,31 @@ export class OrdersComponent implements OnInit {
     }
   }
 
+  private normalizeTrackStatus(raw: string | undefined): string {
+    if (!raw) return 'PENDING';
+    const u = String(raw).toUpperCase();
+    if (u === 'PROCESSING') return 'PREPARING';
+    if (u === 'OUT_FOR_DELIVERY') return 'IN_TRANSIT';
+    if (u === 'CANCELLED' || u === 'RETURNED') return 'PENDING';
+    if (this.trackingSteps.includes(u)) return u;
+    return 'PENDING';
+  }
+
   get trackingProgress(): number {
     if (!this.selectedOrder) return 0;
-    const status = this.shipmentData?.status || this.selectedOrder.status;
-    const idx = this.statusOrder.indexOf(status);
-    return idx >= 0 ? ((idx + 1) / this.statusOrder.length) * 100 : 20;
+    const status = this.normalizeTrackStatus(this.shipmentData?.status || this.selectedOrder.status);
+    const idx = this.trackingSteps.indexOf(status);
+    return idx >= 0 ? ((idx + 1) / this.trackingSteps.length) * 100 : 20;
   }
 
   isStepDone(step: string): boolean {
     if (!this.selectedOrder) return false;
-    const current = this.shipmentData?.status || this.selectedOrder.status;
-    return this.statusOrder.indexOf(current) >= this.statusOrder.indexOf(step);
+    const current = this.normalizeTrackStatus(this.shipmentData?.status || this.selectedOrder.status);
+    const target = this.normalizeTrackStatus(step);
+    const ci = this.trackingSteps.indexOf(current);
+    const ti = this.trackingSteps.indexOf(target);
+    if (ci < 0 || ti < 0) return false;
+    return ci >= ti;
   }
 
   openReviewForOrder(order: any) {

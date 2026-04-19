@@ -33,17 +33,17 @@ engine = create_engine(DB_URL)
 
 SCHEMA_DESCRIPTION = """
 Tables (MySQL, all column names use snake_case):
-- users (user_id INT PK, email VARCHAR, password_hash VARCHAR, full_name VARCHAR, role ENUM('ADMIN','MANAGER','CONSUMER'), created_at TIMESTAMP)
-- products (product_id INT PK, name VARCHAR, description TEXT, brand VARCHAR, category VARCHAR, base_price DECIMAL(10,2), created_at TIMESTAMP, updated_at TIMESTAMP)
+- users (user_id INT PK, email VARCHAR, password_hash VARCHAR, full_name VARCHAR, role ENUM('ADMIN','MANAGER','CONSUMER'), enabled BOOLEAN, created_at TIMESTAMP)
+- products (product_id INT PK, name VARCHAR, description TEXT, brand VARCHAR, category VARCHAR, base_price DECIMAL(10,2), image_url VARCHAR, stock_quantity INT, created_at TIMESTAMP, updated_at TIMESTAMP)
 - regional_inventory (inventory_id INT PK, product_id INT FK→products, region VARCHAR, stock_quantity INT)
 - orders (order_id INT PK, user_id INT FK→users, total_amount DECIMAL(10,2), shipping_address TEXT, status ENUM('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED'), order_date TIMESTAMP)
 - order_items (order_item_id INT PK, order_id INT FK→orders, product_id INT FK→products, quantity INT, price_at_purchase DECIMAL(10,2))
-- product_reviews (review_id INT PK, product_id INT FK→products, user_id INT FK→users, rating TINYINT 1-5, comment TEXT, sentiment_score DECIMAL(3,2), created_at TIMESTAMP)
+- product_reviews (review_id INT PK, product_id INT FK→products, user_id INT FK→users, rating TINYINT 1-5, comment TEXT, sentiment_score DECIMAL(3,2), store_response VARCHAR(1000), responded_at TIMESTAMP, created_at TIMESTAMP)
 - stores (id INT PK, name VARCHAR, owner_name VARCHAR, owner_id INT FK→users, total_revenue DECIMAL(12,2), order_count INT, rating DECIMAL(3,2), status ENUM('OPEN','CLOSED','PENDING'), created_at TIMESTAMP)
-- shipments (shipment_id INT PK, order_id INT FK→orders, warehouse_block VARCHAR, mode_of_shipment VARCHAR, carrier VARCHAR, tracking_number VARCHAR, status ENUM('PREPARING','SHIPPED','IN_TRANSIT','DELIVERED','RETURNED'), shipped_at TIMESTAMP, delivered_at TIMESTAMP, estimated_delivery TIMESTAMP, customer_care_calls INT, customer_rating TINYINT, cost_of_product DECIMAL(10,2), prior_purchases INT, product_importance ENUM('LOW','MEDIUM','HIGH'), discount_offered DECIMAL(5,2))
-- categories (category_id INT PK, name VARCHAR, description TEXT, parent_id INT FK→categories NULL, display_order INT, active BOOLEAN)
+- shipments (shipment_id INT PK, order_id INT FK→orders, warehouse_block VARCHAR, mode_of_shipment VARCHAR, carrier VARCHAR, tracking_number VARCHAR, status ENUM('PREPARING','SHIPPED','IN_TRANSIT','DELIVERED','RETURNED'), shipped_at TIMESTAMP, delivered_at TIMESTAMP, estimated_delivery TIMESTAMP, customer_care_calls INT, customer_rating TINYINT, cost_of_product DECIMAL(10,2), prior_purchases INT, product_importance ENUM('LOW','MEDIUM','HIGH'), discount_offered DECIMAL(5,2), on_time_delivery BOOLEAN)
+- categories (category_id INT PK, name VARCHAR, description TEXT, image_url VARCHAR, parent_id INT FK→categories NULL, display_order INT, active BOOLEAN)
 - customer_profiles (profile_id INT PK, user_id INT FK→users UNIQUE, gender VARCHAR, age INT, city VARCHAR, country VARCHAR, membership_type ENUM('BASIC','SILVER','GOLD','PLATINUM'), total_spend DECIMAL(12,2), items_purchased INT, avg_rating DECIMAL(3,2), discount_applied BOOLEAN, satisfaction_level ENUM('UNSATISFIED','NEUTRAL','SATISFIED','VERY_SATISFIED'))
-- integration_logs (log_id INT PK, service_name VARCHAR, endpoint VARCHAR, status_code INT, message TEXT, created_at TIMESTAMP)
+- integration_logs (id INT PK, username VARCHAR, action VARCHAR, type VARCHAR, detail TEXT, created_at TIMESTAMP)
 
 IMPORTANT: Always use snake_case column names in SQL queries. Example: user_id NOT userId, base_price NOT basePrice, order_date NOT orderDate.
 Note: orders table has NO store_id column. To find orders related to a store, you cannot directly join orders to stores.
@@ -69,8 +69,11 @@ def guardrails_agent(state: AgentState):
     Answer with ONLY "yes" or "no".
     """
     model = genai.GenerativeModel("gemini-1.5-flash")
-    resp = model.generate_content(prompt)
-    answer = resp.text.strip().lower()
+    try:
+        resp = model.generate_content(prompt)
+        answer = resp.text.strip().lower()
+    except Exception:
+        return {"is_in_scope": True, "next_step": "generate_sql"}
 
     if answer.startswith("no") or answer == "no":
         return {
@@ -119,6 +122,29 @@ def sql_agent(state: AgentState):
     return {"sql_query": sql, "next_step": "execute"}
 
 
+def _is_read_only_select(sql: str) -> bool:
+    """Reject anything that is not a single SELECT (defense in depth for LLM-generated SQL)."""
+    s = (sql or "").strip()
+    if not s:
+        return False
+    parts = [p.strip() for p in s.split(";") if p.strip()]
+    if len(parts) != 1:
+        return False
+    first = parts[0].lower()
+    if not (first.startswith("select") or first.startswith("with")):
+        return False
+    # Block UNION-based multi-query tricks in a single statement
+    if " union " in f" {first} ":
+        return False
+    banned = (" insert ", " update ", " delete ", " drop ", " alter ", " truncate ", " grant ", " revoke ")
+    padded = f" {first} "
+    return not any(b in padded for b in banned)
+
+
+MAX_SQL_RESULT_ROWS = 100
+SQL_MAX_EXECUTION_MS = 10_000
+
+
 def execution_agent(state: AgentState):
     """Executes SQL safely against the database."""
     if not state.get("sql_query"):
@@ -128,10 +154,26 @@ def execution_agent(state: AgentState):
             "response": state.get("response") or "I wasn't able to generate a query for that. Could you rephrase?",
             "results": [],
         }
+    raw_sql = state["sql_query"].strip()
+    if not _is_read_only_select(raw_sql):
+        return {
+            "error": "Only a single read-only SELECT query is allowed.",
+            "results": [],
+            "next_step": "error_handler",
+        }
     try:
         with engine.connect() as conn:
-            result = conn.execute(text(state["sql_query"]))
-            rows = [dict(row._mapping) for row in result]
+            conn.execute(text(f"SET SESSION MAX_EXECUTION_TIME={SQL_MAX_EXECUTION_MS}"))
+            result = conn.execute(text(raw_sql))
+            rows = []
+            for i, row in enumerate(result):
+                if i >= MAX_SQL_RESULT_ROWS:
+                    return {
+                        "error": f"Result exceeded {MAX_SQL_RESULT_ROWS} rows; refine the query with filters or LIMIT.",
+                        "results": [],
+                        "next_step": "error_handler",
+                    }
+                rows.append(dict(row._mapping))
             serializable = []
             for row in rows:
                 clean = {}

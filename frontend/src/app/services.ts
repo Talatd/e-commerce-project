@@ -1,40 +1,70 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, Subject } from 'rxjs';
-const API = 'http://localhost:8080';
-const AI_API = 'http://localhost:8000';
+import { HttpBackend, HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, tap, Subject, of, map, catchError } from 'rxjs';
+import { apiRoot } from '../environments/environment';
+
+const API_V1 = apiRoot();
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = `${API}/api/v1/auth`;
+  private httpBackend = inject(HttpBackend);
+  /** Avoids interceptor recursion when refreshing tokens. */
+  private refreshHttp = new HttpClient(this.httpBackend);
+  private apiUrl = `${API_V1}/auth`;
 
   private currentUserSubject = new BehaviorSubject<any>(JSON.parse(localStorage.getItem('user') || 'null'));
   currentUser$ = this.currentUserSubject.asObservable();
 
+  private persistSession(res: any) {
+    localStorage.setItem('token', res.token);
+    if (res.refreshToken) {
+      localStorage.setItem('refreshToken', res.refreshToken);
+    }
+    const prev = JSON.parse(localStorage.getItem('user') || '{}');
+    const merged = {
+      ...prev,
+      ...res,
+      token: res.token,
+      refreshToken: res.refreshToken,
+      userId: res.userId,
+      email: res.email,
+      fullName: res.fullName,
+      role: res.role,
+    };
+    localStorage.setItem('user', JSON.stringify(merged));
+    this.currentUserSubject.next(merged);
+  }
+
   login(credentials: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/login`, credentials).pipe(
-      tap((user: any) => {
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('token', user.token);
-        this.currentUserSubject.next(user);
-      })
+      tap((user: any) => this.persistSession(user))
     );
   }
 
   register(data: { email: string; fullName: string; passwordHash: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/register`, data).pipe(
-      tap((user: any) => {
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('token', user.token);
-        this.currentUserSubject.next(user);
-      })
+      tap((user: any) => this.persistSession(user))
+    );
+  }
+
+  /** Uses HttpBackend client so the global interceptor does not recurse. */
+  refreshAccessToken(): Observable<boolean> {
+    const rt = localStorage.getItem('refreshToken');
+    if (!rt) {
+      return of(false);
+    }
+    return this.refreshHttp.post<any>(`${this.apiUrl}/refresh`, { refreshToken: rt }).pipe(
+      tap((res) => this.persistSession(res)),
+      map(() => true),
+      catchError(() => of(false)),
     );
   }
 
   logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('cart');
     this.currentUserSubject.next(null);
   }
@@ -56,14 +86,14 @@ export class AuthService {
 @Injectable({ providedIn: 'root' })
 export class AiService {
   private http = inject(HttpClient);
-  private aiUrl = `${AI_API}/api/v1/chatbot/query`;
+  /** Proxied through Spring Boot so JWT + user context are enforced server-side. */
+  private chatUrl = `${API_V1}/chat/ask`;
+  private chatStreamUrl = `${API_V1}/chat/ask/stream`;
   sessionId: string | null = null;
 
-  query(prompt: string, userId: number, role: string, history: string[]): Observable<any> {
-    return this.http.post(this.aiUrl, {
+  query(prompt: string, history: string[]): Observable<any> {
+    return this.http.post(this.chatUrl, {
       query: prompt,
-      user_id: userId,
-      role: role,
       history: history,
       session_id: this.sessionId,
     }).pipe(tap((res: any) => {
@@ -71,15 +101,18 @@ export class AiService {
     }));
   }
 
-  queryStream(prompt: string, userId: number, role: string, history: string[],
+  queryStream(prompt: string, history: string[],
               onStep: (step: any) => void, onFinal: (result: any) => void, onError: (err: string) => void) {
     const body = JSON.stringify({
-      query: prompt, user_id: userId, role, history, session_id: this.sessionId
+      query: prompt, history, session_id: this.sessionId
     });
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch(`${AI_API}/api/v1/chatbot/query/stream`, {
+    fetch(this.chatStreamUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body,
     }).then(async (response) => {
       const reader = response.body?.getReader();
@@ -118,7 +151,7 @@ export class AiService {
 @Injectable({ providedIn: 'root' })
 export class ProductService {
   private http = inject(HttpClient);
-  private apiUrl = `${API}/api/v1/products`;
+  private apiUrl = `${API_V1}/products`;
 
   getProducts(): Observable<any[]> {
     return this.http.get<any[]>(this.apiUrl);
@@ -160,7 +193,7 @@ export class ProductService {
 @Injectable({ providedIn: 'root' })
 export class OrderService {
   private http = inject(HttpClient);
-  private apiUrl = `${API}/api/v1/orders`;
+  private apiUrl = `${API_V1}/orders`;
 
   createOrder(order: any): Observable<any> {
     return this.http.post(this.apiUrl, order);
@@ -178,7 +211,7 @@ export class OrderService {
 @Injectable({ providedIn: 'root' })
 export class StoreService {
   private http = inject(HttpClient);
-  private apiUrl = `${API}/api/v1/stores`;
+  private apiUrl = `${API_V1}/stores`;
 
   getStores(): Observable<any[]> {
     return this.http.get<any[]>(this.apiUrl);
@@ -190,50 +223,50 @@ export class AdminService {
   private http = inject(HttpClient);
 
   getUsers(): Observable<any[]> {
-    return this.http.get<any[]>(`${API}/api/v1/admin/users`);
+    return this.http.get<any[]>(`${API_V1}/admin/users`);
   }
 
   getOrders(): Observable<any[]> {
-    return this.http.get<any[]>(`${API}/api/v1/orders`);
+    return this.http.get<any[]>(`${API_V1}/orders`);
   }
 
   getStats(): Observable<any> {
-    return this.http.get(`${API}/api/v1/analytics/admin-stats`);
+    return this.http.get(`${API_V1}/analytics/admin-stats`);
   }
 
   banUser(id: number): Observable<any> {
-    return this.http.post(`${API}/api/v1/admin/users/${id}/ban`, {});
+    return this.http.post(`${API_V1}/admin/users/${id}/ban`, {});
   }
 
   deleteUser(id: number): Observable<any> {
-    return this.http.delete(`${API}/api/v1/admin/users/${id}`);
+    return this.http.delete(`${API_V1}/admin/users/${id}`);
   }
 
   getSalesBreakdown(): Observable<any> {
-    return this.http.get(`${API}/api/v1/analytics/sales-breakdown`);
+    return this.http.get(`${API_V1}/analytics/sales-breakdown`);
   }
 
   getStoreComparison(): Observable<any[]> {
-    return this.http.get<any[]>(`${API}/api/v1/analytics/store-comparison`);
+    return this.http.get<any[]>(`${API_V1}/analytics/store-comparison`);
   }
 
   getCustomerSegments(): Observable<any> {
-    return this.http.get(`${API}/api/v1/analytics/customer-segments`);
+    return this.http.get(`${API_V1}/analytics/customer-segments`);
   }
 
   getAuditLogs(): Observable<any[]> {
-    return this.http.get<any[]>(`${API}/api/v1/admin/audit-logs`);
+    return this.http.get<any[]>(`${API_V1}/admin/audit-logs`);
   }
 
   createAuditLog(action: string, type: string, detail: string): Observable<any> {
-    return this.http.post(`${API}/api/v1/admin/audit-logs`, { action, type, detail });
+    return this.http.post(`${API_V1}/admin/audit-logs`, { action, type, detail });
   }
 }
 
 @Injectable({ providedIn: 'root' })
 export class ShipmentService {
   private http = inject(HttpClient);
-  private apiUrl = `${API}/api/v1/shipments`;
+  private apiUrl = `${API_V1}/shipments`;
 
   getAll(): Observable<any[]> {
     return this.http.get<any[]>(this.apiUrl);
@@ -255,7 +288,7 @@ export class ShipmentService {
 @Injectable({ providedIn: 'root' })
 export class CategoryService {
   private http = inject(HttpClient);
-  private apiUrl = `${API}/api/v1/categories`;
+  private apiUrl = `${API_V1}/categories`;
 
   getAll(): Observable<any[]> {
     return this.http.get<any[]>(this.apiUrl);
@@ -281,7 +314,7 @@ export class CategoryService {
 @Injectable({ providedIn: 'root' })
 export class CustomerProfileService {
   private http = inject(HttpClient);
-  private apiUrl = `${API}/api/v1/profiles`;
+  private apiUrl = `${API_V1}/profiles`;
 
   getMyProfile(): Observable<any> {
     return this.http.get(`${this.apiUrl}/me`);
@@ -301,7 +334,7 @@ export class ChatService {
   private http = inject(HttpClient);
 
   ask(query: string, history: string[] = []): Observable<any> {
-    return this.http.post(`${API}/api/v1/chat/ask`, { query, history });
+    return this.http.post(`${API_V1}/chat/ask`, { query, history });
   }
 }
 

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400&display=swap');
+/* Fonts load from index.html (<link>) so production build does not inline huge Google CSS. */
 @import url('nexus-components.css');
 @import url('nexus-settings.css');
 

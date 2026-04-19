@@ -1,14 +1,18 @@
 package com.smartstore.backend.controller;
 
 import com.smartstore.backend.model.Order;
+import com.smartstore.backend.model.Role;
+import com.smartstore.backend.model.User;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.ProductRepository;
+import com.smartstore.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -23,6 +27,7 @@ class OrderControllerTest {
 
     @Mock private OrderRepository orderRepository;
     @Mock private ProductRepository productRepository;
+    @Mock private UserRepository userRepository;
     @InjectMocks private OrderController controller;
 
     @BeforeEach
@@ -43,12 +48,25 @@ class OrderControllerTest {
 
     @Test
     void getOrder_Exists_ReturnsOrder() {
+        User buyer = new User();
+        buyer.setUserId(1L);
+        buyer.setEmail("owner@test.com");
+        buyer.setRole(Role.CONSUMER);
+
         Order o = new Order();
         o.setOrderId(1L);
         o.setTotalAmount(BigDecimal.valueOf(250));
+        o.setUser(buyer);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(o));
+        when(userRepository.findByEmail("owner@test.com")).thenReturn(Optional.of(buyer));
 
-        ResponseEntity<Order> response = controller.getOrder(1L);
+        UserDetails principal = org.springframework.security.core.userdetails.User
+                .withUsername("owner@test.com")
+                .password("")
+                .roles("CONSUMER")
+                .build();
+
+        ResponseEntity<Order> response = controller.getOrder(1L, principal);
 
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
@@ -58,8 +76,41 @@ class OrderControllerTest {
     @Test
     void getOrder_NotFound_Returns404() {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
-        ResponseEntity<Order> response = controller.getOrder(99L);
+        UserDetails principal = org.springframework.security.core.userdetails.User
+                .withUsername("any@test.com")
+                .password("")
+                .roles("CONSUMER")
+                .build();
+        ResponseEntity<Order> response = controller.getOrder(99L, principal);
         assertEquals(404, response.getStatusCode().value());
+    }
+
+    @Test
+    void getOrder_NotOwner_Returns403() {
+        User owner = new User();
+        owner.setUserId(1L);
+        owner.setEmail("owner@test.com");
+        owner.setRole(Role.CONSUMER);
+
+        User other = new User();
+        other.setUserId(2L);
+        other.setEmail("other@test.com");
+        other.setRole(Role.CONSUMER);
+
+        Order o = new Order();
+        o.setOrderId(1L);
+        o.setUser(owner);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(o));
+        when(userRepository.findByEmail("other@test.com")).thenReturn(Optional.of(other));
+
+        UserDetails principal = org.springframework.security.core.userdetails.User
+                .withUsername("other@test.com")
+                .password("")
+                .roles("CONSUMER")
+                .build();
+
+        ResponseEntity<Order> response = controller.getOrder(1L, principal);
+        assertEquals(403, response.getStatusCode().value());
     }
 
     @Test

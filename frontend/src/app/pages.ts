@@ -337,7 +337,6 @@ export class LoginComponent {
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400&display=swap');
 :host {
   --bg:#080808;--glass:rgba(255,255,255,0.04);--glass2:rgba(255,255,255,0.07);
   --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
@@ -1752,10 +1751,18 @@ export class ConsumerComponent implements OnInit {
     this.prompt = '';
     this.isTyping = true;
     this.streamSteps = [];
-    const user = this.auth.currentUserValue || { userId: 1, role: 'CONSUMER' };
+    if (!this.auth.currentUserValue) {
+      this.isTyping = false;
+      this.chatMessages.push({
+        sender: 'ai',
+        text: 'Please sign in to use Nexus AI.',
+        time: this.getTimeNow(),
+      });
+      return;
+    }
 
     this.ai.queryStream(
-      userMsg, user.userId, user.role, this.history,
+      userMsg, this.history,
       (step) => {
         this.streamSteps.push(step.message);
       },

@@ -1,7 +1,7 @@
 import os
 import uuid
 import time
-from collections import defaultdict
+import threading
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -34,10 +34,20 @@ engine = create_engine(DB_URL)
 
 SESSION_TTL = 3600
 sessions: Dict[str, dict] = {}
+session_lock = threading.Lock()
+
+
+def _cleanup_sessions_unlocked():
+    now = time.time()
+    expired = [k for k, v in sessions.items() if now - v["last_active"] > SESSION_TTL]
+    for k in expired:
+        del sessions[k]
 
 
 def get_or_create_session(session_id: Optional[str], user_id: int, role: str) -> dict:
+    """Must be called with session_lock held."""
     now = time.time()
+    _cleanup_sessions_unlocked()
     if session_id and session_id in sessions:
         s = sessions[session_id]
         s["last_active"] = now
@@ -52,13 +62,6 @@ def get_or_create_session(session_id: Optional[str], user_id: int, role: str) ->
         "last_active": now,
     }
     return sessions[sid]
-
-
-def cleanup_sessions():
-    now = time.time()
-    expired = [k for k, v in sessions.items() if now - v["last_active"] > SESSION_TTL]
-    for k in expired:
-        del sessions[k]
 
 
 class ChatRequest(BaseModel):
@@ -98,73 +101,90 @@ def _build_initial_state(query, history, session_id, user_id, role):
     }
 
 
+def _run_graph_stream_sync(initial_state: dict):
+    """Runs sync LangGraph stream off the asyncio event loop."""
+    events = []
+    current_state = dict(initial_state)
+    for step_output in ai_graph.stream(initial_state):
+        for node_name, node_state in step_output.items():
+            current_state.update(node_state)
+            events.append((node_name, node_state))
+    return events, current_state
+
+
 @app.post("/api/v1/chatbot/query")
 async def process_query(request: ChatRequest):
-    cleanup_sessions()
-    session = get_or_create_session(request.session_id, request.user_id, request.role)
+    with session_lock:
+        session = get_or_create_session(request.session_id, request.user_id, request.role)
+        merged_history = session["history"] + request.history
+        last_n = merged_history[-20:]
+        sid = session["id"]
 
-    merged_history = session["history"] + request.history
-    last_n = merged_history[-20:]
+    initial_state = _build_initial_state(
+        request.query, last_n, sid, request.user_id, request.role
+    )
 
     try:
-        initial_state = _build_initial_state(
-            request.query, last_n, session["id"], request.user_id, request.role
-        )
-
-        final_state = ai_graph.invoke(initial_state)
-
-        session["history"].append("User: " + request.query)
-        session["history"].append("AI: " + final_state.get("response", ""))
-
-        return {
-            "success": True,
-            "session_id": session["id"],
-            "query": request.query,
-            "response": final_state.get("response", ""),
-            "sql": final_state.get("sql_query", ""),
-            "data": final_state.get("results", []),
-            "visualization": final_state.get("visualization_code", ""),
-        }
+        final_state = await asyncio.to_thread(ai_graph.invoke, initial_state)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    with session_lock:
+        if sid in sessions:
+            s = sessions[sid]
+            s["history"].append("User: " + request.query)
+            s["history"].append("AI: " + final_state.get("response", ""))
+
+    return {
+        "success": True,
+        "session_id": sid,
+        "query": request.query,
+        "response": final_state.get("response", ""),
+        "sql": final_state.get("sql_query", ""),
+        "data": final_state.get("results", []),
+        "visualization": final_state.get("visualization_code", ""),
+    }
 
 
 @app.post("/api/v1/chatbot/query/stream")
 async def process_query_stream(request: ChatRequest):
     """SSE streaming endpoint — sends agent progress events for transparency."""
-    cleanup_sessions()
-    session = get_or_create_session(request.session_id, request.user_id, request.role)
-    merged_history = session["history"] + request.history
-    last_n = merged_history[-20:]
 
     async def event_generator():
+        with session_lock:
+            session = get_or_create_session(request.session_id, request.user_id, request.role)
+            merged_history = session["history"] + request.history
+            last_n = merged_history[-20:]
+            sid = session["id"]
+
+        initial_state = _build_initial_state(
+            request.query, last_n, sid, request.user_id, request.role
+        )
+
+        step_names = {
+            "guardrails": "Checking query scope...",
+            "sql_writer": "Generating SQL query...",
+            "sql_executor": "Executing database query...",
+            "error_handler": "Fixing SQL error, retrying...",
+            "responder": "Analyzing results...",
+            "visualizer": "Generating visualization...",
+        }
+
+        yield f"data: {json_module.dumps({'type': 'step', 'step': 'start', 'message': 'Processing your question...'})}\n\n"
+        await asyncio.sleep(0.05)
+
         try:
-            initial_state = _build_initial_state(
-                request.query, last_n, session["id"], request.user_id, request.role
-            )
+            events, current_state = await asyncio.to_thread(_run_graph_stream_sync, initial_state)
+            for node_name, _node_state in events:
+                msg = step_names.get(node_name, f"Running {node_name}...")
+                yield f"data: {json_module.dumps({'type': 'step', 'step': node_name, 'message': msg})}\n\n"
+                await asyncio.sleep(0.05)
 
-            step_names = {
-                "guardrails": "Checking query scope...",
-                "sql_writer": "Generating SQL query...",
-                "sql_executor": "Executing database query...",
-                "error_handler": "Fixing SQL error, retrying...",
-                "responder": "Analyzing results...",
-                "visualizer": "Generating visualization...",
-            }
-
-            yield f"data: {json_module.dumps({'type': 'step', 'step': 'start', 'message': 'Processing your question...'})}\n\n"
-            await asyncio.sleep(0.05)
-
-            current_state = initial_state
-            for step_output in ai_graph.stream(initial_state):
-                for node_name, node_state in step_output.items():
-                    current_state.update(node_state)
-                    msg = step_names.get(node_name, f"Running {node_name}...")
-                    yield f"data: {json_module.dumps({'type': 'step', 'step': node_name, 'message': msg})}\n\n"
-                    await asyncio.sleep(0.05)
-
-            session["history"].append("User: " + request.query)
-            session["history"].append("AI: " + current_state.get("response", ""))
+            with session_lock:
+                if sid in sessions:
+                    s = sessions[sid]
+                    s["history"].append("User: " + request.query)
+                    s["history"].append("AI: " + current_state.get("response", ""))
 
             results_data = current_state.get("results", [])
             try:
@@ -175,7 +195,7 @@ async def process_query_stream(request: ChatRequest):
             final_payload = {
                 "type": "final",
                 "success": True,
-                "session_id": session["id"],
+                "session_id": sid,
                 "query": request.query,
                 "response": current_state.get("response", ""),
                 "sql": current_state.get("sql_query", ""),
@@ -192,23 +212,25 @@ async def process_query_stream(request: ChatRequest):
 
 @app.get("/api/v1/chatbot/sessions/{session_id}")
 async def get_session(session_id: str):
-    if session_id not in sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    s = sessions[session_id]
-    return {
-        "session_id": s["id"],
-        "user_id": s["user_id"],
-        "role": s["role"],
-        "message_count": len(s["history"]) // 2,
-        "created_at": s["created_at"],
-        "last_active": s["last_active"],
-    }
+    with session_lock:
+        if session_id not in sessions:
+            raise HTTPException(status_code=404, detail="Session not found")
+        s = sessions[session_id]
+        return {
+            "session_id": s["id"],
+            "user_id": s["user_id"],
+            "role": s["role"],
+            "message_count": len(s["history"]) // 2,
+            "created_at": s["created_at"],
+            "last_active": s["last_active"],
+        }
 
 
 @app.delete("/api/v1/chatbot/sessions/{session_id}")
 async def delete_session(session_id: str):
-    if session_id in sessions:
-        del sessions[session_id]
+    with session_lock:
+        if session_id in sessions:
+            del sessions[session_id]
     return {"success": True}
 
 

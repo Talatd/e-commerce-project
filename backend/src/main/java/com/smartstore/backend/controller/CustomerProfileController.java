@@ -1,6 +1,7 @@
 package com.smartstore.backend.controller;
 
 import com.smartstore.backend.model.CustomerProfile;
+import com.smartstore.backend.model.User;
 import com.smartstore.backend.repository.CustomerProfileRepository;
 import com.smartstore.backend.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/profiles")
@@ -51,22 +53,23 @@ public class CustomerProfileController {
     }
 
     @PostMapping
-    @Operation(summary = "Create or update a customer profile")
-    public ResponseEntity<CustomerProfile> createOrUpdate(@RequestBody CustomerProfile profile) {
-        if (profile.getUser() != null) {
-            var existing = profileRepository.findByUser(profile.getUser());
-            if (existing.isPresent()) {
-                CustomerProfile p = existing.get();
-                p.setGender(profile.getGender());
-                p.setAge(profile.getAge());
-                p.setCity(profile.getCity());
-                p.setCountry(profile.getCountry());
-                p.setMembershipType(profile.getMembershipType());
-                p.setSatisfactionLevel(profile.getSatisfactionLevel());
-                p.setPreferredPaymentMethod(profile.getPreferredPaymentMethod());
-                return ResponseEntity.ok(profileRepository.save(p));
-            }
+    @Operation(summary = "Create or update the current user's customer profile")
+    public ResponseEntity<CustomerProfile> createOrUpdate(@RequestBody CustomerProfile incoming,
+                                                         @AuthenticationPrincipal UserDetails principal) {
+        User current = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+        Optional<CustomerProfile> existingOpt = profileRepository.findByUser(current);
+        if (existingOpt.isPresent()) {
+            CustomerProfile p = existingOpt.get();
+            p.setGender(incoming.getGender());
+            p.setAge(incoming.getAge());
+            p.setCity(incoming.getCity());
+            p.setCountry(incoming.getCountry());
+            p.setMembershipType(incoming.getMembershipType());
+            p.setSatisfactionLevel(incoming.getSatisfactionLevel());
+            p.setPreferredPaymentMethod(incoming.getPreferredPaymentMethod());
+            return ResponseEntity.ok(profileRepository.save(p));
         }
-        return ResponseEntity.ok(profileRepository.save(profile));
+        incoming.setUser(current);
+        return ResponseEntity.ok(profileRepository.save(incoming));
     }
 }

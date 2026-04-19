@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +20,14 @@ public class StoreController {
     private final StoreRepository storeRepository;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "List all stores")
     public ResponseEntity<List<Store>> getAllStores() {
         return ResponseEntity.ok(storeRepository.findAll());
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Create a store")
     @SuppressWarnings("null")
     public ResponseEntity<Store> createStore(@RequestBody Store store) {

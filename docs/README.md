@@ -1,74 +1,94 @@
-# SmartStore AI - Intelligent E-Commerce Platform
+# SmartStore — Intelligent E-Commerce Platform
 
-This is a modern e-commerce application built with Next.js, featuring an integrated AI Shopping Assistant powered by the Google Gemini API.
+Monorepo with an **Angular** storefront/admin UI, a **Spring Boot** REST API, **MySQL**, and a **FastAPI** **AI Hub** (Gemini + Text2SQL via LangGraph). Authentication uses **JWT**; the SPA can **refresh** access tokens using a refresh token.
 
-> **Note:** This repository also serves as the submission for **Homework 2: Website Development & AI Agent Planning**. 
-
-📄 **[View the AI Agent Planning Document here](./AI_Agent_Planning_Document.md)**
+For step-by-step setup, see **[EXECUTION_GUIDE.md](./EXECUTION_GUIDE.md)**.
 
 ---
 
-## 🚀 Core Features
+## Repository layout
 
-*   **Secure JWT Authentication:** Token-based login system with role detection and expiration handling.
-*   **Per-User Data Isolation:** Users only see catalogs and products assigned to their account.
-*   **AI Shopping Assistant:** Integrated Gemini 2.0 Flash LLM acting as a technical advisor.
-*   **Enterprise-Grade AI Security:** 
-    *   Prompt Injection protection against 30+ known attack vectors.
-    *   SQL Injection detection.
-    *   Competitor query filtering to protect business data.
-    *   Strict system prompting to ensure the AI only knows the current store's catalog.
-*   **Dynamic Product Catalog:** Search, filtering, and sorting capabilities.
+| Path | Description |
+|------|-------------|
+| `frontend/` | Angular app (`ng serve` → http://localhost:4200) |
+| `backend/` | Spring Boot API (`mvn spring-boot:run` → http://localhost:8080) |
+| `ai-hub/` | FastAPI + LangGraph chatbot service (http://localhost:8000) |
+| `backend/database/schema.sql` | MySQL baseline schema (optional fresh install) |
 
-## 🛠️ Technologies Used
-
-*   **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
-*   **Frontend Library:** [React](https://reactjs.org/)
-*   **Styling:** Vanilla CSS / CSS Modules with modern Glassmorphism UI
-*   **Authentication:** [jsonwebtoken (JWT)](https://github.com/auth0/node-jsonwebtoken)
-*   **AI Integration:** [@google/generative-ai](https://www.npmjs.com/package/@google/generative-ai) (Gemini API)
+Swagger UI: http://localhost:8080/swagger-ui.html
 
 ---
 
-## ⚙️ Setup and Run Instructions
+## Prerequisites
 
-### 1. Prerequisites
-Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
+- **JDK 21** + **Maven**
+- **Node.js 20+** + **npm**
+- **Python 3.10+** (AI Hub)
+- **MySQL 8** (default: `localhost:3306`, database `smartstore_db`)
 
-### 2. Installation
-Clone this repository and install the dependencies:
+---
+
+## Quick start
+
+1. **MySQL** — Run `backend/database/schema.sql`, or rely on `spring.jpa.hibernate.ddl-auto=update` on first boot.
+2. **`backend/src/main/resources/application.properties`** — Set DB URL / username / password; in production set `smartstore.jwt.secret` (Base64, sufficient length) via environment variables.
+3. **`ai-hub/.env`** — Example:
+   ```env
+   GEMINI_API_KEY=your_key
+   DB_USER=root
+   DB_PASSWORD=root
+   DB_HOST=localhost
+   DB_NAME=smartstore_db
+   ```
+4. **Backend:** `cd backend && mvn spring-boot:run`
+5. **AI Hub:** `cd ai-hub && pip install -r requirements.txt && python main.py`
+6. **Frontend:** `cd frontend && npm install && ng serve`
+
+Ensure `smartstore.ai.url=http://localhost:8000` in `application.properties` so the backend can proxy chat requests to AI Hub.
+
+---
+
+## Frontend environments
+
+- **Development:** `frontend/src/environments/environment.ts` → `apiBaseUrl` (default `http://localhost:8080`).
+- **Production build:** `ng build` uses `environment.prod.ts` (Angular `fileReplacements`). If the API shares the **same origin** as the SPA, use `apiBaseUrl: ''` so requests go to `/api/v1/...`. If the API is on another host, set `apiBaseUrl` to the full backend origin (no trailing slash).
+
+---
+
+## Sample accounts (auto-seeded)
+
+On startup, `DbInitializer` syncs these users (creates them if missing):
+
+| Role | Email | Password |
+|------|-------|----------|
+| ADMIN | `admin@smartstore.com` | `admin123` |
+| ADMIN | `buse@akdeniz.edu.tr` | `admin123` |
+| MANAGER | `james@techhub.com` | `manager123` |
+| MANAGER | `manager@nexus.com` | `manager123` |
+| CONSUMER | `elif@akdeniz.edu.tr` | `user123` |
+
+---
+
+## Build and test
 
 ```bash
-git clone https://github.com/Talatd/E-Commerce-Website.git
-cd "E-Commerce-Website"
-npm install
+cd backend && mvn clean test
+cd frontend && npm run build
 ```
 
-### 3. Environment Configuration
-Create a `.env.local` file in the root of the project to add your security keys and Gemini API key:
+The production Angular build stays within default budgets because Google Fonts are loaded only from **`index.html`** (`<link>`), not via large `@import` blocks in bundled CSS.
 
-```env
-# Get a free API key from: https://aistudio.google.com/apikey
-GEMINI_API_KEY=your_actual_api_key_here
+---
 
-NEXT_PUBLIC_APP_NAME=SmartStore AI
+## Security (summary)
 
-# Add a long random string here for JWT encryption
-JWT_SECRET=your_super_secret_jwt_key_here
-JWT_EXPIRATION=1h
-```
-*(Note: If no API key is provided, the AI Chatbot will run in a safe "Demo Mode")*
+- Sensitive endpoints (orders listing, analytics, store creation, review moderation, etc.) are **role-gated** with `@PreAuthorize`.
+- Order detail and customer profile updates are bound to the **authenticated JWT user** (mitigates IDOR).
+- AI chat is proxied through Spring; user context for the AI service is derived on the server.
 
-### 4. Running the Development Server
-Start the Next.js development server:
+---
 
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Before submission / demo
 
-### 5. Demo Accounts
-To test the data isolation and functionality, use the following credentials:
-*   **Admin Access (5 Products):** `admin@smartstore.com` / `admin123`
-*   **User Access (3 Products):** `user@smartstore.com` / `user123`
-*   **Demo Access (2 Products):** `demo@smartstore.com` / `demo123`
+- Do not commit real **API keys** or production **JWT secrets**; keep `.env` out of git (`.gitignore`).
+- Share **EXECUTION_GUIDE.md** and this README with reviewers; verify MySQL plus all three processes run together for a live demo.

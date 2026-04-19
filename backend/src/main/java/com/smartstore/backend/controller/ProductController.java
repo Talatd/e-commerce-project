@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -95,23 +96,21 @@ public class ProductController {
 
         Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
 
-        com.smartstore.backend.model.User user;
-        if (principal != null) {
-            user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
-        } else {
-            Long userIdRaw = Long.valueOf(payload.get("userId").toString());
-            user = userRepository.findById(Objects.requireNonNull(userIdRaw)).orElseThrow();
+        if (principal == null) {
+            throw new IllegalArgumentException("Authentication required to submit a review");
         }
+        com.smartstore.backend.model.User user =
+                userRepository.findByEmail(principal.getUsername()).orElseThrow();
 
-        Integer rating = (Integer) payload.get("rating");
-        if (rating == null || rating < 1 || rating > 5) {
+        int rating = parseRating(payload);
+        if (rating < 1 || rating > 5) {
             throw new IllegalArgumentException("Rating must be between 1 and 5");
         }
 
         ProductReview review = new ProductReview();
         review.setProduct(product);
         review.setUser(user);
-        review.setRating(rating);
+        review.setRating(Integer.valueOf(rating));
         review.setComment((String) payload.get("comment"));
 
         double mockSentiment = review.getRating() >= 4 ? 0.9 : (review.getRating() <= 2 ? 0.2 : 0.5);
@@ -122,6 +121,7 @@ public class ProductController {
     }
 
     @PatchMapping("/reviews/{reviewId}/respond")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Respond to a review", description = "Store owner responds to a customer review.")
     public ResponseEntity<ProductReview> respondToReview(
             @PathVariable Long reviewId,
@@ -133,18 +133,21 @@ public class ProductController {
     }
 
     @GetMapping("/reviews/all")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Get all reviews", description = "Returns all product reviews for management.")
     public ResponseEntity<java.util.List<ProductReview>> getAllReviews() {
         return ResponseEntity.ok(reviewRepository.findAll());
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Add a new product", description = "Creates a new electronics product in the catalog.")
     public ResponseEntity<Product> createProduct(@RequestBody Product product) {
         return ResponseEntity.ok(productRepository.save(Objects.requireNonNull(product)));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Update product", description = "Updates an existing product's details and stock.")
     public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product productDetails) {
         Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
@@ -159,9 +162,21 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Delete product", description = "Removes a product from the catalog.")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productRepository.deleteById(Objects.requireNonNull(id));
         return ResponseEntity.ok().build();
+    }
+
+    private static int parseRating(Map<String, Object> payload) {
+        Object raw = payload.get("rating");
+        if (raw == null) {
+            throw new IllegalArgumentException("Rating is required");
+        }
+        if (raw instanceof Number n) {
+            return n.intValue();
+        }
+        return Integer.parseInt(raw.toString().trim());
     }
 }

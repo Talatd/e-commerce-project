@@ -10,6 +10,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100) NOT NULL,
     role ENUM('ADMIN', 'MANAGER', 'CONSUMER') NOT NULL DEFAULT 'CONSUMER',
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -21,6 +22,8 @@ CREATE TABLE products (
     brand VARCHAR(100),
     category VARCHAR(100),
     base_price DECIMAL(10, 2) NOT NULL,
+    image_url VARCHAR(512),
+    stock_quantity INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -64,6 +67,8 @@ CREATE TABLE product_reviews (
     rating TINYINT CHECK (rating BETWEEN 1 AND 5),
     comment TEXT,
     sentiment_score DECIMAL(3, 2), -- Score from Sentiment Analysis API
+    store_response VARCHAR(1000),
+    responded_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
@@ -103,6 +108,7 @@ CREATE TABLE shipments (
     prior_purchases INT DEFAULT 0,
     product_importance ENUM('LOW', 'MEDIUM', 'HIGH') DEFAULT 'MEDIUM',
     discount_offered DECIMAL(5, 2) DEFAULT 0.00,
+    on_time_delivery BOOLEAN NULL,
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
     INDEX idx_shipment_order (order_id),
     INDEX idx_shipment_tracking (tracking_number),
@@ -114,6 +120,7 @@ CREATE TABLE categories (
     category_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     description TEXT,
+    image_url VARCHAR(512),
     parent_id INT NULL,
     display_order INT DEFAULT 0,
     active BOOLEAN DEFAULT TRUE,
@@ -141,14 +148,16 @@ CREATE TABLE customer_profiles (
     INDEX idx_profile_membership (membership_type)
 );
 
--- 11. Integration Logs (Admin Visibility)
+-- 11. Integration / audit logs (Admin panel — matches JPA AuditLog entity)
 CREATE TABLE integration_logs (
-    log_id INT AUTO_INCREMENT PRIMARY KEY,
-    service_name VARCHAR(100),
-    endpoint VARCHAR(255),
-    status_code INT,
-    message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(150),
+    action VARCHAR(100),
+    type VARCHAR(50),
+    detail TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_audit_action (action),
+    INDEX idx_audit_created (created_at)
 );
 
 -- Performance indexes on core tables
@@ -161,3 +170,10 @@ CREATE INDEX idx_orderitem_product ON order_items(product_id);
 CREATE INDEX idx_review_product ON product_reviews(product_id);
 CREATE INDEX idx_review_user ON product_reviews(user_id);
 CREATE INDEX idx_inventory_product ON regional_inventory(product_id);
+
+-- ---------------------------------------------------------------------------
+-- Notes for upgrades (not executed automatically):
+-- 1) If Hibernate/JPA added columns on an older DB, align with ALTERs above as needed.
+-- 2) orders.status already includes PROCESSING; if legacy data used invalid enum values,
+--    fix rows before tightening ENUM (e.g. map unknown values to PENDING).
+-- ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,6 +30,7 @@ public class AnalyticsController {
     private final CustomerProfileRepository profileRepository;
 
     @GetMapping("/admin-stats")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get platform KPIs", description = "Returns revenue, orders, users and store counts.")
     public ResponseEntity<Map<String, Object>> getAdminStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -64,6 +66,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/sales-breakdown")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get sales aggregation", description = "Returns sales by category and region.")
     public ResponseEntity<Map<String, Object>> getSalesBreakdown() {
         Map<String, Object> data = new HashMap<>();
@@ -85,6 +88,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/store-comparison")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Cross-store comparison", description = "Compares stores by revenue, orders, and rating for admin analytics.")
     public ResponseEntity<List<Map<String, Object>>> getStoreComparison() {
         List<Map<String, Object>> comparison = new java.util.ArrayList<>();
@@ -111,6 +115,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/customer-segments")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Customer segmentation", description = "Aggregates customer profiles by membership type, city, and spending tiers.")
     public ResponseEntity<Map<String, Object>> getCustomerSegments() {
         Map<String, Object> segments = new HashMap<>();

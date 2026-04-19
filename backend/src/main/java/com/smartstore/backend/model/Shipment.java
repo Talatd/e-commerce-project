@@ -40,7 +40,7 @@ public class Shipment {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ShipmentStatus status = ShipmentStatus.PROCESSING;
+    private ShipmentStatus status = ShipmentStatus.PREPARING;
 
     private Integer customerCareCalls = 0;
     private Integer customerRating;
@@ -59,7 +59,8 @@ public class Shipment {
         createdAt = LocalDateTime.now();
     }
 
+    /** Values must match MySQL ENUM on shipments.status (see database/schema.sql). */
     public enum ShipmentStatus {
-        PROCESSING, SHIPPED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, RETURNED
+        PREPARING, SHIPPED, IN_TRANSIT, DELIVERED, RETURNED
     }
 }
