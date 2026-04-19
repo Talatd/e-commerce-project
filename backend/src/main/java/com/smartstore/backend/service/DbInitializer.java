@@ -9,7 +9,6 @@ import com.smartstore.backend.repository.UserRepository;
 import com.smartstore.backend.model.Store;
 import com.smartstore.backend.model.User;
 import com.smartstore.backend.model.Role;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,18 +24,22 @@ public class DbInitializer {
     private final RegionalInventoryRepository inventoryRepository;
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
-    @PostConstruct
+    @jakarta.annotation.PostConstruct
+    @jakarta.transaction.Transactional
     public void init() {
+        System.out.println("SEED: Initializing database checks...");
+        System.out.println("SEED: Product count: " + productRepository.count());
         if (productRepository.count() < 10) {
             seedSmartwatches();
         }
+        System.out.println("SEED: Store count: " + storeRepository.count());
         if (storeRepository.count() == 0) {
             seedStores();
         }
-        if (userRepository.count() < 2) {
-            seedUsers();
-        }
+        seedUsers();
+        System.out.println("SEED: Initialization complete.");
     }
 
     private void seedSmartwatches() {
@@ -79,8 +82,30 @@ public class DbInitializer {
 
     @SuppressWarnings("null")
     private void seedUsers() {
-        userRepository.save(User.builder().fullName("Buse Ünal").email("buse@akdeniz.edu.tr").passwordHash("$2a$10$8.UnS8OWu7qL6E2Q31m0.Ok0.3u8.8.8.8.8.8.8.8.8.8.8").role(Role.ADMIN).build());
-        userRepository.save(User.builder().fullName("James Wilson").email("james@techhub.com").passwordHash("pass").role(Role.MANAGER).build());
+        updateOrSaveUser("Buse Ünal", "buse@akdeniz.edu.tr", "$2a$10$8.UnS8OWu7qL6E2Q31m0.Ok0.3u8.8.8.8.8.8.8.8.8.8.8", Role.ADMIN);
+        updateOrSaveUser("James Wilson", "james@techhub.com", "manager123", Role.MANAGER);
+        updateOrSaveUser("Elif Buse", "elif@akdeniz.edu.tr", "user123", Role.CONSUMER);
+    }
+
+    private void updateOrSaveUser(String name, String email, String pass, Role role) {
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User u = new User();
+            u.setEmail(email);
+            return u;
+        });
+        user.setFullName(name);
+        user.setRole(role);
+        
+        // Always attempt to encode if a plain string is provided.
+        // If it already looks like a hash, we use it as is.
+        if (pass.startsWith("$2a$")) {
+            user.setPasswordHash(pass);
+        } else {
+            user.setPasswordHash(passwordEncoder.encode(pass));
+        }
+        
+        userRepository.save(user);
+        System.out.println("SEED: Synchronized user " + email);
     }
 
     private Product createProduct(String name, String cat, String brand, double price, String desc, String img) {

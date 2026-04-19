@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/products")
@@ -31,16 +32,16 @@ public class ProductController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get product by ID", description = "Retrieves specific product details.")
-    public ResponseEntity<Product> getProduct(@PathVariable @org.springframework.lang.NonNull Long id) {
-        return productRepository.findById(id)
+    public ResponseEntity<Product> getProduct(@PathVariable Long id) {
+        return productRepository.findById(Objects.requireNonNull(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{id}/reviews/sentiment")
     @Operation(summary = "Analyze product sentiment", description = "Calculates average sentiment score from reviews using AI enriched data.")
-    public ResponseEntity<Map<String, Object>> getProductSentiment(@PathVariable @org.springframework.lang.NonNull Long id) {
-        Product product = productRepository.findById(id).orElseThrow();
+    public ResponseEntity<Map<String, Object>> getProductSentiment(@PathVariable Long id) {
+        Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         List<ProductReview> reviews = reviewRepository.findByProduct(product);
         
         double averageSentiment = reviews.stream()
@@ -63,12 +64,12 @@ public class ProductController {
     @PostMapping("/{id}/reviews")
     @Operation(summary = "Submit a product review", description = "Allows a consumer to post a rating and comment for a product.")
     public ResponseEntity<ProductReview> submitReview(
-            @PathVariable @org.springframework.lang.NonNull Long id,
+            @PathVariable Long id,
             @RequestBody Map<String, Object> payload) {
         
-        Product product = productRepository.findById(java.util.Objects.requireNonNull(id)).orElseThrow();
+        Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         Long userIdRaw = Long.valueOf(payload.get("userId").toString());
-        com.smartstore.backend.model.User user = userRepository.findById(java.util.Objects.requireNonNull(userIdRaw)).orElseThrow();
+        com.smartstore.backend.model.User user = userRepository.findById(Objects.requireNonNull(userIdRaw)).orElseThrow();
         
         ProductReview review = new ProductReview();
         review.setProduct(product);
@@ -80,26 +81,30 @@ public class ProductController {
         double mockSentiment = review.getRating() >= 4 ? 0.9 : (review.getRating() <= 2 ? 0.2 : 0.5);
         review.setSentimentScore(BigDecimal.valueOf(mockSentiment));
         
-        return ResponseEntity.ok(reviewRepository.save(review));
+        ProductReview saved = reviewRepository.save(review);
+        return ResponseEntity.ok(saved);
     }
 
     @PostMapping
     @Operation(summary = "Add a new product", description = "Creates a new electronics product in the catalog.")
+    @SuppressWarnings("null")
     public ResponseEntity<Product> createProduct(@RequestBody Product product) {
         return ResponseEntity.ok(productRepository.save(product));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update product", description = "Updates an existing product's details and stock.")
-    public ResponseEntity<Product> updateProduct(@PathVariable @org.springframework.lang.NonNull Long id, @RequestBody Product productDetails) {
-        Product product = productRepository.findById(id).orElseThrow();
+    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product productDetails) {
+        Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         product.setName(productDetails.getName());
         product.setDescription(productDetails.getDescription());
         product.setBasePrice(productDetails.getBasePrice());
         product.setStockQuantity(productDetails.getStockQuantity());
         product.setCategory(productDetails.getCategory());
         product.setImageUrl(productDetails.getImageUrl());
-        return ResponseEntity.ok(productRepository.save(product));
+        @SuppressWarnings("null")
+        Product saved = productRepository.save(product);
+        return ResponseEntity.ok(saved);
     }
 
     @DeleteMapping("/{id}")

@@ -16,7 +16,6 @@ public class StoreController {
     private StoreRepository storeRepository;
 
     @GetMapping
-    @SuppressWarnings("null")
     public List<Store> getAllStores() {
         return storeRepository.findAll();
     }

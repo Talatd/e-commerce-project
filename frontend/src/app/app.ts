@@ -17,7 +17,8 @@ export class AppComponent implements OnInit {
   activeToasts: any[] = [];
 
   get shouldShowGlobalSidebar(): boolean {
-    const hiddenRoutes = ['/admin', '/manager', '/settings'];
+    const hiddenRoutes = ['/login', '/admin', '/manager', '/consumer', '/settings'];
+    if (this.router.url === '/' || this.router.url === '/login') return false;
     return !hiddenRoutes.some(r => this.router.url.startsWith(r));
   }
 

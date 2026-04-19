@@ -52,8 +52,7 @@ body {
   background: var(--bg);
   font-family: 'Plus Jakarta Sans', sans-serif;
   color: var(--text);
-  overflow: hidden;
-  height: 100vh;
+  min-height: 100vh;
   transition: background 0.7s cubic-bezier(0.4,0,0.2,1);
 }
 
@@ -62,6 +61,10 @@ body {
   height:100vh;
   overflow:hidden;
   position:relative;
+}
+.wrap.standalone {
+  height: 100vh;
+  overflow: hidden;
 }
 
 .glow-tl{position:absolute;top:-140px;left:-100px;width:420px;height:420px;background:radial-gradient(circle,var(--teal-dim) 0%,transparent 65%);pointer-events:none;z-index:0;transition:all 0.8s;}
