@@ -1295,61 +1295,41 @@ export class LoginComponent {
         </div>
 
         <div class="orders">
-          <div class="ocard">
+          <div class="ocard" *ngFor="let o of consumerOrders" [style.border-color]="o.status === 'CANCELLED' ? 'rgba(224,112,112,0.08)' : ''">
             <div class="oc-header">
-              <div class="och-left"><div class="oc-id">#ORD-7821</div><div class="oc-date">Apr 17, 2025</div><div class="oc-items-count">3 items</div></div>
-              <div class="och-right"><div class="oc-total">$1,788</div><div class="spill sp-b">● Shipped</div></div>
+              <div class="och-left">
+                <div class="oc-id">#ORD-{{o.orderId}}</div>
+                <div class="oc-date">{{o.orderDate | date:'mediumDate'}}</div>
+                <div class="oc-items-count">{{o.items?.length || 0}} item{{(o.items?.length || 0) > 1 ? 's' : ''}}</div>
+              </div>
+              <div class="och-right">
+                <div class="oc-total">{{o.totalAmount | currency}}</div>
+                <div class="spill" [class.sp-b]="o.status === 'SHIPPED' || o.status === 'PROCESSING'" [class.sp-g]="o.status === 'DELIVERED'" [class.sp-r]="o.status === 'CANCELLED'" [class.sp-a]="o.status === 'PENDING'">● {{o.status}}</div>
+              </div>
             </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(62,207,178,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2" stroke="#3ECFB2" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">MacBook Pro 14" M3 Pro</div><div class="oi-var">512GB · Silver</div></div>
-              <div class="oi-qty">×1</div><div class="oi-price">$1,039</div>
+            <ng-container *ngIf="o.items && o.items.length > 0">
+              <div class="oc-items-row" *ngFor="let item of o.items.slice(0,3)">
+                <div class="oi-img" style="background:rgba(62,207,178,0.04);">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2" stroke="#3ECFB2" stroke-width="1.1" opacity="0.5"/></svg>
+                </div>
+                <div class="oi-info">
+                  <div class="oi-name">{{item.product?.name || 'Product'}}</div>
+                  <div class="oi-var">{{item.product?.category || ''}}</div>
+                </div>
+                <div class="oi-qty">×{{item.quantity}}</div>
+                <div class="oi-price">{{item.priceAtPurchase | currency}}</div>
+              </div>
+            </ng-container>
+            <div class="oc-actions">
+              <div class="oa-btn oa-teal" *ngIf="o.status !== 'CANCELLED' && o.status !== 'DELIVERED'" routerLink="/orders">Track Order</div>
+              <div class="oa-btn oa-ghost" *ngIf="o.status === 'DELIVERED'" routerLink="/orders">Write Review</div>
+              <div class="oa-btn oa-ghost" *ngIf="o.status === 'CANCELLED'" (click)="reorder(o)">Reorder</div>
             </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(107,168,200,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6" stroke="#6BA8C8" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">AirPods Pro Max</div><div class="oi-var">Midnight</div></div>
-              <div class="oi-qty">×1</div><div class="oi-price">$479</div>
-            </div>
-            <div class="oc-actions"><div class="oa-btn oa-teal">Track Order</div><div class="oa-btn oa-ghost">View Invoice</div><div class="oa-btn oa-ghost">Write Review</div></div>
           </div>
 
-          <div class="ocard">
-            <div class="oc-header">
-              <div class="och-left"><div class="oc-id">#ORD-7654</div><div class="oc-date">Nov 18, 2024</div><div class="oc-items-count">2 items</div></div>
-              <div class="och-right"><div class="oc-total">$678</div><div class="spill sp-g">● Delivered</div></div>
-            </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(232,169,74,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="7" width="14" height="9" rx="2" stroke="#E8A94A" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">Keychron Q1 Pro</div><div class="oi-var">Carbon Black</div></div>
-              <div class="oi-qty">×2</div><div class="oi-price">$398</div>
-            </div>
-            <div class="oc-actions"><div class="oa-btn oa-ghost">View Invoice</div><div class="oa-btn oa-ghost">Reorder</div><div class="oa-btn oa-teal">Write Review</div></div>
-          </div>
-
-          <div class="ocard">
-            <div class="oc-header">
-              <div class="och-left"><div class="oc-id">#ORD-7412</div><div class="oc-date">Oct 30, 2024</div><div class="oc-items-count">1 item</div></div>
-              <div class="och-right"><div class="oc-total">$999</div><div class="spill sp-g">● Delivered</div></div>
-            </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(62,201,138,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="6" y="2" width="8" height="14" rx="2.5" stroke="#3EC98A" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">iPhone 16 Pro</div><div class="oi-var">Desert Titanium · 256GB</div></div>
-              <div class="oi-qty">×1</div><div class="oi-price">$999</div>
-            </div>
-            <div class="oc-actions"><div class="oa-btn oa-ghost">View Invoice</div><div class="oa-btn oa-ghost">Reorder</div><div class="oa-btn oa-ghost" style="color:var(--teal2);">✓ Reviewed</div></div>
-          </div>
-
-          <div class="ocard" style="border-color:rgba(224,112,112,0.08);">
-            <div class="oc-header">
-              <div class="och-left"><div class="oc-id">#ORD-7201</div><div class="oc-date">Sep 12, 2024</div><div class="oc-items-count">1 item</div></div>
-              <div class="och-right"><div class="oc-total">$679</div><div class="spill sp-r">● Cancelled</div></div>
-            </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(232,169,74,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2.5" stroke="#E8A94A" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">LG UltraWide 34"</div><div class="oi-var">Black</div></div>
-              <div class="oi-qty">×1</div><div class="oi-price">$679</div>
-            </div>
-            <div class="oc-actions"><div class="oa-btn oa-ghost">View Details</div><div class="oa-btn oa-teal">Reorder</div></div>
+          <div *ngIf="consumerOrders.length === 0" style="text-align:center;padding:48px;color:var(--text3);">
+            <div style="font-size:36px;margin-bottom:12px;opacity:0.15;">📦</div>
+            <div style="font-size:13px;">No orders yet. Start shopping!</div>
           </div>
         </div>
       </div>
@@ -1610,6 +1590,20 @@ export class ConsumerComponent implements OnInit {
   }
   get consumerAvgRating(): string {
     return '4.8';
+  }
+
+  reorder(order: any) {
+    if (order?.items) {
+      let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      order.items.forEach((item: any) => {
+        const existing = cart.find((c: any) => c.productId === item.product?.productId);
+        if (existing) { existing.qty += item.quantity; }
+        else { cart.push({ ...item.product, qty: item.quantity }); }
+      });
+      localStorage.setItem('cart', JSON.stringify(cart));
+      this.toast.show('Items added to cart!');
+      this.router.navigate(['/cart']);
+    }
   }
 
   private getTimeNow(): string {
@@ -2499,6 +2493,10 @@ export class ManagerComponent implements OnInit, AfterViewInit {
         <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h4v4H2zM7 2h4v4H7zM2 7h4v4H2zM7 7h4v4H7z" stroke="currentColor" stroke-width="1.1"/></svg>Categories</div>
       </div>
 
+      <div class="sitem-a" [class.active]="tab === 'comparison'" (click)="tab = 'comparison'; loadStoreComparison()">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 11V6h2.5v5H1zM5.25 11V3h2.5v8h-2.5zM9.5 11V1H12v10H9.5z" stroke="currentColor" stroke-width="1.1"/></svg>Store Comparison</div>
+      </div>
+
       <div class="sg-label-a">System</div>
       <div class="sitem-a" [class.active]="tab === 'auditlogs'" (click)="tab = 'auditlogs'">
         <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 2h7v9H3z" stroke="currentColor" stroke-width="1.1"/><path d="M5 5h3M5 7h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>Audit Logs</div>
@@ -2618,6 +2616,49 @@ export class ManagerComponent implements OnInit, AfterViewInit {
               <button class="sc-btn-a">View</button>
               <button class="sc-btn-a danger">Action</button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CROSS-STORE COMPARISON PANEL -->
+      <div class="panel-a" [class.active]="tab === 'comparison'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Cross-Store Comparison</div><div class="page-sub-a">Compare stores by revenue, orders, rating & avg. order value.</div></div>
+        </div>
+        <div *ngIf="storeComparison.length === 0" style="text-align:center;padding:48px;color:var(--text3);font-size:13px;">Loading comparison data...</div>
+        <div *ngIf="storeComparison.length > 0">
+          <div style="margin-bottom:20px;">
+            <canvas #storeComparisonChart style="width:100%;max-height:320px;"></canvas>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);text-align:left;">
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">#</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">Store</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">Owner</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Revenue</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Orders</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Avg. Order</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Rating</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let s of storeComparison; let i = index" style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                  <td style="padding:10px 12px;color:var(--text3);">{{i + 1}}</td>
+                  <td style="padding:10px 12px;font-weight:500;">{{s.name}}</td>
+                  <td style="padding:10px 12px;color:var(--text3);">{{s.owner}}</td>
+                  <td style="padding:10px 12px;text-align:right;color:#3ECFB2;font-weight:500;">{{s.revenue | currency}}</td>
+                  <td style="padding:10px 12px;text-align:right;">{{s.orders}}</td>
+                  <td style="padding:10px 12px;text-align:right;">{{s.avgOrderValue | currency}}</td>
+                  <td style="padding:10px 12px;text-align:right;">{{s.rating}} ★</td>
+                  <td style="padding:10px 12px;">
+                    <span style="padding:2px 8px;border-radius:4px;font-size:10px;" [style.background]="s.status === 'OPEN' ? 'rgba(62,207,178,0.12)' : 'rgba(224,112,112,0.12)'" [style.color]="s.status === 'OPEN' ? '#3ECFB2' : '#E07070'">{{s.status}}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -2784,9 +2825,12 @@ export class AdminComponent implements OnInit, AfterViewInit {
 
   @ViewChild('adminRevenueChart') adminRevenueCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('adminCategoryChart') adminCategoryCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('storeComparisonChart') storeComparisonCanvas!: ElementRef<HTMLCanvasElement>;
   private revChart: Chart | null = null;
   private catChart: Chart | null = null;
+  private compChart: Chart | null = null;
 
+  storeComparison: any[] = [];
   categories: any[] = [];
   auditLogs = [
     { time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'System', action: 'Startup', type: 'info', detail: 'Application initialized' },
@@ -2892,6 +2936,56 @@ export class AdminComponent implements OnInit, AfterViewInit {
           this.isLoading = false;
         }
       });
+    });
+  }
+
+  loadStoreComparison() {
+    this.adminService.getStoreComparison().subscribe({
+      next: (data) => {
+        this.storeComparison = data;
+        setTimeout(() => this.buildComparisonChart(), 300);
+      },
+      error: () => this.toast.show('Failed to load comparison data', 'error')
+    });
+  }
+
+  private buildComparisonChart() {
+    if (!this.storeComparisonCanvas?.nativeElement) return;
+    if (this.compChart) this.compChart.destroy();
+    const labels = this.storeComparison.map(s => s.name);
+    this.compChart = new Chart(this.storeComparisonCanvas.nativeElement, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Revenue ($)',
+            data: this.storeComparison.map(s => s.revenue),
+            backgroundColor: 'rgba(62,207,178,0.7)',
+            borderRadius: 4,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Orders',
+            data: this.storeComparison.map(s => s.orders),
+            backgroundColor: 'rgba(107,168,200,0.7)',
+            borderRadius: 4,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { color: '#7A918D', font: { size: 10 }, padding: 16 } }
+        },
+        scales: {
+          x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { position: 'left', ticks: { color: '#3ECFB2' }, grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Revenue ($)', color: '#3ECFB2', font: { size: 10 } } },
+          y1: { position: 'right', ticks: { color: '#6BA8C8' }, grid: { display: false }, title: { display: true, text: 'Orders', color: '#6BA8C8', font: { size: 10 } } }
+        }
+      }
     });
   }
 

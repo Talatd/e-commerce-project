@@ -81,4 +81,30 @@ public class AnalyticsController {
         
         return ResponseEntity.ok(data);
     }
+
+    @GetMapping("/store-comparison")
+    @Operation(summary = "Cross-store comparison", description = "Compares stores by revenue, orders, and rating for admin analytics.")
+    public ResponseEntity<List<Map<String, Object>>> getStoreComparison() {
+        List<Map<String, Object>> comparison = new java.util.ArrayList<>();
+
+        storeRepository.findAll().forEach(store -> {
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("storeId", store.getId());
+            entry.put("name", store.getName());
+            entry.put("owner", store.getOwnerName());
+            entry.put("revenue", store.getTotalRevenue());
+            entry.put("orders", store.getOrderCount());
+            entry.put("rating", store.getRating());
+            entry.put("status", store.getStatus());
+            double avgOrderValue = store.getOrderCount() > 0
+                    ? store.getTotalRevenue() / store.getOrderCount() : 0;
+            entry.put("avgOrderValue", Math.round(avgOrderValue * 100.0) / 100.0);
+            comparison.add(entry);
+        });
+
+        comparison.sort((a, b) -> Double.compare(
+                (Double) b.get("revenue"), (Double) a.get("revenue")));
+
+        return ResponseEntity.ok(comparison);
+    }
 }

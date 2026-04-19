@@ -1,10 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, Subject } from 'rxjs';
-import { environment } from './environment';
-
-const API = environment.apiUrl;
-const AI_API = environment.aiUrl;
+const API = 'http://localhost:8080';
+const AI_API = 'http://localhost:8000';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -158,6 +156,10 @@ export class AdminService {
 
   getSalesBreakdown(): Observable<any> {
     return this.http.get(`${API}/api/v1/analytics/sales-breakdown`);
+  }
+
+  getStoreComparison(): Observable<any[]> {
+    return this.http.get<any[]>(`${API}/api/v1/analytics/store-comparison`);
   }
 }
 
