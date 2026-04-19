@@ -1,9 +1,9 @@
 import { Routes } from '@angular/router';
-import { LoginComponent, AdminComponent, ManagerComponent, ConsumerComponent, SettingsComponent } from './pages';
+import { LoginComponent, AdminComponent, ManagerComponent, ConsumerComponent, SettingsComponent, LandingComponent } from './pages';
 import { CartComponent, ProductDetailComponent, OrdersComponent } from './shop-pages';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '', component: LandingComponent },
   { path: 'login', component: LoginComponent },
   { path: 'admin', component: AdminComponent },
   { path: 'manager', component: ManagerComponent },

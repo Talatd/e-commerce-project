@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ViewChild, ElementRef, HostListener, OnDestr
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { ProductService } from './services';
+import { ProductService, OrderService, AuthService, ToastService } from './services';
 
 @Component({
   selector: 'app-cart',
@@ -302,7 +302,9 @@ export class CartComponent implements OnInit, OnDestroy {
   cartItems: any[] = [];
   subtotal = 0;
   step = 1;
-  router = inject(Router);
+  orderService = inject(OrderService);
+  auth = inject(AuthService);
+  toast = inject(ToastService);
 
   // Payment Form State
   addrMode = 'saved';
@@ -409,14 +411,35 @@ export class CartComponent implements OnInit, OnDestroy {
     if (!valid) return;
 
     this.isProcessing = true;
-    setTimeout(() => {
-      this.isProcessing = false;
-      this.paySuccess = true;
-      setTimeout(() => {
-        this.step = 3;
-        setTimeout(() => this.launchConfetti(), 100);
-      }, 1500);
-    }, 2000);
+    
+    const user = this.auth.currentUserValue;
+    const orderPayload = {
+      user: { userId: user?.userId || 1 },
+      totalAmount: this.subtotal * 1.08,
+      shippingAddress: "123 Nexus Grove, SF, CA",
+      status: 'PENDING',
+      items: this.cartItems.map(item => ({
+        product: { productId: item.productId },
+        quantity: item.qty,
+        priceAtPurchase: item.basePrice
+      }))
+    };
+
+    this.orderService.createOrder(orderPayload).subscribe({
+      next: (res) => {
+        this.isProcessing = false;
+        this.paySuccess = true;
+        this.orderId = res.orderId;
+        setTimeout(() => {
+          this.step = 3;
+          setTimeout(() => this.launchConfetti(), 100);
+        }, 1500);
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        this.toast.show('Failed to save order. Please try again.', 'error');
+      }
+    });
   }
 
   // --- CONFETTI LOGIC ---
@@ -838,6 +861,10 @@ export class OrdersComponent {
   reviewText = '';
   charCount = 0;
 
+  productService = inject(ProductService);
+  auth = inject(AuthService);
+  toast = inject(ToastService);
+
   tags = [
     {label: 'Great value', selected: false},
     {label: 'Fast delivery', selected: false},
@@ -886,10 +913,22 @@ export class OrdersComponent {
   }
 
   submitReview() {
+    if (!this.canSubmit()) return;
     this.isSubmitting = true;
-    setTimeout(() => {
-      this.isSubmitting = false;
-      this.isSuccess = true;
-    }, 1500);
+    
+    const user = this.auth.currentUserValue;
+    const productId = 1; // Default for now, ideally passed from order details
+
+    this.productService.submitReview(productId, user?.userId || 1, this.rating, this.reviewText).subscribe({
+      next: () => {
+        this.isSubmitting = false;
+        this.isSuccess = true;
+        this.toast.show('Thank you for your feedback!');
+      },
+      error: () => {
+        this.isSubmitting = false;
+        this.toast.show('Failed to submit review', 'error');
+      }
+    });
   }
 }

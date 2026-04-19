@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterModule, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { AuthService } from './services';
+import { AuthService, ToastService } from './services';
 
 @Component({
   selector: 'app-root',
@@ -12,10 +12,13 @@ import { AuthService } from './services';
 export class AppComponent implements OnInit {
   auth = inject(AuthService);
   router = inject(Router);
+  toastService = inject(ToastService);
   isLightMode = false;
+  activeToasts: any[] = [];
 
   get shouldShowGlobalSidebar(): boolean {
-    const hiddenRoutes = ['/admin', '/manager', '/settings'];
+    const hiddenRoutes = ['/login', '/admin', '/manager', '/consumer', '/settings'];
+    if (this.router.url === '/' || this.router.url === '/login') return false;
     return !hiddenRoutes.some(r => this.router.url.startsWith(r));
   }
 
@@ -46,7 +49,6 @@ export class AppComponent implements OnInit {
       my = e.clientY;
       
       const target = e.target as HTMLElement;
-      // Robust hover detection: check specific classes OR if any parent has cursor:pointer
       const isPointer = target.closest('button, .mag-pill, .npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link');
       const computedPointer = getComputedStyle(target).cursor === 'pointer' || (target.parentElement && getComputedStyle(target.parentElement).cursor === 'pointer');
       
@@ -58,7 +60,6 @@ export class AppComponent implements OnInit {
          ring?.classList.remove('hover');
       }
 
-      // Magnetic pills spotlight
       const pill = target.closest('.mag-pill') as HTMLElement | null;
       if (pill) {
         const r = pill.getBoundingClientRect();
@@ -98,6 +99,14 @@ export class AppComponent implements OnInit {
       requestAnimationFrame(loop);
     };
     loop();
+
+    this.toastService.toasts$.subscribe(t => {
+      const id = Date.now();
+      this.activeToasts.push({ ...t, id });
+      setTimeout(() => {
+        this.activeToasts = this.activeToasts.filter(x => x.id !== id);
+      }, 5000);
+    });
   }
 
   toggleTheme() {
@@ -111,7 +120,6 @@ export class AppComponent implements OnInit {
     }
   }
 
-  // SEARCH AND NOTIF STATE
   isSearchOpen = false;
   isNotifOpen = false;
   unreadCount = 2;
@@ -166,7 +174,6 @@ export class AppComponent implements OnInit {
   onSearchInput(e: any) {
     this.searchQuery = e.target?.value || '';
     if(this.searchQuery.trim().length > 0) {
-      // Fake dummy search results logic
       this.searchResults = [
          { productId: 1, name: 'MacBook Pro 14"', category: 'Electronics', basePrice: 1039 },
          { productId: 3, name: 'AirPods Pro Max', category: 'Accessories', basePrice: 479 },
