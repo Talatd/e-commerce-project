@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/shipments")
@@ -31,7 +32,7 @@ public class ShipmentController {
     @GetMapping("/{id}")
     @Operation(summary = "Get shipment by ID")
     public ResponseEntity<Shipment> getById(@PathVariable Long id) {
-        return shipmentRepository.findById(id)
+        return shipmentRepository.findById(Objects.requireNonNull(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -47,7 +48,7 @@ public class ShipmentController {
     @GetMapping("/order/{orderId}")
     @Operation(summary = "Get shipment by order ID")
     public ResponseEntity<Shipment> getByOrder(@PathVariable Long orderId) {
-        var order = orderRepository.findById(orderId).orElseThrow();
+        var order = orderRepository.findById(Objects.requireNonNull(orderId)).orElseThrow();
         return shipmentRepository.findByOrder(order)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -65,7 +66,7 @@ public class ShipmentController {
     @PatchMapping("/{id}/status")
     @Operation(summary = "Update shipment status")
     public ResponseEntity<Shipment> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        Shipment shipment = shipmentRepository.findById(id).orElseThrow();
+        Shipment shipment = shipmentRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         String newStatus = body.get("status");
         shipment.setStatus(Shipment.ShipmentStatus.valueOf(newStatus.toUpperCase()));
 

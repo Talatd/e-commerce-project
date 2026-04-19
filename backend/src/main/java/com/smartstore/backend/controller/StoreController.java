@@ -26,6 +26,7 @@ public class StoreController {
 
     @PostMapping
     @Operation(summary = "Create a store")
+    @SuppressWarnings("null")
     public ResponseEntity<Store> createStore(@RequestBody Store store) {
         return ResponseEntity.ok(storeRepository.save(store));
     }

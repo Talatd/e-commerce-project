@@ -80,7 +80,9 @@ CREATE TABLE stores (
     rating DECIMAL(3, 2) DEFAULT 0.00,
     status ENUM('OPEN', 'CLOSED', 'PENDING') DEFAULT 'OPEN',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (owner_id) REFERENCES users(user_id)
+    FOREIGN KEY (owner_id) REFERENCES users(user_id),
+    INDEX idx_store_owner (owner_id),
+    INDEX idx_store_status (status)
 );
 
 -- 8. Shipments Table (DS3 — E-Commerce Shipping Data)

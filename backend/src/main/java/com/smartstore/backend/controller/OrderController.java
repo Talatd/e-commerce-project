@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -31,7 +32,7 @@ public class OrderController {
     @GetMapping("/{id}")
     @Operation(summary = "Get order by ID")
     public ResponseEntity<Order> getOrder(@PathVariable Long id) {
-        return orderRepository.findById(id)
+        return orderRepository.findById(Objects.requireNonNull(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -41,7 +42,8 @@ public class OrderController {
     public ResponseEntity<Order> createOrder(@RequestBody Order order) {
         if (order.getItems() != null) {
             for (OrderItem item : order.getItems()) {
-                Product product = productRepository.findById(item.getProduct().getProductId()).orElseThrow();
+                Product product = productRepository.findById(
+                        Objects.requireNonNull(item.getProduct().getProductId())).orElseThrow();
                 if (product.getStockQuantity() < item.getQuantity()) {
                     throw new IllegalArgumentException(
                             "Insufficient stock for " + product.getName()
@@ -59,7 +61,7 @@ public class OrderController {
     @PatchMapping("/{id}/status")
     @Operation(summary = "Update order status", description = "Advances or changes the status of an order.")
     public ResponseEntity<Order> updateStatus(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
-        Order order = orderRepository.findById(id).orElseThrow();
+        Order order = orderRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         String newStatus = body.get("status");
         if (newStatus == null || newStatus.isBlank()) {
             throw new IllegalArgumentException("Status is required");

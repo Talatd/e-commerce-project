@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/admin/users")
@@ -29,7 +30,7 @@ public class UserController {
     @PutMapping("/{id}")
     @Operation(summary = "Update a user")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
-        User user = userRepository.findById(id).orElseThrow();
+        User user = userRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         user.setFullName(userDetails.getFullName());
         user.setEmail(userDetails.getEmail());
         user.setRole(userDetails.getRole());
@@ -40,14 +41,14 @@ public class UserController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a user")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        userRepository.deleteById(id);
+        userRepository.deleteById(Objects.requireNonNull(id));
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/ban")
     @Operation(summary = "Ban a user")
     public ResponseEntity<User> banUser(@PathVariable Long id) {
-        User user = userRepository.findById(id).orElseThrow();
+        User user = userRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         user.setEnabled(false);
         return ResponseEntity.ok(userRepository.save(user));
     }

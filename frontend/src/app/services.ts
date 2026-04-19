@@ -83,6 +83,10 @@ export class ProductService {
     return this.http.get<any[]>(this.apiUrl);
   }
 
+  getReviews(productId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${productId}/reviews`);
+  }
+
   getSentiment(productId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/${productId}/reviews/sentiment`);
   }

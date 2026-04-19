@@ -275,18 +275,18 @@ export class LoginComponent {
   pwStrength(event: any) {
     const v = event.target.value || '';
     this.s = 0;
-    if(v.length >= 6) this.s++;
-    if(v.length >= 10) this.s++;
-    if(/[0-9!@#$%^&*]/.test(v)) this.s++;
-    if(v.length >= 12 && /[A-Z]/.test(v)) this.s++;
-    const colors = ['#E07070','#E8A94A','#E8A94A','#3EC98A'];
+    if (v.length >= 6) this.s++;
+    if (v.length >= 10) this.s++;
+    if (/[0-9!@#$%^&*]/.test(v)) this.s++;
+    if (v.length >= 12 && /[A-Z]/.test(v)) this.s++;
+    const colors = ['#E07070', '#E8A94A', '#E8A94A', '#3EC98A'];
     this.c = this.s > 0 ? colors[this.s - 1] : 'rgba(255,255,255,0.05)';
   }
 
   onLogin() {
     this.isLoading = true;
     this.error = '';
-    
+
     setTimeout(() => {
       this.auth.login({ email: this.email, password: this.password }).subscribe({
         next: (user) => {
@@ -1266,7 +1266,7 @@ export class LoginComponent {
         <div class="page-head-orders">
           <div>
             <div class="ph-title">Purchase History</div>
-            <div class="ph-sub">47 orders · Member since Jan 2023</div>
+            <div class="ph-sub">{{consumerOrders.length}} orders · Your spending analytics</div>
           </div>
           <div style="display:flex;gap:8px;">
             <div class="ph-btn ph-ghost">Export PDF</div>
@@ -1275,10 +1275,10 @@ export class LoginComponent {
         </div>
 
         <div class="summary-bar">
-          <div class="sb-item"><div class="sb-val">47</div><div class="sb-label">Total Orders</div></div>
-          <div class="sb-item"><div class="sb-val">$8.<em>2K</em></div><div class="sb-label">Total Spent</div></div>
-          <div class="sb-item"><div class="sb-val">3</div><div class="sb-label">Active Orders</div></div>
-          <div class="sb-item"><div class="sb-val">4.<em>9★</em></div><div class="sb-label">Avg. Rating</div></div>
+          <div class="sb-item"><div class="sb-val">{{consumerOrders.length}}</div><div class="sb-label">Total Orders</div></div>
+          <div class="sb-item"><div class="sb-val">{{consumerTotalSpent | currency:'USD':'symbol':'1.0-0'}}</div><div class="sb-label">Total Spent</div></div>
+          <div class="sb-item"><div class="sb-val">{{consumerActiveOrders}}</div><div class="sb-label">Active Orders</div></div>
+          <div class="sb-item"><div class="sb-val">{{consumerAvgRating}}<em>★</em></div><div class="sb-label">Avg. Rating</div></div>
         </div>
 
         <div class="toolbar">
@@ -1287,10 +1287,10 @@ export class LoginComponent {
             <input placeholder="Search orders by product or ID…"/>
           </div>
           <div class="filter-chips">
-            <div class="fchip active">All (47)</div>
-            <div class="fchip">Active (3)</div>
-            <div class="fchip">Delivered (42)</div>
-            <div class="fchip">Cancelled (2)</div>
+            <div class="fchip active">All ({{consumerOrders.length}})</div>
+            <div class="fchip">Active ({{consumerActiveOrders}})</div>
+            <div class="fchip">Delivered ({{consumerDelivered}})</div>
+            <div class="fchip">Cancelled ({{consumerCancelled}})</div>
           </div>
         </div>
 
@@ -1576,8 +1576,8 @@ export class ConsumerComponent implements OnInit {
   selectedCat = 'All';
   availability = { inStock: false, onSale: false };
   notifPrefs = { orders: true, marketing: false };
-  categories: {name: string, checked: boolean}[] = [];
-  brands: {name: string, checked: boolean}[] = [
+  categories: { name: string, checked: boolean }[] = [];
+  brands: { name: string, checked: boolean }[] = [
     { name: 'Apple', checked: false },
     { name: 'Sony', checked: false },
     { name: 'Keychron', checked: false },
@@ -1588,11 +1588,29 @@ export class ConsumerComponent implements OnInit {
   qty = 1;
   isTyping = false;
   chatSuggestions = ['Top selling products', 'Recommend a laptop for my budget', 'Order status', 'Discounted items', 'Apple vs Samsung compare'];
+  consumerOrders: any[] = [];
   auth = inject(AuthService);
   ai = inject(AiService);
   productService = inject(ProductService);
+  orderService = inject(OrderService);
   toast = inject(ToastService);
   router = inject(Router);
+
+  get consumerTotalSpent(): number {
+    return this.consumerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }
+  get consumerActiveOrders(): number {
+    return this.consumerOrders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING' || o.status === 'SHIPPED').length;
+  }
+  get consumerDelivered(): number {
+    return this.consumerOrders.filter(o => o.status === 'DELIVERED').length;
+  }
+  get consumerCancelled(): number {
+    return this.consumerOrders.filter(o => o.status === 'CANCELLED').length;
+  }
+  get consumerAvgRating(): string {
+    return '4.8';
+  }
 
   private getTimeNow(): string {
     const d = new Date();
@@ -1611,6 +1629,10 @@ export class ConsumerComponent implements OnInit {
       this.products = res;
       const cats = Array.from(new Set(this.products.map(p => p.category)));
       this.categories = cats.map((c: any) => ({ name: c, checked: false }));
+    });
+
+    this.orderService.getOrders().subscribe(res => {
+      this.consumerOrders = res || [];
     });
   }
 
@@ -2203,7 +2225,7 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   private buildRevenueChart() {
     if (!this.revenueCanvas?.nativeElement) return;
     if (this.revenueChart) this.revenueChart.destroy();
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const revenueByMonth = new Array(12).fill(0);
     this.storeOrders.forEach((o: any) => {
       const d = new Date(o.orderDate);
@@ -2240,7 +2262,7 @@ export class ManagerComponent implements OnInit, AfterViewInit {
     this.products.forEach((p: any) => { catMap[p.category || 'Other'] = (catMap[p.category || 'Other'] || 0) + 1; });
     const labels = Object.keys(catMap);
     const data = Object.values(catMap);
-    const palette = ['#3ECFB2','#6BA8C8','#E8A94A','#E07070','#A78BFA','#34D399','#F472B6'];
+    const palette = ['#3ECFB2', '#6BA8C8', '#E8A94A', '#E07070', '#A78BFA', '#34D399', '#F472B6'];
     this.categoryChart = new Chart(this.categoryCanvas.nativeElement, {
       type: 'doughnut',
       data: {
@@ -2767,8 +2789,8 @@ export class AdminComponent implements OnInit, AfterViewInit {
 
   categories: any[] = [];
   auditLogs = [
-    { time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'System', action: 'Startup', type: 'info', detail: 'Application initialized' },
-    { time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'Admin', action: 'Login', type: 'success', detail: 'Authenticated via JWT' },
+    { time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'System', action: 'Startup', type: 'info', detail: 'Application initialized' },
+    { time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'Admin', action: 'Login', type: 'success', detail: 'Authenticated via JWT' },
   ];
 
   stores: any[] = [];
@@ -2796,7 +2818,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
   private buildAdminCharts() {
     if (this.adminRevenueCanvas?.nativeElement) {
       if (this.revChart) this.revChart.destroy();
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const revenueByMonth = new Array(12).fill(0);
       this.allOrders.forEach((o: any) => {
         const d = new Date(o.orderDate);
@@ -2834,7 +2856,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
       this.pagedProducts.forEach((p: any) => { catMap[p.category || 'Other'] = (catMap[p.category || 'Other'] || 0) + 1; });
       const labels = Object.keys(catMap);
       const data = Object.values(catMap);
-      const palette = ['#3ECFB2','#6BA8C8','#E8A94A','#E07070','#A78BFA','#34D399','#F472B6'];
+      const palette = ['#3ECFB2', '#6BA8C8', '#E8A94A', '#E07070', '#A78BFA', '#34D399', '#F472B6'];
       this.catChart = new Chart(this.adminCategoryCanvas.nativeElement, {
         type: 'doughnut',
         data: { labels, datasets: [{ data, backgroundColor: palette.slice(0, labels.length), borderWidth: 0 }] },
@@ -2886,10 +2908,10 @@ export class AdminComponent implements OnInit, AfterViewInit {
   }
 
   banUser(u: any) {
-    if(!confirm(`Ban ${u.fullName}?`)) return;
+    if (!confirm(`Ban ${u.fullName}?`)) return;
     this.adminService.banUser(u.userId).subscribe(() => {
       this.toast.show('User banned');
-      this.auditLogs.unshift({ time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'Admin', action: 'Ban User', type: 'warning', detail: `Banned ${u.fullName}` });
+      this.auditLogs.unshift({ time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'Admin', action: 'Ban User', type: 'warning', detail: `Banned ${u.fullName}` });
       this.refreshData();
     });
   }
@@ -2901,7 +2923,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
       next: (c) => {
         this.categories.push(c);
         this.toast.show('Category created');
-        this.auditLogs.unshift({ time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'Admin', action: 'Create Category', type: 'success', detail: name });
+        this.auditLogs.unshift({ time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'Admin', action: 'Create Category', type: 'success', detail: name });
       },
       error: (e) => this.toast.show(e.error?.message || 'Failed to create category', 'error')
     });
@@ -2913,7 +2935,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
       next: () => {
         this.categories = this.categories.filter(x => x.categoryId !== c.categoryId);
         this.toast.show('Category deleted');
-        this.auditLogs.unshift({ time: new Date().toISOString().slice(0,19).replace('T',' '), user: 'Admin', action: 'Delete Category', type: 'warning', detail: c.name });
+        this.auditLogs.unshift({ time: new Date().toISOString().slice(0, 19).replace('T', ' '), user: 'Admin', action: 'Delete Category', type: 'warning', detail: c.name });
       },
       error: () => this.toast.show('Failed to delete category', 'error')
     });
@@ -2981,6 +3003,23 @@ export class AdminComponent implements OnInit, AfterViewInit {
                   <input [value]="editUser.role" disabled style="opacity:0.5; cursor:not-allowed;"/>
                 </div>
               </div>
+
+              <div style="height:1px;background:var(--border);margin:24px 0;"></div>
+              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;font-weight:600;">Profile Details</div>
+              <div class="grid-2-nexus" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                <div class="field-nexus"><label>Gender</label><input [(ngModel)]="profile.gender" placeholder="e.g. Male, Female, Other"/></div>
+                <div class="field-nexus"><label>Age</label><input [(ngModel)]="profile.age" type="number" placeholder="25"/></div>
+                <div class="field-nexus"><label>City</label><input [(ngModel)]="profile.city" placeholder="e.g. Istanbul"/></div>
+                <div class="field-nexus"><label>Country</label><input [(ngModel)]="profile.country" placeholder="e.g. Turkey"/></div>
+                <div class="field-nexus">
+                  <label>Membership</label>
+                  <input [value]="profile.membershipType" disabled style="opacity:0.5; cursor:not-allowed;"/>
+                </div>
+                <div class="field-nexus">
+                  <label>Total Spend</label>
+                  <input [value]="(profile.totalSpend || 0 | currency)" disabled style="opacity:0.5; cursor:not-allowed;"/>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -3039,11 +3078,13 @@ export class AdminComponent implements OnInit, AfterViewInit {
 export class SettingsComponent implements OnInit {
   tab = 'personal';
   editUser: any = {};
+  profile: any = { gender: '', age: null, city: '', country: '', membershipType: 'BASIC' };
   pwS = 0; pwC = '';
   breakdown: any = { categories: [] };
-  
+
   auth = inject(AuthService);
   adminService = inject(AdminService);
+  profileService = inject(CustomerProfileService);
   toast = inject(ToastService);
   router = inject(Router);
 
@@ -3051,6 +3092,10 @@ export class SettingsComponent implements OnInit {
     this.auth.currentUser$.subscribe(u => {
       if (u) {
         this.editUser = { ...u };
+        this.profileService.getMyProfile().subscribe({
+          next: (p: any) => { if (p) this.profile = { ...this.profile, ...p }; },
+          error: () => { }
+        });
         if (u.role === 'ADMIN' || u.role === 'MANAGER') {
           this.adminService.getSalesBreakdown().subscribe(res => {
             this.breakdown = res;
@@ -3062,8 +3107,8 @@ export class SettingsComponent implements OnInit {
 
   goBack() {
     const role = this.editUser.role || 'CONSUMER';
-    if(role === 'ADMIN') this.router.navigate(['/admin']);
-    else if(role === 'MANAGER') this.router.navigate(['/manager']);
+    if (role === 'ADMIN') this.router.navigate(['/admin']);
+    else if (role === 'MANAGER') this.router.navigate(['/manager']);
     else this.router.navigate(['/consumer']);
   }
 
@@ -3072,27 +3117,32 @@ export class SettingsComponent implements OnInit {
     const oldText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="set-spin">◌</span> Saving...';
-    
-    setTimeout(() => {
-      this.auth.updateUser(this.editUser);
-      this.toast.show('Profile updated successfully!', 'success');
-      btn.innerHTML = '✓ Saved';
-      setTimeout(() => {
-        btn.innerHTML = oldText;
-        btn.disabled = false;
-      }, 2000);
-    }, 1000);
+
+    this.profileService.save(this.profile).subscribe({
+      next: (saved: any) => {
+        if (saved) this.profile = { ...this.profile, ...saved };
+        this.auth.updateUser(this.editUser);
+        this.toast.show('Profile updated successfully!', 'success');
+        btn.innerHTML = '✓ Saved';
+        setTimeout(() => { btn.innerHTML = oldText; btn.disabled = false; }, 2000);
+      },
+      error: () => {
+        this.auth.updateUser(this.editUser);
+        this.toast.show('Profile updated (local only)', 'info');
+        btn.innerHTML = oldText; btn.disabled = false;
+      }
+    });
   }
 
   updatePwStrength(ev: any) {
     const v = ev.target.value || '';
     this.pwS = 0;
-    if(v.length >= 6) this.pwS++;
-    if(v.length >= 10) this.pwS++;
-    if(/[0-9]/.test(v)) this.pwS++;
-    if(/[A-Z]/.test(v)) this.pwS++;
-    const colors = ['#E07070','#E8A94A','#E8A94A','#3EC98A'];
-    this.pwC = this.pwS > 0 ? colors[this.pwS-1] : '';
+    if (v.length >= 6) this.pwS++;
+    if (v.length >= 10) this.pwS++;
+    if (/[0-9]/.test(v)) this.pwS++;
+    if (/[A-Z]/.test(v)) this.pwS++;
+    const colors = ['#E07070', '#E8A94A', '#E8A94A', '#3EC98A'];
+    this.pwC = this.pwS > 0 ? colors[this.pwS - 1] : '';
   }
 }
 
@@ -3416,8 +3466,8 @@ export class LandingComponent {
   auth = inject(AuthService);
   get dashboardLink() {
     const role = this.auth.currentUserValue?.role;
-    if(role === 'ADMIN') return '/admin';
-    if(role === 'MANAGER') return '/manager';
+    if (role === 'ADMIN') return '/admin';
+    if (role === 'MANAGER') return '/manager';
     return '/consumer';
   }
 }

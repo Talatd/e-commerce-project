@@ -562,7 +562,7 @@ export class CartComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUserValue;
     const orderPayload = {
       user: { userId: user?.userId || 1 },
-      totalAmount: this.subtotal * 1.08,
+      totalAmount: this.grandTotal,
       shippingAddress: "123 Nexus Grove, SF, CA",
       status: 'PENDING',
       items: this.cartItems.map(item => ({
@@ -727,13 +727,49 @@ export class CartComponent implements OnInit, OnDestroy {
            </div>
         </div>
       </div>
+
+      <!-- REVIEWS SECTION -->
+      <div class="gcard" style="padding:24px; margin-top:20px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <div style="font-family:'Playfair Display',serif; font-size:18px;">Customer Reviews</div>
+          <div style="font-size:12px; color:var(--text3);" *ngIf="reviews.length > 0">{{reviews.length}} review{{reviews.length > 1 ? 's' : ''}} · Avg {{avgRating}}★</div>
+        </div>
+        <div *ngIf="reviews.length === 0" style="text-align:center; padding:24px; color:var(--text3); font-size:12px;">No reviews yet. Be the first to review this product!</div>
+        <div *ngFor="let r of reviews" style="padding:14px 0; border-bottom:1px solid var(--border);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:28px; height:28px; border-radius:50%; background:var(--teal-dim); display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--teal); font-weight:600;">{{(r.user?.fullName || 'U').charAt(0)}}</div>
+              <div style="font-size:12px; font-weight:500; color:var(--text);">{{r.user?.fullName || 'Anonymous'}}</div>
+            </div>
+            <div style="font-size:11px; color:var(--text3);">{{r.createdAt | date:'mediumDate'}}</div>
+          </div>
+          <div style="display:flex; gap:2px; margin-bottom:6px;">
+            <span *ngFor="let s of [1,2,3,4,5]" style="font-size:12px;" [style.color]="s <= r.rating ? '#E8A94A' : 'var(--text3)'">★</span>
+          </div>
+          <div style="font-size:12px; color:var(--text2); line-height:1.5;">{{r.comment}}</div>
+          <div *ngIf="r.sentimentScore != null" style="margin-top:6px;">
+            <span style="font-size:9px; padding:2px 8px; border-radius:8px; letter-spacing:0.05em; text-transform:uppercase;"
+              [style.background]="r.sentimentScore > 0.6 ? 'rgba(62,201,138,0.1)' : r.sentimentScore < 0.4 ? 'rgba(224,112,112,0.1)' : 'rgba(107,168,200,0.1)'"
+              [style.color]="r.sentimentScore > 0.6 ? '#3EC98A' : r.sentimentScore < 0.4 ? '#E07070' : '#6BA8C8'">
+              {{r.sentimentScore > 0.6 ? 'Positive' : r.sentimentScore < 0.4 ? 'Negative' : 'Neutral'}}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   `
 })
 export class ProductDetailComponent implements OnInit {
   product: any;
+  reviews: any[] = [];
   route = inject(ActivatedRoute);
   productService = inject(ProductService);
+
+  get avgRating(): string {
+    if (this.reviews.length === 0) return '0';
+    const avg = this.reviews.reduce((s, r) => s + (r.rating || 0), 0) / this.reviews.length;
+    return avg.toFixed(1);
+  }
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
@@ -741,6 +777,10 @@ export class ProductDetailComponent implements OnInit {
       if (id) {
         this.productService.getProducts().subscribe(res => {
           this.product = res.find((p: any) => p.productId === +id);
+        });
+        this.productService.getReviews(+id).subscribe({
+          next: (res) => this.reviews = res || [],
+          error: () => this.reviews = []
         });
       }
     });

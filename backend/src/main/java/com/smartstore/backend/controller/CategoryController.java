@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/categories")
@@ -33,7 +34,7 @@ public class CategoryController {
     @GetMapping("/{id}")
     @Operation(summary = "Get category by ID")
     public ResponseEntity<Category> getById(@PathVariable Long id) {
-        return categoryRepository.findById(id)
+        return categoryRepository.findById(Objects.requireNonNull(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -50,7 +51,7 @@ public class CategoryController {
     @PutMapping("/{id}")
     @Operation(summary = "Update a category")
     public ResponseEntity<Category> update(@PathVariable Long id, @RequestBody Category details) {
-        Category cat = categoryRepository.findById(id).orElseThrow();
+        Category cat = categoryRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         cat.setName(details.getName());
         cat.setDescription(details.getDescription());
         cat.setImageUrl(details.getImageUrl());
@@ -65,7 +66,7 @@ public class CategoryController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a category")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        categoryRepository.deleteById(id);
+        categoryRepository.deleteById(Objects.requireNonNull(id));
         return ResponseEntity.ok().build();
     }
 }

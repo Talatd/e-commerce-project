@@ -9,9 +9,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/profiles")
@@ -23,7 +25,8 @@ public class CustomerProfileController {
     private final UserRepository userRepository;
 
     @GetMapping
-    @Operation(summary = "List all profiles (admin)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "List all profiles (admin only)")
     public ResponseEntity<List<CustomerProfile>> getAll() {
         return ResponseEntity.ok(profileRepository.findAll());
     }
@@ -38,9 +41,10 @@ public class CustomerProfileController {
     }
 
     @GetMapping("/user/{userId}")
-    @Operation(summary = "Get profile by user ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get profile by user ID (admin only)")
     public ResponseEntity<CustomerProfile> getByUser(@PathVariable Long userId) {
-        var user = userRepository.findById(userId).orElseThrow();
+        var user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow();
         return profileRepository.findByUser(user)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

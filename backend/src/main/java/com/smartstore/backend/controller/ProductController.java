@@ -56,6 +56,13 @@ public class ProductController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/{id}/reviews")
+    @Operation(summary = "Get product reviews", description = "Lists all reviews for a given product.")
+    public ResponseEntity<List<ProductReview>> getProductReviews(@PathVariable Long id) {
+        Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
+        return ResponseEntity.ok(reviewRepository.findByProduct(product));
+    }
+
     @GetMapping("/{id}/reviews/sentiment")
     @Operation(summary = "Analyze product sentiment", description = "Calculates average sentiment score from reviews using AI enriched data.")
     public ResponseEntity<Map<String, Object>> getProductSentiment(@PathVariable Long id) {
@@ -116,9 +123,8 @@ public class ProductController {
 
     @PostMapping
     @Operation(summary = "Add a new product", description = "Creates a new electronics product in the catalog.")
-    @SuppressWarnings("null")
     public ResponseEntity<Product> createProduct(@RequestBody Product product) {
-        return ResponseEntity.ok(productRepository.save(product));
+        return ResponseEntity.ok(productRepository.save(Objects.requireNonNull(product)));
     }
 
     @PutMapping("/{id}")
@@ -131,15 +137,14 @@ public class ProductController {
         product.setStockQuantity(productDetails.getStockQuantity());
         product.setCategory(productDetails.getCategory());
         product.setImageUrl(productDetails.getImageUrl());
-        @SuppressWarnings("null")
-        Product saved = productRepository.save(product);
+        Product saved = productRepository.save(Objects.requireNonNull(product));
         return ResponseEntity.ok(saved);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete product", description = "Removes a product from the catalog.")
-    public ResponseEntity<Void> deleteProduct(@PathVariable @org.springframework.lang.NonNull Long id) {
-        productRepository.deleteById(id);
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+        productRepository.deleteById(Objects.requireNonNull(id));
         return ResponseEntity.ok().build();
     }
 }
