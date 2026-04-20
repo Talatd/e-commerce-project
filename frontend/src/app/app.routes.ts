@@ -4,6 +4,18 @@ import { authGuard, roleGuard } from './auth.guard';
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./pages').then(m => m.LandingComponent) },
   { path: 'login', loadComponent: () => import('./pages').then(m => m.LoginComponent) },
+  { path: 'forgot-password', loadComponent: () => import('./pages/forgot-password.component').then(m => m.ForgotPasswordComponent) },
+  { path: 'reset-password', loadComponent: () => import('./pages/reset-password.component').then(m => m.ResetPasswordComponent) },
+  {
+    path: 'terms',
+    loadComponent: () => import('./pages/legal-placeholder.component').then(m => m.LegalPlaceholderComponent),
+    data: { title: 'Terms of Service' },
+  },
+  {
+    path: 'privacy',
+    loadComponent: () => import('./pages/legal-placeholder.component').then(m => m.LegalPlaceholderComponent),
+    data: { title: 'Privacy Policy' },
+  },
   { path: 'admin', loadComponent: () => import('./pages').then(m => m.AdminComponent), canActivate: [roleGuard(['ADMIN'])] },
   { path: 'manager', loadComponent: () => import('./pages').then(m => m.ManagerComponent), canActivate: [roleGuard(['ADMIN', 'MANAGER'])] },
   { path: 'consumer', loadComponent: () => import('./pages').then(m => m.ConsumerComponent), canActivate: [authGuard] },

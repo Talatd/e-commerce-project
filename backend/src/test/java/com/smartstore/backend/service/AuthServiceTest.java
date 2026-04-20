@@ -4,6 +4,7 @@ import com.smartstore.backend.dto.AuthRequest;
 import com.smartstore.backend.dto.AuthResponse;
 import com.smartstore.backend.model.Role;
 import com.smartstore.backend.model.User;
+import com.smartstore.backend.repository.PasswordResetTokenRepository;
 import com.smartstore.backend.repository.UserRepository;
 import com.smartstore.backend.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +15,10 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.net.http.HttpClient;
 import java.util.Optional;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,6 +34,14 @@ class AuthServiceTest {
     private JwtService jwtService;
     @Mock
     private AuthenticationManager authenticationManager;
+    @Mock
+    private ObjectMapper objectMapper;
+    @Mock
+    private HttpClient httpClient;
+    @Mock
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+    @Mock
+    private MailService mailService;
 
     @InjectMocks
     private AuthService authService;

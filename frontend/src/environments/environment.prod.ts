@@ -2,6 +2,7 @@ export const environment = {
   production: true,
   /** Deploy behind same host as the SPA and proxy `/api` to Spring, or set at build time. */
   apiBaseUrl: '',
+  googleClientId: '',
 };
 
 export function apiRoot(): string {

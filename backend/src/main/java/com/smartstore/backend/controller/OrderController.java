@@ -8,6 +8,7 @@ import com.smartstore.backend.model.User;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.ProductRepository;
 import com.smartstore.backend.repository.UserRepository;
+import com.smartstore.backend.service.MailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final MailService mailService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -86,7 +88,10 @@ public class OrderController {
                 item.setOrder(order);
             }
         }
-        return ResponseEntity.ok(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+        orderRepository.findDetailedById(saved.getOrderId()).ifPresent(o ->
+                mailService.sendOrderConfirmation(buyer.getEmail(), o));
+        return ResponseEntity.ok(saved);
     }
 
     @PatchMapping("/{id}/status")

@@ -20,6 +20,7 @@ public class DbInitializer {
     private final ProductReviewRepository reviewRepository;
     private final AuditLogRepository auditLogRepository;
     private final CustomerProfileRepository profileRepository;
+    private final OrderEventRepository orderEventRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @jakarta.annotation.PostConstruct
@@ -119,8 +120,52 @@ public class DbInitializer {
 
             order.setItems(items);
             order.setTotalAmount(total);
-            orderRepository.save(order);
+            Order savedOrder = orderRepository.save(order);
+
+            // Seed Order Events for the saved order
+            seedEventsForOrder(savedOrder, random);
         }
+    }
+
+    @SuppressWarnings("all")
+    private void seedEventsForOrder(Order order, Random random) {
+        // Every order has a CREATED event
+        orderEventRepository.save(OrderEvent.builder()
+            .order(order)
+            .status("PENDING")
+            .eventDate(order.getOrderDate())
+            .notes("Order received by system.")
+            .build());
+
+        if (order.getStatus() == OrderStatus.PENDING) return;
+
+        // PROCESSING event
+        orderEventRepository.save(OrderEvent.builder()
+            .order(order)
+            .status("PROCESSING")
+            .eventDate(order.getOrderDate().plusHours(2 + random.nextInt(24)))
+            .notes("Order is being prepared by the store.")
+            .build());
+
+        if (order.getStatus() == OrderStatus.PROCESSING) return;
+
+        // SHIPPED event
+        orderEventRepository.save(OrderEvent.builder()
+            .order(order)
+            .status("SHIPPED")
+            .eventDate(order.getOrderDate().plusDays(1 + random.nextInt(2)))
+            .notes("Order has been handed over to the delivery partner.")
+            .build());
+
+        if (order.getStatus() == OrderStatus.SHIPPED) return;
+
+        // DELIVERED event
+        orderEventRepository.save(OrderEvent.builder()
+            .order(order)
+            .status("DELIVERED")
+            .eventDate(order.getOrderDate().plusDays(3 + random.nextInt(4)))
+            .notes("Order successfully delivered to the customer.")
+            .build());
     }
 
     private void seedCuratedProducts() {

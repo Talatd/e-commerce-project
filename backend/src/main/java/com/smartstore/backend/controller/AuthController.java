@@ -2,6 +2,9 @@ package com.smartstore.backend.controller;
 
 import com.smartstore.backend.dto.AuthRequest;
 import com.smartstore.backend.dto.AuthResponse;
+import com.smartstore.backend.dto.ForgotPasswordRequest;
+import com.smartstore.backend.dto.GoogleAuthRequest;
+import com.smartstore.backend.dto.ResetPasswordRequest;
 import com.smartstore.backend.model.User;
 import com.smartstore.backend.repository.UserRepository;
 import com.smartstore.backend.service.AuthService;
@@ -39,6 +42,28 @@ public class AuthController {
     @Operation(summary = "Authenticate user", description = "Verifies credentials and returns user details with JWT tokens.")
     public ResponseEntity<AuthResponse> authenticate(@RequestBody AuthRequest request) {
         return ResponseEntity.ok(authService.authenticate(request));
+    }
+
+    @PostMapping("/google")
+    @Operation(summary = "Sign in with Google", description = "Exchanges a valid Google OAuth access token for app JWTs (userinfo verified server-side).")
+    public ResponseEntity<AuthResponse> google(@RequestBody GoogleAuthRequest request) {
+        return ResponseEntity.ok(authService.loginWithGoogleAccessToken(request.getAccessToken()));
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Request password reset email", description = "Sends a reset link if the email is registered (same response either way).")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        authService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok(Map.of(
+                "message",
+                "If an account exists for this email, you will receive password reset instructions shortly."));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Complete password reset", description = "Sets a new password using the token from the email link.")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("message", "Your password has been updated. You can sign in now."));
     }
 
     @PostMapping("/change-password")

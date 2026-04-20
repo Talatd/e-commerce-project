@@ -50,6 +50,7 @@ DATABASE SCHEMA (MySQL):
 - product_reviews (review_id INT PK, product_id FK->products.product_id, user_id FK->users.user_id, rating, comment, sentiment_score, store_response, created_at)
 - categories (category_id INT PK, name, description, parent_id FK->categories.category_id, active)
 - customer_profiles (profile_id INT PK, user_id FK->users.user_id, gender, age, city, country, membership_type, total_spend, items_purchased, avg_rating, satisfaction_level)
+- order_events (id INT PK, order_id FK->orders.order_id, status, event_date, notes)
 
 RULES:
 1. Use snake_case.

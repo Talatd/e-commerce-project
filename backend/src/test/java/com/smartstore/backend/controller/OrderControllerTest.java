@@ -6,6 +6,7 @@ import com.smartstore.backend.model.User;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.ProductRepository;
 import com.smartstore.backend.repository.UserRepository;
+import com.smartstore.backend.service.MailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -28,6 +29,7 @@ class OrderControllerTest {
     @Mock private OrderRepository orderRepository;
     @Mock private ProductRepository productRepository;
     @Mock private UserRepository userRepository;
+    @Mock private MailService mailService;
     @InjectMocks private OrderController controller;
 
     @BeforeEach

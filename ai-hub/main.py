@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import json as json_module
+import traceback
 from typing import List, Optional, Dict
 
 from agents import ai_graph
@@ -87,6 +88,7 @@ async def process_query(request: ChatRequest):
     try:
         final_state = await asyncio.to_thread(ai_graph.invoke, initial_state)
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
     with session_lock:
@@ -146,6 +148,7 @@ async def process_query_stream(request: ChatRequest):
             }
             yield f"data: {json_module.dumps(payload)}\n\n"
         except Exception as e:
+            traceback.print_exc()
             yield f"data: {json_module.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

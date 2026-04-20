@@ -27,6 +27,7 @@ backend/target/
 .DS_Store
 *.pem
 npm-debug.log*
+*.log
 
 # python
 __pycache__/
@@ -41,3 +42,7 @@ ai-hub/.env
 
 # preview
 /preview
+
+# angular build/cache
+frontend/dist/
+frontend/.angular/

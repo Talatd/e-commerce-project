@@ -1,16 +1,17 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../services';
 import { NexusLogoComponent } from '../nexus-logo.component';
 import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
 import { CONSUMER_NAV } from '../consumer-nav.paths';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, NexusLogoComponent, NexusThemeToggleComponent],
+  imports: [CommonModule, FormsModule, RouterLink, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <div class="scene">
   <div class="bg-glow-1"></div>
@@ -29,17 +30,17 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
     <!-- TOGGLE -->
     <div class="toggle-wrap" [class.registering]="mode === 'register'">
       <div class="toggle-bg"></div>
-      <div class="t-opt" [class.active]="mode === 'login'" (click)="setMode('login')">Sign In</div>
-      <div class="t-opt" [class.active]="mode === 'register'" (click)="setMode('register')">Create Account</div>
+      <div class="t-opt" [class.tab-on]="mode === 'login'" (click)="setMode('login')">Sign In</div>
+      <div class="t-opt" [class.tab-on]="mode === 'register'" (click)="setMode('register')">Create Account</div>
     </div>
 
     <!-- HEADLINE -->
     <div class="headline-container">
-      <div class="headline" [class.active]="mode === 'login'">
+      <div class="headline" [class.head-on]="mode === 'login'">
         <h1 class="hl-title">Welcome <em>back.</em></h1>
         <p class="hl-sub">Sign in to continue to your account.</p>
       </div>
-      <div class="headline" [class.active]="mode === 'register'">
+      <div class="headline" [class.head-on]="mode === 'register'">
         <h1 class="hl-title">Join <em>Nexus</em> today.</h1>
         <p class="hl-sub">Create your free account in seconds.</p>
       </div>
@@ -48,7 +49,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
     <!-- FORMS -->
     <div class="form-stack">
       <!-- LOGIN -->
-      <div class="form-view" [class.active]="mode === 'login'">
+      <div class="form-view" [class.view-on]="mode === 'login'">
         <div class="field">
           <label class="field-label">Email Address</label>
           <input class="fi" [(ngModel)]="email" placeholder="you@example.com" type="email"/>
@@ -56,54 +57,72 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
         <div class="field">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <label class="field-label">Password</label>
-            <span class="forgot">Forgot password?</span>
+            <a routerLink="/forgot-password" class="forgot">Forgot password?</a>
           </div>
-          <input class="fi" [(ngModel)]="password" placeholder="••••••••" type="password" (keyup.enter)="onLogin()"/>
+          <div class="fi-wrap">
+            <input
+              class="fi fi--pw"
+              [(ngModel)]="password"
+              placeholder="••••••••"
+              [type]="loginPwVisible ? 'text' : 'password'"
+              (keyup.enter)="onLogin()"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="pw-eye"
+              (click)="loginPwVisible = !loginPwVisible"
+              [attr.aria-pressed]="loginPwVisible"
+              [attr.aria-label]="loginPwVisible ? 'Hide password' : 'Show password'"
+            >
+              <svg *ngIf="!loginPwVisible" class="pw-eye-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg *ngIf="loginPwVisible" class="pw-eye-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
         </div>
         
         <p *ngIf="error" class="error-msg">{{error}}</p>
 
-        <button class="submit" (click)="onLogin()" [disabled]="isLoading">
-          <span *ngIf="!isLoading">Sign In →</span>
-          <span *ngIf="isLoading" class="spin">◌</span>
+        <button class="submit" type="button" (click)="onLogin()" [disabled]="loginBusy">
+          <span class="submit-label" *ngIf="!loginSubmitting">Sign In →</span>
+          <span class="submit-spinner" *ngIf="loginSubmitting" aria-hidden="true"></span>
         </button>
         
-        <div class="divider">
-          <div class="divider-line"></div>
-          <span class="divider-text">or</span>
-          <div class="divider-line"></div>
+        <div class="login-div-row">
+          <div class="login-div-line"></div>
+          <span class="login-div-text">or</span>
+          <div class="login-div-line"></div>
         </div>
 
-        <div class="social-grid">
-          <button class="soc-btn">
-             <svg width="16" height="16" viewBox="0 0 24 24">
-               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-             </svg>
-             Google
-          </button>
-          <button class="soc-btn">
-             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-               <path d="M17.05 20.28c-.96.95-2.12 1.44-3.5 1.44-1.38 0-2.54-.49-3.5-1.44-.96-.95-1.44-2.11-1.44-3.48 0-2.73 1.91-5.01 4.54-5.01 1.25 0 2.22.41 2.92.95-.31-.96-.46-1.97-.46-3 0-1.61.41-3.14 1.16-4.5h-.16c-1.38 0-2.54.49-3.5 1.44-.96.95-1.44 2.11-1.44 3.48 0 1.37.48 2.53 1.44 3.48s2.12 1.44 3.5 1.44c.48 0 .94-.06 1.38-.17.38.7.62 1.49.62 2.34 0 1.37-.48 2.53-1.44 3.48z"/>
-               <path d="M12.03 5.07c.48 0 .93.18 1.27.5.34.33.53.77.53 1.24 0 .47-.19.91-.53 1.23-.34.33-.79.51-1.27.51-.48 0-.93-.18-1.27-.51a1.69 1.69 0 0 1-.53-1.23c0-.47.19-.91.53-1.24.34-.32.79-.5 1.27-.5zM12.03 1.01c-.11 0-.21.05-.28.14-.07.08-.09.19-.06.29l.71 2.34c.06.21.26.35.48.35h.19c.22 0 .42-.14.48-.35l.71-2.34c.03-.11.01-.22-.06-.3s-.17-.13-.28-.13h-1.89z" opacity="0.5"/>
-             </svg>
-             Apple
+        <div class="social-row">
+          <button type="button" class="soc-btn soc-btn-google" (click)="onGoogleSignIn()" [disabled]="googleBusy" title="Sign in with Google">
+            <svg class="soc-ico" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M13 7.1c0-.5 0-.9-.1-1.3H7v2.5h3.4c-.1.8-.6 1.5-1.4 2v1.6h2.2C12.4 10.7 13 9 13 7.1Z" fill="currentColor" opacity="0.85"/>
+              <path d="M7 13c1.7 0 3.2-.6 4.2-1.5l-2.1-1.7c-.6.4-1.3.6-2.1.6-1.6 0-3-1.1-3.5-2.6H1.3V9.5C2.3 11.6 4.5 13 7 13Z" fill="currentColor" opacity="0.65"/>
+              <path d="M3.5 7.9c-.1-.4-.2-.8-.2-1.2s.1-.8.2-1.2V3.8H1.3C.5 5 0 6.4 0 8s.5 3 1.3 4.2L3.5 7.9Z" fill="currentColor" opacity="0.75"/>
+              <path d="M7 2.8c.9 0 1.7.3 2.4 1l1.8-1.8C10.2 1 8.7.5 7 .5 4.5.5 2.3 1.9 1.3 4L3.5 5.7C4 4.2 5.4 2.8 7 2.8Z" fill="currentColor"/>
+            </svg>
+            Continue with Google
           </button>
         </div>
       </div>
 
       <!-- REGISTER -->
-      <div class="form-view" [class.active]="mode === 'register'">
+      <div class="form-view" [class.view-on]="mode === 'register'">
         <div class="name-row">
           <div class="field">
             <label class="field-label">First name</label>
-            <input class="fi" [(ngModel)]="regFirstName" placeholder="Buse"/>
+            <input class="fi" [(ngModel)]="regFirstName" placeholder="First name" autocomplete="given-name"/>
           </div>
           <div class="field">
             <label class="field-label">Last name</label>
-            <input class="fi" [(ngModel)]="regLastName" placeholder="U."/>
+            <input class="fi" [(ngModel)]="regLastName" placeholder="Last name" autocomplete="family-name"/>
           </div>
         </div>
         <div class="field">
@@ -112,7 +131,33 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
         </div>
         <div class="field">
           <label class="field-label">Create Password</label>
-          <input class="fi" [(ngModel)]="regPassword" placeholder="Min. 8 characters" type="password" (input)="pwStrength($event)" (keyup.enter)="onRegister()"/>
+          <div class="fi-wrap">
+            <input
+              class="fi fi--pw"
+              [(ngModel)]="regPassword"
+              placeholder="Min. 8 characters"
+              [type]="regPwVisible ? 'text' : 'password'"
+              (input)="pwStrength($event)"
+              (keyup.enter)="onRegister()"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="pw-eye"
+              (click)="regPwVisible = !regPwVisible"
+              [attr.aria-pressed]="regPwVisible"
+              [attr.aria-label]="regPwVisible ? 'Hide password' : 'Show password'"
+            >
+              <svg *ngIf="!regPwVisible" class="pw-eye-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg *ngIf="regPwVisible" class="pw-eye-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
           <div class="pw-bars">
             <div class="pw-bar" [style.background]="s >= 1 ? c : 'rgba(255,255,255,0.05)'"></div>
             <div class="pw-bar" [style.background]="s >= 2 ? c : 'rgba(255,255,255,0.05)'"></div>
@@ -123,12 +168,31 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 
         <p *ngIf="regError" class="error-msg">{{regError}}</p>
 
-        <button class="submit" (click)="onRegister()" [disabled]="isLoading">
-          <span *ngIf="!isLoading">Create Account →</span>
-          <span *ngIf="isLoading" class="spin">◌</span>
+        <button class="submit" type="button" (click)="onRegister()" [disabled]="registerBusy">
+          <span class="submit-label" *ngIf="!registerSubmitting">Create Account →</span>
+          <span class="submit-spinner" *ngIf="registerSubmitting" aria-hidden="true"></span>
         </button>
+
+        <div class="login-div-row">
+          <div class="login-div-line"></div>
+          <span class="login-div-text">or</span>
+          <div class="login-div-line"></div>
+        </div>
+
+        <div class="social-row">
+          <button type="button" class="soc-btn soc-btn-google" (click)="onGoogleSignIn()" [disabled]="googleBusy" title="Continue with Google">
+            <svg class="soc-ico" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M13 7.1c0-.5 0-.9-.1-1.3H7v2.5h3.4c-.1.8-.6 1.5-1.4 2v1.6h2.2C12.4 10.7 13 9 13 7.1Z" fill="currentColor" opacity="0.85"/>
+              <path d="M7 13c1.7 0 3.2-.6 4.2-1.5l-2.1-1.7c-.6.4-1.3.6-2.1.6-1.6 0-3-1.1-3.5-2.6H1.3V9.5C2.3 11.6 4.5 13 7 13Z" fill="currentColor" opacity="0.65"/>
+              <path d="M3.5 7.9c-.1-.4-.2-.8-.2-1.2s.1-.8.2-1.2V3.8H1.3C.5 5 0 6.4 0 8s.5 3 1.3 4.2L3.5 7.9Z" fill="currentColor" opacity="0.75"/>
+              <path d="M7 2.8c.9 0 1.7.3 2.4 1l1.8-1.8C10.2 1 8.7.5 7 .5 4.5.5 2.3 1.9 1.3 4L3.5 5.7C4 4.2 5.4 2.8 7 2.8Z" fill="currentColor"/>
+            </svg>
+            Continue with Google
+          </button>
+        </div>
+
         <p class="terms-text">
-          By signing up you agree to our <a>Terms</a> and <a>Privacy Policy</a>.
+          By signing up you agree to our <a routerLink="/terms">Terms</a> and <a routerLink="/privacy">Privacy Policy</a>.
         </p>
       </div>
     </div>
@@ -177,6 +241,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
       padding:4px; position:relative; margin-bottom:32px;
     }
     .toggle-bg{
+      box-sizing:border-box;
       position:absolute; top:4px; bottom:4px; left:4px; width:calc(50% - 4px);
       border-radius:26px; background:rgba(62,207,178,0.08);
       border:1px solid rgba(62,207,178,0.15); z-index:0;
@@ -188,8 +253,8 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
       flex:1; text-align:center; padding:10px 0; border-radius:26px; font-size:13px; font-weight:600;
       cursor:pointer; position:relative; z-index:1; transition:all 0.3s; color:var(--text3);
     }
-    .t-opt.active{ color:var(--teal); }
-    .t-opt:hover:not(.active) { color:var(--text2); }
+    .t-opt.tab-on{ color:var(--teal); }
+    .t-opt:hover:not(.tab-on) { color:var(--text2); }
 
     /* HEADLINE STYLES */
     .headline-container { position: relative; height: 64px; margin-bottom: 24px; }
@@ -197,7 +262,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
        position: absolute; inset: 0; opacity: 0; transform: translateY(10px);
        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .headline.active { opacity: 1; transform: translateY(0); }
+    .headline.head-on { opacity: 1; transform: translateY(0); }
     .hl-title{ font-family:'Playfair Display',serif; font-size:28px; font-weight:400; color:var(--text); line-height:1.2; }
     .hl-title em{ font-style:italic; color:var(--teal); }
     .hl-sub{ font-size:13px; color:var(--text2); margin-top:6px; font-weight:400; }
@@ -205,58 +270,140 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
     /* FORM STYLES */
     .form-stack { display: flex; flex-direction: column; gap: 16px; }
     .form-view { display: none; animation: fade-in 0.4s ease forwards; gap: 16px; }
-    .form-view.active { display: flex; flex-direction: column; }
+    .form-view.view-on { display: flex; flex-direction: column; }
     @keyframes fade-in { from{opacity:0; transform:scale(0.99);} to{opacity:1; transform:scale(1);} }
 
     .field{display:flex;flex-direction:column;gap:6px;}
     .field-label{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;}
     .fi{
+      display:block;
+      width:100%;
+      max-width:100%;
       background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px 16px;
       font-size:14px; color:var(--text); font-family:inherit; outline:none; transition:all 0.3s;
+      box-sizing:border-box;
     }
-    .fi:focus{ background:rgba(62,207,178,0.03); border-color:rgba(62,207,178,0.4); box-shadow:0 0 0 4px rgba(62,207,178,0.08); }
+    .fi::placeholder { color: var(--text3); opacity: 0.85; }
+    :host-context(html.light-mode) .fi::placeholder { color: #6b6b68; opacity: 1; }
+    .fi:focus{
+      background:rgba(62,207,178,0.04);
+      border-color:rgba(62,207,178,0.45);
+      box-shadow: inset 0 0 0 1px rgba(62,207,178,0.25);
+    }
+
+    .fi-wrap{
+      position:relative;
+      display:block;
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      align-self:stretch;
+    }
+    .fi--pw{ padding-right:48px; }
+    .pw-eye{
+      position:absolute; right:4px; top:50%; transform:translateY(-50%);
+      z-index:2; width:38px; height:38px; padding:0; margin:0;
+      border:none; border-radius:10px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      background:transparent;
+      color:rgba(255,255,255,0.45);
+      transition:color 0.15s ease, background 0.15s ease;
+    }
+    .pw-eye:hover{ color:rgba(255,255,255,0.92); background:rgba(255,255,255,0.07); }
+    .pw-eye:focus-visible{
+      outline:2px solid rgba(62,207,178,0.55);
+      outline-offset:1px;
+    }
+    .pw-eye-ico{ width:18px; height:18px; flex-shrink:0; display:block; }
+    :host-context(html.light-mode) .pw-eye{
+      color:#7a7874;
+    }
+    :host-context(html.light-mode) .pw-eye:hover{
+      color:#2c2b28;
+      background:rgba(0,0,0,0.06);
+    }
+    :host-context(html.light-mode) .pw-eye:focus-visible{
+      outline-color:rgba(45,140,120,0.55);
+    }
     
-    .name-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-    .forgot{font-size:11px;color:var(--text3);cursor:pointer; transition:color 0.2s;}
+    .name-row{display:grid;grid-template-columns:1fr 1fr;gap:12px; min-width:0;}
+    .name-row .field { min-width: 0; }
+    .forgot{
+      font-size:11px;color:var(--text3);cursor:pointer; transition:color 0.2s;
+      text-decoration:none;
+    }
     .forgot:hover{color:var(--teal);}
     
     .error-msg { color:var(--red); font-size:12px; font-weight:500; margin: -4px 0 4px; }
     
     .submit{
-      width:100%; padding:14px; border-radius:30px; background:linear-gradient(135deg, var(--teal), var(--teal2));
+      width:100%; min-height:48px; padding:14px; border-radius:30px; background:linear-gradient(135deg, var(--teal), var(--teal2));
       color:#040404; font-size:14px; font-weight:700; cursor:pointer; border:none; margin-top:8px;
       transition:all 0.3s cubic-bezier(0.19, 1, 0.22, 1); box-shadow:0 4px 15px rgba(62,207,178,0.2);
+      display:flex; align-items:center; justify-content:center;
     }
-    .submit:hover{ transform:translateY(-2px); box-shadow:0 8px 25px rgba(62,207,178,0.3); filter:brightness(1.1); }
+    .submit:hover:not(:disabled){ transform:translateY(-2px); box-shadow:0 8px 25px rgba(62,207,178,0.3); filter:brightness(1.1); }
     .submit:active{ transform:translateY(0) scale(0.98); }
-    .submit:disabled{ opacity:0.6; pointer-events:none; }
-
-    .divider { display:flex; align-items:center; gap:15px; margin:10px 0; }
-    .divider-line { flex:1; height:1px; background:var(--border); }
-    .divider-text { font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; }
-
-    .social-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .soc-btn {
-      padding:12px; border-radius:12px; background:var(--glass); border:1px solid var(--border);
-      color:var(--text); font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:all 0.2s;
+    .submit:disabled{ opacity:0.65; pointer-events:none; }
+    .submit-label { display:inline-block; }
+    .submit-spinner{
+      width:20px;height:20px;border-radius:50%;
+      border:2px solid rgba(4,4,4,0.25);border-top-color:#040404;
+      animation:spin 0.7s linear infinite;
+      margin:0 auto;display:block;
     }
-    .soc-btn:hover { background:var(--glass2); border-color:var(--border2); }
+
+    /* Unique class names — avoid clash with global .divider (e.g. consumer) */
+    .login-div-row { display:flex; align-items:center; gap:10px; margin:4px 0 2px; }
+    .login-div-line { flex:1; height:1px; background:var(--border); min-width:0; }
+    .login-div-text { font-size:11px; color:var(--text3); font-weight:500; text-transform:lowercase; flex-shrink:0; }
+
+    .social-row { display:block; max-width:100%; }
+    .soc-btn-google { width:100%; }
+    .soc-btn {
+      padding:10px 8px; border-radius:9px; background:var(--glass); border:1px solid var(--border);
+      color:var(--text2); font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.15s;
+    }
+    .soc-btn:hover:not(:disabled) { background:var(--glass2); border-color:var(--border2); color:var(--text); }
+    .soc-btn:disabled { opacity:0.65; cursor:wait; }
+    .soc-ico {
+      width:18px; height:18px; flex-shrink:0; display:block; color:var(--text2);
+    }
+    :host-context(html.light-mode) .soc-ico { color:#5a6560; }
     
     .terms-text { font-size:11px; color:var(--text3); text-align:center; padding:0 10px; line-height:1.6; }
     .terms-text a { color:var(--text2); cursor:pointer; text-decoration:underline; }
+
+    .pw-bars{display:flex;gap:4px;margin-top:8px;}
+    .pw-bar{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,0.06);transition:background 0.25s;min-width:0;}
+    :host-context(html.light-mode) .pw-bar{background:rgba(0,0,0,0.06);}
     
-    .spin { animation:spin 1s linear infinite; display:inline-block; font-size:18px; line-height:1; }
     @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
   `]
 })
 export class LoginComponent {
-  email = 'admin@smartstore.com';
-  password = 'admin123';
+  email = '';
+  password = '';
   error = '';
   mode = 'login';
   s = 0;
   c = 'rgba(255,255,255,0.05)';
-  isLoading = false;
+  loginSubmitting = false;
+  registerSubmitting = false;
+  googlePending = false;
+
+  get loginBusy(): boolean {
+    return this.loginSubmitting || this.googlePending;
+  }
+  get registerBusy(): boolean {
+    return this.registerSubmitting || this.googlePending;
+  }
+  get googleBusy(): boolean {
+    return this.googlePending || this.loginSubmitting || this.registerSubmitting;
+  }
+
+  loginPwVisible = false;
+  regPwVisible = false;
 
   regFirstName = '';
   regLastName = '';
@@ -267,10 +414,15 @@ export class LoginComponent {
   auth = inject(AuthService);
   router = inject(Router);
 
+  /** Single-flight load of https://accounts.google.com/gsi/client */
+  private gsiScriptPromise: Promise<void> | null = null;
+
   setMode(m: string) {
     this.mode = m;
     this.error = '';
     this.regError = '';
+    this.loginPwVisible = false;
+    this.regPwVisible = false;
   }
 
   pwStrength(event: any) {
@@ -285,23 +437,121 @@ export class LoginComponent {
   }
 
   onLogin() {
-    this.isLoading = true;
+    this.loginSubmitting = true;
     this.error = '';
 
     setTimeout(() => {
       this.auth.login({ email: this.email, password: this.password }).subscribe({
         next: (user) => {
-          this.isLoading = false;
-          if (user.role === 'ADMIN') this.router.navigate(['/admin']);
-          else if (user.role === 'MANAGER') this.router.navigate(['/manager']);
-          else this.router.navigate([CONSUMER_NAV.shop]);
+          this.loginSubmitting = false;
+          this.afterAuth(user);
         },
         error: () => {
           this.error = 'Invalid credentials. Please try again.';
-          this.isLoading = false;
+          this.loginSubmitting = false;
         }
       });
     }, 600);
+  }
+
+  onGoogleSignIn() {
+    this.error = '';
+    this.regError = '';
+    const cid = (environment.googleClientId ?? '').trim();
+    if (!cid) {
+      this.setGoogleError(
+        'Google sign-in: add your Web Client ID to environment.googleClientId (Google Cloud Console → OAuth client → Authorized JavaScript origins: http://localhost:4200).'
+      );
+      return;
+    }
+    this.googlePending = true;
+    this.ensureGsiScript()
+      .then(() => {
+        const w = window as unknown as { google?: { accounts?: { oauth2?: { initTokenClient: (x: unknown) => { requestAccessToken: () => void } } } } };
+        const oauth2 = w.google?.accounts?.oauth2;
+        if (!oauth2) {
+          this.googlePending = false;
+          this.setGoogleError('Google Sign-In script did not initialize.');
+          return;
+        }
+        oauth2
+          .initTokenClient({
+            client_id: cid,
+            scope: 'openid email profile',
+            callback: (resp: { error?: string; access_token?: string }) => {
+              if (resp.error) {
+                this.googlePending = false;
+                if (resp.error !== 'popup_closed_by_user') {
+                  this.setGoogleError(resp.error || 'Google sign-in failed.');
+                }
+                return;
+              }
+              if (!resp.access_token) {
+                this.googlePending = false;
+                this.setGoogleError('No access token from Google.');
+                return;
+              }
+              this.auth.loginWithGoogleAccessToken(resp.access_token).subscribe({
+                next: (user: { role: string }) => {
+                  this.googlePending = false;
+                  this.afterAuth(user);
+                },
+                error: (err: { error?: { message?: string }; message?: string }) => {
+                  this.googlePending = false;
+                  this.setGoogleError(err.error?.message || err.message || 'Google sign-in failed.');
+                }
+              });
+            }
+          })
+          .requestAccessToken();
+      })
+      .catch(() => {
+        this.googlePending = false;
+        this.setGoogleError('Could not load Google Sign-In.');
+      });
+  }
+
+  /** Show Google errors on the active tab (Sign In vs Create Account). */
+  private setGoogleError(msg: string) {
+    if (this.mode === 'register') {
+      this.regError = msg;
+    } else {
+      this.error = msg;
+    }
+  }
+
+  private ensureGsiScript(): Promise<void> {
+    if (this.gsiScriptPromise) {
+      return this.gsiScriptPromise;
+    }
+    const w = window as unknown as { google?: { accounts?: { oauth2?: unknown } } };
+    if (w.google?.accounts?.oauth2) {
+      this.gsiScriptPromise = Promise.resolve();
+      return this.gsiScriptPromise;
+    }
+    this.gsiScriptPromise = new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector('script[data-nexus-gsi="1"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve());
+        existing.addEventListener('error', () => reject());
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.defer = true;
+      s.setAttribute('data-nexus-gsi', '1');
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('gsi script'));
+      document.head.appendChild(s);
+    });
+    return this.gsiScriptPromise;
+  }
+
+  private afterAuth(user: { role: string }) {
+    if (user.role === 'ADMIN') this.router.navigate(['/admin']);
+    else if (user.role === 'MANAGER') this.router.navigate(['/manager']);
+    else this.router.navigate([CONSUMER_NAV.shop]);
   }
 
   onRegister() {
@@ -315,18 +565,16 @@ export class LoginComponent {
       return;
     }
 
-    this.isLoading = true;
+    this.registerSubmitting = true;
     this.regError = '';
 
     this.auth.register({ email: this.regEmail, fullName, passwordHash: this.regPassword }).subscribe({
       next: (user) => {
-        this.isLoading = false;
-        if (user.role === 'ADMIN') this.router.navigate(['/admin']);
-        else if (user.role === 'MANAGER') this.router.navigate(['/manager']);
-        else this.router.navigate([CONSUMER_NAV.shop]);
+        this.registerSubmitting = false;
+        this.afterAuth(user);
       },
       error: (err) => {
-        this.isLoading = false;
+        this.registerSubmitting = false;
         this.regError = err.error?.message || 'Registration failed. Please try again.';
       }
     });

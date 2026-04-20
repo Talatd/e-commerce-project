@@ -13,6 +13,10 @@ export const CONSUMER_NAV = {
 export const FULLPAGE_STANDALONE_PATHS: readonly string[] = [
   '/',
   '/login',
+  '/forgot-password',
+  '/reset-password',
+  '/terms',
+  '/privacy',
   '/admin',
   '/manager',
   CONSUMER_NAV.shop,

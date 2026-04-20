@@ -730,7 +730,8 @@ body {
 .fancy-link:hover::after{width:100%;}
 
 /* TOAST NOTIFICATIONS */
-#toast-container {
+#toast-container,
+#toast-container-noauth {
   position: fixed;
   bottom: 30px;
   right: 30px;

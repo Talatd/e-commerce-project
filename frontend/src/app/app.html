@@ -171,5 +171,11 @@
 <ng-template #noAuth>
   <div [class.light-mode]="theme.isLight()">
     <router-outlet></router-outlet>
+    <div id="toast-container-noauth">
+      <div class="toast-nexus" *ngFor="let t of activeToasts" [class]="t.type">
+        <div class="toast-dot"></div>
+        <div class="toast-msg">{{t.msg}}</div>
+      </div>
+    </div>
   </div>
 </ng-template>

@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { HttpBackend, HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, Subject, of, map, catchError } from 'rxjs';
 import { apiRoot } from '../environments/environment';
@@ -9,6 +10,7 @@ const API_V1 = apiRoot();
 export class AuthService {
   private http = inject(HttpClient);
   private httpBackend = inject(HttpBackend);
+  private router = inject(Router);
   /** Avoids interceptor recursion when refreshing tokens. */
   private refreshHttp = new HttpClient(this.httpBackend);
   private apiUrl = `${API_V1}/auth`;
@@ -48,6 +50,21 @@ export class AuthService {
     );
   }
 
+  /** Google OAuth access token → app session (backend verifies token with Google userinfo). */
+  loginWithGoogleAccessToken(accessToken: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/google`, { accessToken }).pipe(
+      tap((user: any) => this.persistSession(user))
+    );
+  }
+
+  forgotPassword(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/reset-password`, { token, newPassword });
+  }
+
   /** Uses HttpBackend client so the global interceptor does not recurse. */
   refreshAccessToken(): Observable<boolean> {
     const rt = localStorage.getItem('refreshToken');
@@ -67,6 +84,7 @@ export class AuthService {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('cart');
     this.currentUserSubject.next(null);
+    this.router.navigate(['/'], { replaceUrl: true });
   }
 
   get token() { return localStorage.getItem('token'); }

@@ -7,6 +7,7 @@ import com.smartstore.backend.model.User;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.ShipmentRepository;
 import com.smartstore.backend.repository.UserRepository;
+import com.smartstore.backend.service.MailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class ShipmentController {
     private final ShipmentRepository shipmentRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+    private final MailService mailService;
 
     private User currentUser(UserDetails principal) {
         return userRepository.findByEmail(principal.getUsername()).orElseThrow();
@@ -104,7 +106,14 @@ public class ShipmentController {
         if (shipment.getTrackingNumber() == null || shipment.getTrackingNumber().isBlank()) {
             shipment.setTrackingNumber("FX-" + System.currentTimeMillis());
         }
-        return ResponseEntity.ok(shipmentRepository.save(shipment));
+        if (shipment.getStatus() == Shipment.ShipmentStatus.SHIPPED && shipment.getShippedAt() == null) {
+            shipment.setShippedAt(LocalDateTime.now());
+        }
+        Shipment saved = shipmentRepository.save(shipment);
+        if (saved.getStatus() == Shipment.ShipmentStatus.SHIPPED) {
+            notifyShipmentShippedEmail(saved);
+        }
+        return ResponseEntity.ok(saved);
     }
 
     @PatchMapping("/{id}/status")
@@ -112,6 +121,7 @@ public class ShipmentController {
     @Operation(summary = "Update shipment status")
     public ResponseEntity<Shipment> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         Shipment shipment = shipmentRepository.findById(Objects.requireNonNull(id)).orElseThrow();
+        Shipment.ShipmentStatus previous = shipment.getStatus();
         String newStatus = body.get("status");
         if (newStatus == null || newStatus.isBlank()) {
             throw new IllegalArgumentException("Status is required");
@@ -126,6 +136,21 @@ public class ShipmentController {
             shipment.setOnTimeDelivery(
                     shipment.getEstimatedDelivery() == null || !LocalDateTime.now().isAfter(shipment.getEstimatedDelivery()));
         }
-        return ResponseEntity.ok(shipmentRepository.save(shipment));
+        Shipment saved = shipmentRepository.save(shipment);
+        if (previous != Shipment.ShipmentStatus.SHIPPED && saved.getStatus() == Shipment.ShipmentStatus.SHIPPED) {
+            notifyShipmentShippedEmail(saved);
+        }
+        return ResponseEntity.ok(saved);
+    }
+
+    private void notifyShipmentShippedEmail(Shipment saved) {
+        Order order = saved.getOrder();
+        if (order == null || order.getUser() == null) {
+            return;
+        }
+        String email = order.getUser().getEmail();
+        if (email != null && !email.isBlank()) {
+            mailService.sendShipmentShipped(email, saved);
+        }
     }
 }

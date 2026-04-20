@@ -20,9 +20,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         req.headers.has('X-Auth-Retry') ||
         url.includes('/auth/refresh') ||
         url.includes('/auth/login') ||
-        url.includes('/auth/register');
+        url.includes('/auth/register') ||
+        url.includes('/auth/google') ||
+        url.includes('/auth/forgot-password') ||
+        url.includes('/auth/reset-password');
       if (skipRefresh) {
-        if (!url.includes('/auth/login') && !url.includes('/auth/register')) {
+        if (!url.includes('/auth/login') && !url.includes('/auth/register') && !url.includes('/auth/google')
+            && !url.includes('/auth/forgot-password') && !url.includes('/auth/reset-password')) {
           localStorage.removeItem('user');
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
