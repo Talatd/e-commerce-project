@@ -1,0 +1,762 @@
+import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
+import { AuthService, ProductService, StoreService, AdminService, OrderService, CategoryService, CustomerProfileService, ToastService } from '../services';
+import { NexusLogoComponent } from '../nexus-logo.component';
+import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
+import { Chart } from './chart-register';
+
+@Component({
+  selector: 'app-admin',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
+  template: `
+<style>
+.admin-page { background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+:host-context(html.light-mode) .navbar-a{background:rgba(245,242,237,0.96);}
+:host-context(html.light-mode) .sidebar-a{background:rgba(245,242,237,0.55);}
+.navbar-a { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; border-bottom:1px solid var(--border); background:rgba(8,8,8,0.95); backdrop-filter:blur(20px); flex-shrink:0; z-index:100; }
+.logo-a { font-family:'Playfair Display',serif; font-style:italic; font-size:18px; color:var(--text); display:flex; align-items:center; gap:8px; }
+.logo-dot-a { width:6px; height:6px; border-radius:50%; background:var(--teal); box-shadow:0 0 8px var(--teal-glow); }
+.badge-a { background:var(--teal-dim); border:1px solid rgba(62,207,178,0.2); color:var(--teal); font-size:9px; padding:2px 8px; border-radius:8px; text-transform:uppercase; letter-spacing:0.06em; }
+.pc-badges { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; margin-bottom:8px; }
+.pc-badge { font-size:9px; font-weight:700; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.02em; background:var(--glass2); color:var(--text2); }
+.nav-r-a { display:flex; align-items:center; gap:12px; }
+.nav-av-a { width:30px; height:30px; border-radius:50%; background:var(--teal-dim); border:1px solid rgba(62,207,178,0.2); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:var(--teal); }
+
+.body-a { display:flex; flex:1; overflow:hidden; }
+.sidebar-a { width:200px; min-width:200px; border-right:1px solid var(--border); background:rgba(8,8,8,0.4); display:flex; flex-direction:column; padding:16px 10px; }
+.sg-label-a { font-size:8.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3); padding:0 12px; margin:14px 0 6px; }
+.sg-label-a:first-child { margin-top:0; }
+.sitem-a { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:12px; font-size:13px; color:var(--text2); cursor:pointer; transition:all 0.2s; margin-bottom:2px; justify-content:space-between; }
+.sitem-a.active { background:var(--teal-dim); color:var(--teal2); border:1px solid rgba(62,207,178,0.15); }
+.sitem-a:not(.active):hover { background:var(--glass); color:var(--text); }
+.sitem-l-a { display:flex; align-items:center; gap:10px; }
+.sitem-badge-a { font-size:9px; padding:1px 6px; border-radius:8px; background:var(--glass2); color:var(--text2); }
+.sitem-badge-a.green { background:var(--teal-dim); color:var(--teal); }
+
+.sidebar-foot-a { margin-top:auto; padding-top:12px; border-top:1px solid var(--border); }
+.s-user-a { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:12px; transition:all 0.2s; cursor:pointer; }
+.s-user-a:hover { background:var(--glass); }
+.su-name-a { font-size:12px; font-weight:500; color:var(--text); }
+.su-role-a { font-size:10px; color:var(--text3); }
+
+.main-a { flex:1; overflow-y:auto; padding:24px; position:relative; }
+.panel-a { display:none; animation:fade-up 0.4s ease forwards; }
+.panel-a.active { display:block; }
+@keyframes fade-up { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+.top-bar-a { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:24px; }
+.page-title-a { font-family:'Playfair Display',serif; font-size:24px; font-style:italic; font-weight:400; color:var(--text); }
+.page-sub-a { font-size:12px; color:var(--text3); margin-top:4px; }
+.top-actions-a { display:flex; gap:8px; }
+.tbtn-a { padding:8px 16px; border-radius:20px; font-size:12px; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+.tbtn-ghost-a { background:var(--glass); border:1px solid var(--border2); color:var(--text2); }
+.tbtn-ghost-a:hover { color:var(--text); border-color:var(--text3); }
+.tbtn-primary-a { background:var(--teal); border:none; color:#080808; font-weight:600; }
+.tbtn-primary-a:hover { background:var(--teal2); transform:translateY(-1px); }
+
+.kpi-row-a { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.kpi-a { background:var(--glass); border:1px solid var(--border); border-radius:14px; padding:18px 20px; transition:all 0.3s; }
+.kpi-a:hover { border-color:var(--teal-dim); transform:translateY(-2px); }
+.kpi-label-a { font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:8px; }
+.kpi-val-a { font-family:'Playfair Display',serif; font-size:26px; color:var(--text); line-height:1; font-weight:400; }
+.kpi-delta-a { font-size:11px; margin-top:8px; display:flex; align-items:center; gap:4px; }
+.up-a { color:var(--green); }
+.dn-a { color:var(--red); }
+
+.chart-row-a { display:grid; grid-template-columns:1fr 280px; gap:16px; margin-bottom:24px; }
+.gcard-a { background:var(--glass); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.gc-head-a { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.gc-title-a { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text2); font-weight:600; }
+.gc-link-a { font-size:11px; color:var(--text3); cursor:pointer; }
+.gc-body-a { padding:20px; }
+
+.bar-chart-a { display:flex; align-items:flex-end; gap:8px; height:120px; }
+.bc-col-a { display:flex; flex-direction:column; align-items:center; gap:6px; flex:1; }
+.bc-bar-a { width:100%; border-radius:4px 4px 0 0; background:rgba(62,207,178,0.12); transition:all 0.4s; position:relative; }
+.bc-bar-a:hover { background:rgba(62,207,178,0.3); }
+.bc-bar-a.active { background:var(--teal); box-shadow:0 0 15px var(--teal-glow); }
+.bc-label-a { font-size:9px; color:var(--text3); font-family:'JetBrains Mono',monospace; }
+
+.donut-wrap-a { display:flex; align-items:center; gap:20px; }
+.donut-legend-a { display:flex; flex-direction:column; gap:10px; }
+.dl-item-a { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text2); }
+.dl-dot-a { width:8px; height:8px; border-radius:50%; }
+
+.table-card-a { background:var(--glass); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:24px; }
+.tbl-a { width:100%; border-collapse:collapse; }
+.tbl-a th { padding:12px 20px; text-align:left; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); font-weight:600; }
+.tbl-a td { padding:14px 20px; font-size:13px; color:var(--text2); border-bottom:1px solid rgba(255,255,255,0.03); }
+.tbl-a tr:last-child td { border-bottom:none; }
+.tbl-a tr:hover td { background:rgba(255,255,255,0.02); }
+.td-mono-a { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--teal2); }
+.td-name-a { color:var(--text); font-weight:500; }
+.spill-a { display:inline-flex; align-items:center; gap:6px; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:500; }
+.sp-green-a { background:var(--green-dim); color:var(--green); }
+.sp-blue-a { background:rgba(107,168,200,0.1); color:var(--blue); }
+.sp-amber-a { background:rgba(232,169,74,0.1); color:var(--amber); }
+
+.store-grid-a { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+.store-card-a { background:var(--glass); border:1px solid var(--border); border-radius:14px; padding:20px; transition:all 0.3s; }
+.store-card-a:hover { border-color:var(--teal-dim); transform:translateY(-2px); }
+.sc-top-a { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; }
+.sc-name-a { font-size:15px; font-weight:600; color:var(--text); }
+.sc-owner-a { font-size:11px; color:var(--text3); margin-top:2px; }
+.sc-status-a { font-size:10px; padding:3px 10px; border-radius:20px; display:inline-flex; align-items:center; gap:5px; }
+.sc-status-a.open { background:var(--green-dim); color:var(--green); border:1px solid rgba(62,201,138,0.2); }
+.sc-status-a.closed { background:var(--red-dim); color:var(--red); border:1px solid var(--red-border); }
+.sc-dot-a { width:6px; height:6px; border-radius:50%; }
+.sc-dot-a.on { background:var(--green); box-shadow:0 0 4px var(--green); }
+.sc-stats-a { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; padding:15px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.sc-stat-a { text-align:center; }
+.sc-stat-v-a { font-size:16px; font-weight:600; color:var(--text); }
+.sc-stat-l-a { font-size:9px; color:var(--text3); text-transform:uppercase; margin-top:4px; letter-spacing:0.04em; }
+.sc-actions-a { display:flex; gap:8px; }
+.sc-btn-a { flex:1; padding:8px 0; border-radius:12px; font-size:12px; cursor:pointer; text-align:center; border:1px solid var(--border); background:var(--glass2); color:var(--text2); transition:all 0.2s; }
+.sc-btn-a.danger { color:var(--red); border-color:rgba(224,112,112,0.2); }
+.sc-btn-a:hover:not(.danger) { color:var(--text); border-color:var(--text3); }
+.sc-btn-a.danger:hover { background:var(--red-dim); }
+
+.prod-mgmt-grid-a { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.pm-card-a { background:var(--glass); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:all 0.3s; }
+.pm-card-a:hover { border-color:var(--teal-dim); transform:translateY(-2px); }
+.pm-img-a { height:120px; background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--border); position:relative; overflow:hidden; }
+.pm-img-a::after { content:''; position:absolute; inset:0; pointer-events:none; z-index:2; background:radial-gradient(ellipse 88% 88% at 50% 48%, rgba(0,0,0,0) 28%, rgba(0,0,0,0.25) 100%); }
+:host-context(html.light-mode) .pm-img-a::after { background:radial-gradient(ellipse 88% 88% at 50% 48%, rgba(0,0,0,0) 24%, rgba(0,0,0,0.2) 100%); }
+.pm-img-a-photo { position:absolute; inset:8px; width:calc(100% - 16px); height:calc(100% - 16px); object-fit:cover; object-position:center; border-radius:14px; z-index:1; display:block; }
+.pm-body-a { padding:15px; }
+.pm-name-a { font-size:13px; font-weight:600; color:var(--text); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pm-row-a { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.pm-price-a { font-family:'Playfair Display',serif; font-size:16px; color:var(--text); }
+.pm-stock-a { font-size:10px; padding:2px 8px; border-radius:8px; }
+.pm-stock-a.ok { background:var(--green-dim); color:var(--green); }
+.pm-stock-a.low { background:var(--amber-dim); color:var(--amber); }
+
+.set-card-a { background:var(--glass); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:600px; }
+.set-row-a { display:flex; align-items:center; justify-content:space-between; padding:16px 0; border-bottom:1px solid var(--border); }
+.set-row-a:last-child { border-bottom:none; }
+.set-info-a { flex:1; }
+.set-title-a { font-size:14px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.set-desc-a { font-size:12px; color:var(--text3); }
+.set-tog-a { width:40px; height:22px; border-radius:12px; background:var(--glass2); border:1px solid var(--border); position:relative; cursor:pointer; transition:all 0.3s; }
+.set-tog-a.on { background:var(--teal-dim); border-color:var(--teal-glow); }
+.set-tog-thumb-a { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--text3); transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.set-tog-a.on .set-tog-thumb-a { transform:translateX(18px); background:var(--teal); box-shadow:0 0 8px var(--teal-glow); }
+</style>
+
+<div class="admin-page">
+  <!-- NAVBAR -->
+  <div class="navbar-a">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="logo-a"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
+      <div class="badge-a">Admin</div>
+    </div>
+    <div class="nav-r-a">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
+      <div class="nav-notif-a" style="position:relative; width:34px; height:34px; background:var(--glass); border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5c-2.2 0-4 1.8-4 4V9l-1 1.5h10l-1-1.5V5.5c0-2.2-1.8-4-4-4Z" stroke="var(--text2)" stroke-width="1.1"/><path d="M6 12c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="var(--text2)" stroke-width="1.1"/></svg>
+        <div style="position:absolute; top:-1px; right:-1px; width:8px; height:8px; border-radius:50%; background:var(--red); border:1.5px solid #080808;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="body-a">
+    <!-- SIDEBAR -->
+    <div class="sidebar-a">
+      <div class="sg-label-a">Overview</div>
+      <div class="sitem-a" [class.active]="tab === 'dashboard'" (click)="tab = 'dashboard'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.6"/><rect x="7" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.4"/><rect x="1" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.4"/><rect x="7" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.3"/></svg>Dashboard</div>
+      </div>
+      <div class="sitem-a" [class.active]="tab === 'analytics'" (click)="tab = 'analytics'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 10L4 6l3 2 5-6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Analytics</div>
+      </div>
+
+      <div class="sg-label-a">Management</div>
+      <div class="sitem-a" [class.active]="tab === 'stores'" (click)="tab = 'stores'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 5.5h10v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6Z" stroke="currentColor" stroke-width="1.1"/><path d="M.5 3l.8-1.5h10.4L12.5 3a2 2 0 0 1-2 2.5h-8A2 2 0 0 1 .5 3Z" stroke="currentColor" stroke-width="1.1"/></svg>Stores</div>
+        <div class="sitem-badge-a green">{{stores.length}}</div>
+      </div>
+      <div class="sitem-a" [class.active]="tab === 'users'" (click)="tab = 'users'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1.5 11.5c0-2.7 2-4 5-4s5 1.3 5 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Users</div>
+        <div class="sitem-badge-a">{{users.length}}</div>
+      </div>
+      <div class="sitem-a" [class.active]="tab === 'products'" (click)="tab = 'products'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L1 4v5l5.5 3L12 9V4L6.5 1Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>Products</div>
+      </div>
+      <div class="sitem-a" [class.active]="tab === 'orders'" (click)="tab = 'orders'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h1.5l2 7h6l1.5-4.5H4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="11" r="1" fill="currentColor"/><circle cx="10" cy="11" r="1" fill="currentColor"/></svg>Orders</div>
+      </div>
+
+      <div class="sitem-a" [class.active]="tab === 'categories'" (click)="tab = 'categories'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h4v4H2zM7 2h4v4H7zM2 7h4v4H2zM7 7h4v4H7z" stroke="currentColor" stroke-width="1.1"/></svg>Categories</div>
+      </div>
+
+      <div class="sitem-a" [class.active]="tab === 'comparison'" (click)="tab = 'comparison'; loadStoreComparison()">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 11V6h2.5v5H1zM5.25 11V3h2.5v8h-2.5zM9.5 11V1H12v10H9.5z" stroke="currentColor" stroke-width="1.1"/></svg>Store Comparison</div>
+      </div>
+
+      <div class="sg-label-a">System</div>
+      <div class="sitem-a" [class.active]="tab === 'auditlogs'" (click)="tab = 'auditlogs'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 2h7v9H3z" stroke="currentColor" stroke-width="1.1"/><path d="M5 5h3M5 7h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>Audit Logs</div>
+      </div>
+      <div class="sitem-a" [class.active]="tab === 'settings'" (click)="tab = 'settings'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1v1.2M6.5 10.8V12M1 6.5h1.2M10.8 6.5H12M2.6 2.6l.85.85M9.55 9.55l.85.85M2.6 10.4l.85-.85M9.55 3.45l.85-.85" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Config</div>
+      </div>
+
+      <div class="sidebar-foot-a">
+        <div class="s-user-a" (click)="logout()">
+          <div class="nav-av-a" style="flex-shrink:0;">{{auth.currentUserValue?.fullName?.charAt(0)}}</div>
+          <div style="min-width:0;">
+            <div class="su-name-a" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{auth.currentUserValue?.fullName}}</div>
+            <div class="su-role-a">Admin · Logout</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-a">
+      <div *ngIf="isLoading" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(8,8,8,0.7); z-index:10; backdrop-filter:blur(4px);">
+        <div class="set-spin" style="font-size:32px; color:var(--teal);">◌</div>
+        <div style="margin-top:12px; font-size:10px; letter-spacing:0.12em; color:var(--teal);">SYNCHRONIZING DATA...</div>
+      </div>
+
+      <!-- DASHBOARD PANEL -->
+      <div class="panel-a" [class.active]="tab === 'dashboard'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Dashboard</div><div class="page-sub-a">Friday, 17 April · Platform overview</div></div>
+          <div class="top-actions-a">
+            <button class="tbtn-a tbtn-ghost-a">Export Report</button>
+            <button class="tbtn-a tbtn-primary-a">+ Add Store</button>
+          </div>
+        </div>
+
+        <div class="kpi-row-a">
+          <div class="kpi-a"><div class="kpi-label-a">Platform Revenue</div><div class="kpi-val-a">{{stats.totalRevenue | currency}}</div><div class="kpi-delta-a up-a">↑ {{stats.revenueGrowth}}% this month</div></div>
+          <div class="kpi-a"><div class="kpi-label-a">Total Orders</div><div class="kpi-val-a">{{stats.totalOrders || 0}}</div><div class="kpi-delta-a up-a">↑ Active</div></div>
+          <div class="kpi-a"><div class="kpi-label-a">Active Stores</div><div class="kpi-val-a">{{stats.totalStores || 0}}</div><div class="kpi-delta-a up-a">↑ Online</div></div>
+          <div class="kpi-a"><div class="kpi-label-a">Total Users</div><div class="kpi-val-a">{{stats.totalUsers || 0}}</div><div class="kpi-delta-a up-a">↑ {{stats.activeSessions}} live sessions</div></div>
+        </div>
+
+        <div class="chart-row-a">
+          <div class="gcard-a">
+            <div class="gc-head-a"><div class="gc-title-a">Revenue by Month</div><div class="gc-link-a">Full report →</div></div>
+            <div class="gc-body-a" style="height:260px;"><canvas #adminRevenueChart></canvas></div>
+          </div>
+          <div class="gcard-a">
+            <div class="gc-head-a"><div class="gc-title-a">Revenue Split</div></div>
+            <div class="gc-body-a" style="height:260px;"><canvas #adminCategoryChart></canvas></div>
+          </div>
+        </div>
+
+        <div class="table-card-a">
+          <div class="gc-head-a"><div class="gc-title-a">Recent Orders — All Stores</div><div class="gc-link-a">View all →</div></div>
+          <table class="tbl-a">
+            <thead><tr><th>Order</th><th>Customer</th><th>Store</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let o of orders.slice(0,5)">
+                <td class="td-mono-a">#{{o.orderId}}</td>
+                <td class="td-name-a">{{o.user?.fullName || 'N/A'}}</td>
+                <td>{{o.items?.length || 0}} items</td>
+                <td>{{o.totalAmount | currency}}</td>
+                <td><span class="spill-a" [class.sp-green-a]="o.status==='DELIVERED'" [class.sp-blue-a]="o.status==='SHIPPED' || o.status==='PROCESSING'" [class.sp-amber-a]="o.status==='PENDING'" [class.sp-red-a]="o.status==='CANCELLED'">● {{o.status}}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ANALYTICS PANEL -->
+      <div class="panel-a" [class.active]="tab === 'analytics'">
+        <div class="top-bar-a"><div><div class="page-title-a">Analytics</div><div class="page-sub-a">Deep platform insights.</div></div></div>
+        <div class="kpi-row-a">
+          <div class="kpi-a"><div class="kpi-label-a">Conversion Rate</div><div class="kpi-val-a">3.2%</div><div class="kpi-delta-a up-a">↑ 0.4%</div></div>
+          <div class="kpi-a"><div class="kpi-label-a">Avg Order Value</div><div class="kpi-val-a">$68.5</div><div class="kpi-delta-a up-a">↑ 12%</div></div>
+          <div class="kpi-a"><div class="kpi-label-a">Return Rate</div><div class="kpi-val-a">4.8%</div><div class="kpi-delta-a dn-a">↑ 0.2%</div></div>
+          <div class="kpi-a"><div class="kpi-label-a">Active Sessions</div><div class="kpi-val-a">847</div><div class="kpi-delta-a up-a">Live</div></div>
+        </div>
+        <div class="gcard-a">
+          <div class="gc-head-a"><div class="gc-title-a">Traffic by Store</div></div>
+          <div class="gc-body-a">
+             <div style="display:flex; flex-direction:column; gap:16px;">
+                <div *ngFor="let s of stores.slice(0,4)" style="display:flex; align-items:center; gap:12px;">
+                  <span style="font-size:12px; color:var(--text2); width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{s.name}}</span>
+                  <div style="flex:1; height:4px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
+                    <div [style.width.%]="s.rating * 20" style="height:100%; background:var(--teal); border-radius:4px;"></div>
+                  </div>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text3); width:30px;">{{(s.rating*20).toFixed(0)}}%</span>
+                </div>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STORES PANEL -->
+      <div class="panel-a" [class.active]="tab === 'stores'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Store Management</div><div class="page-sub-a">Approve, open or close stores.</div></div>
+          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a">+ New Store</button></div>
+        </div>
+        <div class="store-grid-a">
+          <div class="store-card-a" *ngFor="let s of stores">
+            <div class="sc-top-a">
+              <div><div class="sc-name-a">{{s.name}}</div><div class="sc-owner-a">Owner: {{s.ownerName}}</div></div>
+              <div class="sc-status-a" [class.open]="s.status === 'OPEN'" [class.closed]="s.status !== 'OPEN'">
+                <div class="sc-dot-a" [class.on]="s.status === 'OPEN'"></div>{{s.status}}
+              </div>
+            </div>
+            <div class="sc-stats-a">
+              <div class="sc-stat-a"><div class="sc-stat-v-a">{{s.totalRevenue | currency}}</div><div class="sc-stat-l-a">Revenue</div></div>
+              <div class="sc-stat-a"><div class="sc-stat-v-a">{{s.orderCount}}</div><div class="sc-stat-l-a">Orders</div></div>
+              <div class="sc-stat-a"><div class="sc-stat-v-a">{{s.rating}}★</div><div class="sc-stat-l-a">Rating</div></div>
+            </div>
+            <div class="sc-actions-a">
+              <button class="sc-btn-a">View</button>
+              <button class="sc-btn-a danger">Action</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CROSS-STORE COMPARISON PANEL -->
+      <div class="panel-a" [class.active]="tab === 'comparison'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Cross-Store Comparison</div><div class="page-sub-a">Compare stores by revenue, orders, rating & avg. order value.</div></div>
+        </div>
+        <div *ngIf="storeComparison.length === 0" style="text-align:center;padding:48px;color:var(--text3);font-size:13px;">Loading comparison data...</div>
+        <div *ngIf="storeComparison.length > 0">
+          <div style="margin-bottom:20px;">
+            <canvas #storeComparisonChart style="width:100%;max-height:320px;"></canvas>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);text-align:left;">
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">#</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">Store</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">Owner</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Revenue</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Orders</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Avg. Order</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Rating</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let s of storeComparison; let i = index" style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                  <td style="padding:10px 12px;color:var(--text3);">{{i + 1}}</td>
+                  <td style="padding:10px 12px;font-weight:500;">{{s.name}}</td>
+                  <td style="padding:10px 12px;color:var(--text3);">{{s.owner}}</td>
+                  <td style="padding:10px 12px;text-align:right;color:#3ECFB2;font-weight:500;">{{s.revenue | currency}}</td>
+                  <td style="padding:10px 12px;text-align:right;">{{s.orders}}</td>
+                  <td style="padding:10px 12px;text-align:right;">{{s.avgOrderValue | currency}}</td>
+                  <td style="padding:10px 12px;text-align:right;">{{s.rating}} ★</td>
+                  <td style="padding:10px 12px;">
+                    <span style="padding:2px 8px;border-radius:4px;font-size:10px;" [style.background]="s.status === 'OPEN' ? 'rgba(62,207,178,0.12)' : 'rgba(224,112,112,0.12)'" [style.color]="s.status === 'OPEN' ? '#3ECFB2' : '#E07070'">{{s.status}}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS PANEL -->
+      <div class="panel-a" [class.active]="tab === 'users'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">User Management</div><div class="page-sub-a">View, suspend or ban users.</div></div>
+          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a">+ Add User</button></div>
+        </div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let u of users">
+                <td class="td-name-a">{{u.fullName}}</td>
+                <td>{{u.email}}</td>
+                <td><span class="spill-a sp-blue-a">{{u.role}}</span></td>
+                <td><span class="spill-a sp-green-a">Active</span></td>
+                <td>
+                  <div style="display:flex; gap:6px;">
+                    <button class="sc-btn-a" style="padding:4px 10px; font-size:10px;">Edit</button>
+                    <button class="sc-btn-a danger" style="padding:4px 10px; font-size:10px;" (click)="banUser(u)">Ban</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PRODUCTS PANEL -->
+      <div class="panel-a" [class.active]="tab === 'products'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Product Catalog</div><div class="page-sub-a">Manage all store products.</div></div>
+          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a">+ Add Product</button></div>
+        </div>
+        <div class="prod-mgmt-grid-a">
+          <div class="pm-card-a" *ngFor="let p of pagedProducts.slice(0,9)">
+            <div class="pm-img-a">
+              <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="pm-img-a-photo" [alt]="p.name"/>
+              <svg *ngIf="!p.imageUrl" width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="4" y="9" width="32" height="20" rx="3" stroke="var(--teal)" stroke-width="1.1" opacity="0.3"/></svg>
+            </div>
+            <div class="pm-body-a">
+              <div class="pm-name-a">{{p.name}}</div>
+              <div class="pm-row-a">
+                <div class="pm-price-a">{{p.basePrice | currency}}</div>
+                <div class="pm-stock-a ok">In Stock</div>
+              </div>
+              <div class="sc-actions-a">
+                <button class="sc-btn-a">Edit</button>
+                <button class="sc-btn-a danger">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ORDERS PANEL -->
+      <div class="panel-a" [class.active]="tab === 'orders'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Order Management</div><div class="page-sub-a">View and manage all platform orders.</div></div>
+        </div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let o of allOrders">
+                <td class="td-mono-a">#ORD-{{o.orderId}}</td>
+                <td class="td-name-a">{{o.user?.fullName || 'N/A'}}</td>
+                <td>{{o.totalAmount | currency}}</td>
+                <td><span class="spill-a" [ngClass]="{'sp-green-a': o.status === 'DELIVERED', 'sp-blue-a': o.status === 'PROCESSING' || o.status === 'SHIPPED', 'sp-amber-a': o.status === 'PENDING'}">● {{o.status}}</span></td>
+                <td>{{o.orderDate | date:'short'}}</td>
+              </tr>
+              <tr *ngIf="allOrders.length === 0">
+                <td colspan="5" style="text-align:center;color:var(--text3);padding:32px;">No orders yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CATEGORIES PANEL -->
+      <div class="panel-a" [class.active]="tab === 'categories'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Category Management</div><div class="page-sub-a">Manage product taxonomy.</div></div>
+          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a" (click)="addCategory()">+ Add Category</button></div>
+        </div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>Category</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let c of categories">
+                <td class="td-name-a">{{c.name}}</td>
+                <td>{{c.description || '—'}}</td>
+                <td><span class="spill-a" [class.sp-green-a]="c.active" [class.sp-amber-a]="!c.active">{{c.active ? 'Active' : 'Inactive'}}</span></td>
+                <td>
+                  <div style="display:flex;gap:6px;">
+                    <button class="sc-btn-a danger" style="padding:4px 10px;font-size:10px;" (click)="deleteCategory(c)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="categories.length === 0"><td colspan="4" style="text-align:center;color:var(--text3);padding:32px;">No categories. Add one to get started.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AUDIT LOGS PANEL -->
+      <div class="panel-a" [class.active]="tab === 'auditlogs'">
+        <div class="top-bar-a"><div><div class="page-title-a">Audit Logs</div><div class="page-sub-a">Platform activity monitoring.</div></div></div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let log of auditLogs">
+                <td style="font-family:'JetBrains Mono',monospace;font-size:10px;">{{log.time}}</td>
+                <td class="td-name-a">{{log.user}}</td>
+                <td><span class="spill-a" [class.sp-green-a]="log.type==='success'" [class.sp-blue-a]="log.type==='info'" [class.sp-amber-a]="log.type==='warning'">{{log.action}}</span></td>
+                <td style="color:var(--text3);font-size:11px;">{{log.detail}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CONFIG PANEL -->
+      <div class="panel-a" [class.active]="tab === 'settings'">
+        <div class="top-bar-a"><div><div class="page-title-a">System Config</div><div class="page-sub-a">Manage platform behavior.</div></div></div>
+        <div class="set-card-a">
+          <div class="set-row-a">
+            <div class="set-info-a"><div class="set-title-a">Maintenance Mode</div><div class="set-desc-a">Disable public store access</div></div>
+            <div class="set-tog-a" [class.on]="sysSettings.maintenance" (click)="sysSettings.maintenance = !sysSettings.maintenance"><div class="set-tog-thumb-a"></div></div>
+          </div>
+          <div class="set-row-a">
+            <div class="set-info-a"><div class="set-title-a">AI Assistant</div><div class="set-desc-a">Enable Text2SQL support for customers</div></div>
+            <div class="set-tog-a" [class.on]="sysSettings.aiAssistant" (click)="sysSettings.aiAssistant = !sysSettings.aiAssistant"><div class="set-tog-thumb-a"></div></div>
+          </div>
+          <div class="set-row-a">
+            <div class="set-info-a"><div class="set-title-a">New Registrations</div><div class="set-desc-a">Allow visitors to create new accounts</div></div>
+            <div class="set-tog-a" [class.on]="sysSettings.registrations" (click)="sysSettings.registrations = !sysSettings.registrations"><div class="set-tog-thumb-a"></div></div>
+          </div>
+          <div style="margin-top:24px;">
+            <button class="tbtn-a tbtn-primary-a" style="width:100%;" (click)="saveSettings($event)">Save All Changes</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+  `,
+})
+export class AdminComponent implements OnInit, AfterViewInit {
+  tab = 'dashboard';
+  isLoading = true;
+  auth = inject(AuthService);
+  productService = inject(ProductService);
+  storeService = inject(StoreService);
+  adminService = inject(AdminService);
+  categoryService = inject(CategoryService);
+  toast = inject(ToastService);
+  router = inject(Router);
+
+  @ViewChild('adminRevenueChart') adminRevenueCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('adminCategoryChart') adminCategoryCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('storeComparisonChart') storeComparisonCanvas!: ElementRef<HTMLCanvasElement>;
+  private revChart: Chart | null = null;
+  private catChart: Chart | null = null;
+  private compChart: Chart | null = null;
+
+  storeComparison: any[] = [];
+  categories: any[] = [];
+  auditLogs: any[] = [];
+
+  stores: any[] = [];
+  users: any[] = [];
+  orders: any[] = [];
+  allOrders: any[] = [];
+  pagedProducts: any[] = [];
+  stats: any = {};
+
+  sysSettings = {
+    maintenance: false,
+    registrations: true,
+    aiAssistant: true
+  };
+
+  ngOnInit() {
+    this.refreshData();
+    this.categoryService.getAll().subscribe(res => this.categories = res);
+    this.loadAuditLogs();
+    this.logAudit('Login', 'success', 'Admin authenticated via JWT');
+  }
+
+  loadAuditLogs() {
+    this.adminService.getAuditLogs().subscribe({
+      next: (logs) => this.auditLogs = logs.map(l => ({
+        time: l.createdAt?.replace('T', ' ')?.slice(0, 19) || '',
+        user: l.username || 'System',
+        action: l.action,
+        type: l.type,
+        detail: l.detail
+      })),
+      error: () => { }
+    });
+  }
+
+  logAudit(action: string, type: string, detail: string) {
+    this.adminService.createAuditLog(action, type, detail).subscribe({
+      next: () => this.loadAuditLogs(),
+      error: () => { }
+    });
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => this.buildAdminCharts(), 800);
+  }
+
+  private buildAdminCharts() {
+    if (this.adminRevenueCanvas?.nativeElement) {
+      if (this.revChart) this.revChart.destroy();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const revenueByMonth = new Array(12).fill(0);
+      this.allOrders.forEach((o: any) => {
+        const d = new Date(o.orderDate);
+        if (!isNaN(d.getTime())) revenueByMonth[d.getMonth()] += o.totalAmount || 0;
+      });
+      this.revChart = new Chart(this.adminRevenueCanvas.nativeElement, {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [{
+            label: 'Revenue ($)',
+            data: revenueByMonth,
+            borderColor: '#3ECFB2',
+            backgroundColor: 'rgba(62,207,178,0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#3ECFB2',
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+          }
+        }
+      });
+    }
+
+    if (this.adminCategoryCanvas?.nativeElement) {
+      if (this.catChart) this.catChart.destroy();
+      const catMap: Record<string, number> = {};
+      this.pagedProducts.forEach((p: any) => { catMap[p.category || 'Other'] = (catMap[p.category || 'Other'] || 0) + 1; });
+      const labels = Object.keys(catMap);
+      const data = Object.values(catMap);
+      const palette = ['#3ECFB2', '#6BA8C8', '#E8A94A', '#E07070', '#A78BFA', '#34D399', '#F472B6'];
+      this.catChart = new Chart(this.adminCategoryCanvas.nativeElement, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: palette.slice(0, labels.length), borderWidth: 0 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#7A918D', padding: 12, font: { size: 10 } } } }
+        }
+      });
+    }
+  }
+
+  refreshData() {
+    this.isLoading = true;
+    import('rxjs').then(({ forkJoin }) => {
+      forkJoin([
+        this.productService.getProducts(),
+        this.storeService.getStores(),
+        this.adminService.getUsers(),
+        this.adminService.getOrders(),
+        this.adminService.getStats()
+      ]).subscribe({
+        next: (results: any) => {
+          this.pagedProducts = results[0];
+          this.stores = results[1];
+          this.users = results[2];
+          this.allOrders = results[3];
+          this.orders = results[3].slice(0, 10);
+          this.stats = results[4];
+          this.isLoading = false;
+          setTimeout(() => this.buildAdminCharts(), 200);
+        },
+        error: () => {
+          this.toast.show('Error fetching data', 'error');
+          this.isLoading = false;
+        }
+      });
+    });
+  }
+
+  loadStoreComparison() {
+    this.adminService.getStoreComparison().subscribe({
+      next: (data) => {
+        this.storeComparison = data;
+        setTimeout(() => this.buildComparisonChart(), 300);
+      },
+      error: () => this.toast.show('Failed to load comparison data', 'error')
+    });
+  }
+
+  private buildComparisonChart() {
+    if (!this.storeComparisonCanvas?.nativeElement) return;
+    if (this.compChart) this.compChart.destroy();
+    const labels = this.storeComparison.map(s => s.name);
+    this.compChart = new Chart(this.storeComparisonCanvas.nativeElement, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Revenue ($)',
+            data: this.storeComparison.map(s => s.revenue),
+            backgroundColor: 'rgba(62,207,178,0.7)',
+            borderRadius: 4,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Orders',
+            data: this.storeComparison.map(s => s.orders),
+            backgroundColor: 'rgba(107,168,200,0.7)',
+            borderRadius: 4,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { color: '#7A918D', font: { size: 10 }, padding: 16 } }
+        },
+        scales: {
+          x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { position: 'left', ticks: { color: '#3ECFB2' }, grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Revenue ($)', color: '#3ECFB2', font: { size: 10 } } },
+          y1: { position: 'right', ticks: { color: '#6BA8C8' }, grid: { display: false }, title: { display: true, text: 'Orders', color: '#6BA8C8', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  saveSettings(event: any) {
+    const btn = event.currentTarget;
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Saving...';
+    setTimeout(() => {
+      this.toast.show('Settings updated');
+      btn.innerHTML = oldHtml;
+      btn.disabled = false;
+    }, 1000);
+  }
+
+  banUser(u: any) {
+    if (!confirm(`Ban ${u.fullName}?`)) return;
+    this.adminService.banUser(u.userId).subscribe(() => {
+      this.toast.show('User banned');
+      this.logAudit('Ban User', 'warning', `Banned ${u.fullName}`);
+      this.refreshData();
+    });
+  }
+
+  addCategory() {
+    const name = prompt('Category name:');
+    if (!name) return;
+    this.categoryService.create({ name, description: '', active: true }).subscribe({
+      next: (c) => {
+        this.categories.push(c);
+        this.toast.show('Category created');
+        this.logAudit('Create Category', 'success', name);
+      },
+      error: (e) => this.toast.show(e.error?.message || 'Failed to create category', 'error')
+    });
+  }
+
+  deleteCategory(c: any) {
+    if (!confirm(`Delete category "${c.name}"?`)) return;
+    this.categoryService.delete(c.categoryId).subscribe({
+      next: () => {
+        this.categories = this.categories.filter(x => x.categoryId !== c.categoryId);
+        this.toast.show('Category deleted');
+        this.logAudit('Delete Category', 'warning', c.name);
+      },
+      error: () => this.toast.show('Failed to delete category', 'error')
+    });
+  }
+
+  logout() {
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
+}
