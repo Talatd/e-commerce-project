@@ -39,7 +39,7 @@ public class DbInitializer {
         System.out.println("SEED: Initialization complete.");
     }
 
-    @SuppressWarnings("null")
+    @SuppressWarnings("all")
     private void seedHistoricalData() {
         System.out.println("SEED: Generating historical analytics data...");
         seedAuditLogs();
@@ -47,7 +47,7 @@ public class DbInitializer {
         seedHistoricalOrders();
     }
 
-    @SuppressWarnings("null")
+    @SuppressWarnings("all")
     private void seedAuditLogs() {
         auditLogRepository.save(AuditLog.builder().username("system").action("MARKETPLACE_INITIALIZED").type("SYSTEM").detail("Marketplace core services started").build());
         auditLogRepository.save(AuditLog.builder().username("marcus@techhub.pro").action("STORE_OPENED").type("STORE").detail("TechHub Performance store is now live").build());
@@ -377,7 +377,7 @@ public class DbInitializer {
         }
     }
 
-    @SuppressWarnings("null")
+    @SuppressWarnings("all")
     private void seedUsersAndStores() {
         System.out.println("SEED: Performing clean sweep (Orders, Reviews, Profiles, Products, Stores, Users)...");
         orderRepository.deleteAll();
@@ -436,7 +436,7 @@ public class DbInitializer {
         return userRepository.save(user);
     }
 
-    @SuppressWarnings("null")
+    @SuppressWarnings("all")
     private void createProfile(User user, String persona, String bio) {
         CustomerProfile profile = CustomerProfile.builder()
             .user(user)
