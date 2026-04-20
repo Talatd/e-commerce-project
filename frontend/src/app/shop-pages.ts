@@ -5,33 +5,27 @@ import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { ProductService, OrderService, AuthService, ToastService, ShipmentService } from './services';
 import { NexusLogoComponent } from './nexus-logo.component';
 import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
+import { ConsumerStandaloneTopNavComponent } from './consumer-standalone-top-nav.component';
+import { CONSUMER_NAV } from './consumer-nav.paths';
 
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NexusThemeToggleComponent, ConsumerStandaloneTopNavComponent],
   template: `
-    <div class="nx-page">
+    <div class="nx-page nx-checkout-clean">
 
-      <!-- NAVBAR -->
-      <div class="nx-navbar">
-        <div class="nx-logo" routerLink="/consumer"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
-        <div class="nx-nav-pills">
-          <div class="nx-npill" routerLink="/consumer">Home</div>
-          <div class="nx-npill active">Shop</div>
-          <div class="nx-npill" routerLink="/orders">Orders</div>
-          <div class="nx-npill" routerLink="/settings">Settings</div>
-        </div>
-        <div class="nx-nav-r">
-          <app-nexus-theme-toggle></app-nexus-theme-toggle>
-          <div class="nx-icon-btn">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.5" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1" fill="#6A8A84"/><circle cx="10" cy="11" r="1" fill="#6A8A84"/></svg>
-            <div class="nx-cart-badge" *ngIf="totalQty > 0">{{totalQty}}</div>
-          </div>
-          <div class="nx-nbtn" routerLink="/consumer">← Back to Shop</div>
-        </div>
-      </div>
+      <!-- NAVBAR (same routes / labels as main app shell Shop · Cart · Orders · Settings) -->
+      <app-consumer-standalone-top-nav>
+        <app-nexus-theme-toggle></app-nexus-theme-toggle>
+        <a class="nx-icon-btn" [routerLink]="consumerNav.cart" aria-label="Cart">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.5" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1" fill="#6A8A84"/><circle cx="10" cy="11" r="1" fill="#6A8A84"/></svg>
+          <div class="nx-cart-badge" *ngIf="totalQty > 0">{{totalQty}}</div>
+        </a>
+        <a class="nx-nbtn" [routerLink]="consumerNav.shop">← Back to Shop</a>
+      </app-consumer-standalone-top-nav>
 
+      <div class="nx-checkout-shell">
       <!-- STEPS -->
       <div class="nx-steps" *ngIf="step < 3">
         <div class="nx-step">
@@ -62,31 +56,45 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
       </div>
 
       <!-- STEP 1: CART + CHECKOUT -->
-      <div class="nx-cart-main" *ngIf="step === 1">
+      <div class="nx-cart-main nx-checkout-split" *ngIf="step === 1">
         <div class="nx-cart-left">
-          <div class="section-title">Your Cart ({{totalQty}})</div>
+          <header class="nx-cart-hero">
+            <p class="nx-cart-kicker">Checkout</p>
+            <h1 class="nx-cart-heading">Your cart <span class="nx-cart-count">({{totalQty}})</span></h1>
+            <p class="nx-cart-sub" *ngIf="cartItems.length > 0">Review items, delivery, and pay securely.</p>
+          </header>
 
-          <div class="nx-cart-item" *ngFor="let item of cartItems; let i = index">
-            <div class="nx-item-img">
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="8" width="28" height="18" rx="3" stroke="#3ECFB2" stroke-width="1.2" opacity="0.5"/><rect x="13" y="26" width="10" height="2.5" rx="1.2" fill="rgba(62,207,178,0.2)"/><rect x="7" y="11" width="22" height="12" rx="1.5" fill="rgba(62,207,178,0.05)"/></svg>
-            </div>
-            <div class="nx-item-info">
-              <div class="nx-item-brand">{{item.category}}</div>
-              <div class="nx-item-name">{{item.name}}</div>
-              <div class="nx-item-variant">{{item.variant || item.description || '—'}}</div>
-            </div>
-            <div class="nx-item-right">
-              <div class="nx-item-price">{{item.basePrice * item.qty | currency}}</div>
-              <div class="qty-box">
-                <div class="qty-btn" (click)="updateQty(i, -1)">−</div>
-                <div class="qty-val">{{item.qty}}</div>
-                <div class="qty-btn" (click)="updateQty(i, 1)">+</div>
+          <div class="nx-line-list" *ngIf="cartItems.length > 0">
+            <article class="nx-line-card" *ngFor="let item of cartItems; let i = index">
+              <div class="nx-line-media">
+                <img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.name" />
+                <div class="nx-line-media-ph" *ngIf="!item.imageUrl" aria-hidden="true">
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="8" width="28" height="18" rx="3" stroke="var(--teal)" stroke-width="1.2" opacity="0.45"/><rect x="13" y="26" width="10" height="2.5" rx="1.2" fill="rgba(62,207,178,0.2)"/></svg>
+                </div>
               </div>
-              <div class="nx-remove-btn" (click)="removeItem(i)">Remove</div>
-            </div>
+              <div class="nx-line-body">
+                <div class="nx-line-meta">
+                  <p class="nx-line-kicker">{{ item.category || 'Product' }}</p>
+                  <h2 class="nx-line-title">{{ item.name }}</h2>
+                  <p class="nx-line-desc">{{ item.variant || item.description || 'Standard' }}</p>
+                </div>
+                <div class="nx-line-aside">
+                  <div class="nx-line-price">{{ item.basePrice * item.qty | currency }}</div>
+                  <div class="nx-qty-pill">
+                    <button type="button" class="nx-qty-btn" (click)="updateQty(i, -1)" aria-label="Decrease quantity">−</button>
+                    <span class="nx-qty-val">{{ item.qty }}</span>
+                    <button type="button" class="nx-qty-btn" (click)="updateQty(i, 1)" aria-label="Increase quantity">+</button>
+                  </div>
+                  <button type="button" class="nx-line-remove" (click)="removeItem(i)">Remove</button>
+                </div>
+              </div>
+            </article>
           </div>
 
-          <div *ngIf="cartItems.length === 0" style="padding:3rem;text-align:center;color:var(--text3);font-size:13px;">Your cart is empty.</div>
+          <div class="nx-empty-cart" *ngIf="cartItems.length === 0">
+            <p>Your cart is empty.</p>
+            <a class="nx-nbtn" [routerLink]="consumerNav.shop" style="display:inline-flex;margin-top:4px;text-decoration:none;">Browse products</a>
+          </div>
 
           <!-- COUPON -->
           <div class="nx-coupon-row" *ngIf="cartItems.length > 0">
@@ -133,8 +141,9 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
         </div>
 
         <!-- RIGHT: ORDER SUMMARY -->
-        <div class="nx-cart-right">
-          <div class="section-title">Order Summary</div>
+        <aside class="nx-cart-right nx-summary-aside">
+          <p class="nx-summary-kicker">Summary</p>
+          <div class="section-title nx-summary-title">Order total</div>
 
           <div class="nx-summary-card">
             <div class="summary-line"><span class="sl-label">Subtotal ({{totalQty}} items)</span><span class="sl-val">{{subtotal | currency}}</span></div>
@@ -191,11 +200,11 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
               <div class="nx-trust-label">Verified<br>Products</div>
             </div>
           </div>
-        </div>
+        </aside>
       </div>
 
       <!-- STEP 2: PAYMENT GATEWAY -->
-      <div class="nx-cart-main" *ngIf="step === 2">
+      <div class="nx-cart-main nx-checkout-split nx-checkout-pay" *ngIf="step === 2">
         <div class="left">
           
           <!-- CARD VISUAL -->
@@ -254,18 +263,18 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
 
           <!-- PAYMENT METHOD SELECTION -->
           <div class="section-title" style="margin-top:20px;margin-bottom:12px;">Payment Method</div>
-          <div style="display:flex;gap:8px;margin-bottom:16px;">
-            <div (click)="paymentMethod='card'" [style.border-color]="paymentMethod==='card' ? 'var(--teal)' : 'var(--border)'" style="flex:1;padding:12px;border:1.5px solid;border-radius:8px;cursor:pointer;text-align:center;background:var(--card);transition:border-color .2s;">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-bottom:4px;"><rect x="2" y="5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M2 8h14" stroke="currentColor" stroke-width="1.1"/></svg>
-              <div style="font-size:10px;font-weight:500;">Credit Card</div>
+          <div class="nx-pay-tiles">
+            <div class="nx-pay-tile" [class.active]="paymentMethod === 'card'" (click)="paymentMethod = 'card'">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="display:block;margin:0 auto;"><rect x="2" y="5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M2 8h14" stroke="currentColor" stroke-width="1.1"/></svg>
+              <div class="nx-pay-tile-label">Credit Card</div>
             </div>
-            <div (click)="paymentMethod='paypal'" [style.border-color]="paymentMethod==='paypal' ? 'var(--teal)' : 'var(--border)'" style="flex:1;padding:12px;border:1.5px solid;border-radius:8px;cursor:pointer;text-align:center;background:var(--card);transition:border-color .2s;">
-              <div style="font-size:14px;font-weight:700;color:#0070BA;margin-bottom:4px;">P</div>
-              <div style="font-size:10px;font-weight:500;">PayPal</div>
+            <div class="nx-pay-tile" [class.active]="paymentMethod === 'paypal'" (click)="paymentMethod = 'paypal'">
+              <div style="font-size:16px;font-weight:800;color:#0070BA;line-height:1;">P</div>
+              <div class="nx-pay-tile-label">PayPal</div>
             </div>
-            <div (click)="paymentMethod='bank'" [style.border-color]="paymentMethod==='bank' ? 'var(--teal)' : 'var(--border)'" style="flex:1;padding:12px;border:1.5px solid;border-radius:8px;cursor:pointer;text-align:center;background:var(--card);transition:border-color .2s;">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-bottom:4px;"><path d="M9 2L2 7h14L9 2Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M4 10v4M7 10v4M11 10v4M14 10v4M2 16h14" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-              <div style="font-size:10px;font-weight:500;">Bank Transfer</div>
+            <div class="nx-pay-tile" [class.active]="paymentMethod === 'bank'" (click)="paymentMethod = 'bank'">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="display:block;margin:0 auto;"><path d="M9 2L2 7h14L9 2Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M4 10v4M7 10v4M11 10v4M14 10v4M2 16h14" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              <div class="nx-pay-tile-label">Bank Transfer</div>
             </div>
           </div>
 
@@ -308,8 +317,8 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
 
           <!-- PAYPAL -->
           <ng-container *ngIf="paymentMethod === 'paypal'">
-            <div style="text-align:center;padding:24px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
-              <div style="font-size:24px;font-weight:700;color:#0070BA;margin-bottom:8px;">PayPal</div>
+            <div style="text-align:center;padding:24px;background:var(--checkout-card);border:1px solid var(--border);border-radius:12px;">
+              <div style="font-size:22px;font-weight:700;color:#0070BA;margin-bottom:8px;">PayPal</div>
               <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">You will be redirected to PayPal to complete payment securely.</div>
               <input class="fi" placeholder="PayPal email address" [(ngModel)]="paypalEmail" style="max-width:300px;margin:0 auto;text-align:center;"/>
             </div>
@@ -317,7 +326,7 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
 
           <!-- BANK TRANSFER -->
           <ng-container *ngIf="paymentMethod === 'bank'">
-            <div style="padding:20px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
+            <div style="padding:20px;background:var(--checkout-card);border:1px solid var(--border);border-radius:12px;">
               <div style="font-size:12px;font-weight:500;margin-bottom:12px;">Bank Transfer Details</div>
               <div style="font-size:11px;color:var(--text3);line-height:1.8;">
                 <div><strong>Bank:</strong> SmartStore International Bank</div>
@@ -334,27 +343,37 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
         </div>
 
         <div class="right">
-          <div class="summary-title" style="margin-top:0;">Order Summary</div>
+          <div class="summary-title">Order Summary</div>
           <div class="order-items">
             <div class="oi" *ngFor="let i of cartItems">
-               <div class="oi-name" style="line-height:1.2;">{{i.name}}<br><span class="oi-var">{{i.category}} × {{i.qty}}</span></div>
-               <div class="oi-price">{{i.basePrice * i.qty | currency}}</div>
+              <div class="oi-thumb">
+                <img *ngIf="i.imageUrl" [src]="i.imageUrl" [alt]="i.name"/>
+                <div class="oi-thumb-ph" *ngIf="!i.imageUrl" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="5" width="16" height="11" rx="2" stroke="var(--teal)" stroke-width="1.1" opacity="0.45"/></svg>
+                </div>
+              </div>
+              <div class="oi-main">
+                <div class="oi-name">{{i.name}}</div>
+                <div class="oi-var">{{i.category}} × {{i.qty}}</div>
+              </div>
+              <div class="oi-price">{{i.basePrice * i.qty | currency}}</div>
             </div>
           </div>
           <div class="summary-lines">
             <div class="sl"><span class="sl-label">Subtotal</span><span class="sl-val">{{subtotal | currency}}</span></div>
-            <div class="sl"><span class="sl-label">Shipping</span><span class="sl-val green">Free</span></div>
-            <div class="sl"><span class="sl-label">Tax (8%)</span><span class="sl-val">{{subtotal * 0.08 | currency}}</span></div>
+            <div class="sl" *ngIf="discount > 0"><span class="sl-label">Discount</span><span class="sl-val nx-green">−{{discount | currency}}</span></div>
+            <div class="sl"><span class="sl-label">Shipping</span><span class="sl-val green">{{deliveryCost === 0 ? 'Free' : (deliveryCost | currency)}}</span></div>
+            <div class="sl"><span class="sl-label">Tax (8%)</span><span class="sl-val">{{tax | currency}}</span></div>
             <div class="sl" style="border-top:1px solid var(--border);padding-top:10px;margin-top:2px;">
               <span class="sl-total-label">Total</span>
-              <span class="sl-total">{{subtotal * 1.08 | currency}}</span>
+              <span class="sl-total">{{grandTotal | currency}}</span>
             </div>
           </div>
 
           <button class="pay-btn" (click)="processPayment()" [disabled]="isProcessing || paySuccess">
             <ng-container *ngIf="!isProcessing && !paySuccess">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="#080808" stroke-width="1.2"/><path d="M1 7h12" stroke="#080808" stroke-width="1.2"/></svg>
-              Pay {{subtotal * 1.08 | currency}}
+              Pay {{grandTotal | currency}}
             </ng-container>
             <span *ngIf="isProcessing" class="spin">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7" stroke="#080808" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -373,7 +392,7 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
       </div>
 
       <!-- STEP 3: ORDER SUCCESS -->
-      <div class="content-success" *ngIf="step === 3" style="min-height: 600px; display:flex; flex-direction:column; position:relative; overflow:hidden;">
+      <div class="content-success" *ngIf="step === 3">
         <canvas #confettiCanvas id="confetti-canvas"></canvas>
         <div class="bg-glow"></div>
 
@@ -394,7 +413,7 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
         </div>
 
         <div class="success-title">Order <em>confirmed,</em><br>{{displayName}}! 🎉</div>
-        <div class="success-sub">Payment of {{subtotal * 1.08 | currency}} was processed successfully. A confirmation has been sent to your email.</div>
+        <div class="success-sub">Payment of {{grandTotal | currency}} was processed successfully. A confirmation has been sent to your email.</div>
 
         <div class="eta-bar">
           <div class="eta-icon">
@@ -431,21 +450,21 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
           </div>
           <div class="sc-totals">
             <div class="sc-line"><span class="sc-line-label">Subtotal</span><span class="sc-line-val">{{subtotal | currency}}</span></div>
-            <div class="sc-line"><span class="sc-line-label">Shipping</span><span class="sc-line-val green">Free</span></div>
-            <div class="sc-line"><span class="sc-line-label">Tax (8%)</span><span class="sc-line-val">{{subtotal * 0.08 | currency}}</span></div>
+            <div class="sc-line"><span class="sc-line-label">Shipping</span><span class="sc-line-val green">{{deliveryCost === 0 ? 'Free' : (deliveryCost | currency)}}</span></div>
+            <div class="sc-line"><span class="sc-line-label">Tax (8%)</span><span class="sc-line-val">{{tax | currency}}</span></div>
             <div class="sc-total-row">
               <span class="sc-total-label">Total Paid</span>
-              <span class="sc-total-val">{{subtotal * 1.08 | currency}}</span>
+              <span class="sc-total-val">{{grandTotal | currency}}</span>
             </div>
           </div>
         </div>
 
         <div class="actions" style="margin:0 auto;">
-          <button class="btn-primary" routerLink="/orders">
+          <button class="btn-primary" [routerLink]="consumerNav.orders">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="5.5" r="4" stroke="#080808" stroke-width="1.2"/><path d="M2 13c0-3 2-4.5 4.5-4.5S11 10 11 13" stroke="#080808" stroke-width="1.2" stroke-linecap="round"/></svg>
             Track Order
           </button>
-          <button class="btn-ghost" routerLink="/consumer">
+          <button class="btn-ghost" [routerLink]="consumerNav.shop">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 4h7l-1 6H4L3 4Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><circle cx="5.5" cy="11.5" r="1" fill="currentColor"/><circle cx="8.5" cy="11.5" r="1" fill="currentColor"/></svg>
             Continue Shopping
           </button>
@@ -454,10 +473,12 @@ import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
         <div class="replay-btn" (click)="launchConfetti()">✦ Replay confetti</div>
       </div>
 
+      </div><!-- .nx-checkout-shell -->
     </div>
   `
 })
 export class CartComponent implements OnInit, OnDestroy {
+  readonly consumerNav = CONSUMER_NAV;
   cartItems: any[] = [];
   subtotal = 0;
   step = 1;
@@ -734,94 +755,152 @@ export class CartComponent implements OnInit, OnDestroy {
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, NexusThemeToggleComponent],
+  imports: [CommonModule, RouterModule, NexusThemeToggleComponent],
   template: `
-    <div class="page-head" *ngIf="product">
-      <div>
-        <div class="page-title">{{product.name}}</div>
-        <div class="page-sub">{{product.category}}</div>
-      </div>
-      <div class="head-r" style="align-self:center;">
-        <app-nexus-theme-toggle></app-nexus-theme-toggle>
-      </div>
+    <div class="app-content" *ngIf="!detailReady" style="padding:48px 24px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>
+
+    <div class="app-content" *ngIf="detailReady && loadError" style="padding:48px 24px;text-align:center;color:var(--text3);">
+      <p style="margin-bottom:16px;">Product not found.</p>
+      <a class="ripple-btn ghost" [routerLink]="consumerNav.shop" style="display:inline-flex;text-decoration:none;">← Back to shop</a>
     </div>
-    <div class="app-content" *ngIf="product">
-      <div class="row2" style="grid-template-columns: 1fr 370px;">
-        <div class="gcard" style="padding:30px; display:flex; align-items:center; justify-content:center; background:var(--glass2);">
-           <div style="font-size:120px; opacity:0.1; font-family:'Playfair Display',serif; font-style:italic;">Nexus Product</div>
+
+    <ng-container *ngIf="product">
+      <nav class="nx-breadcrumb" aria-label="Breadcrumb">
+        <a [routerLink]="consumerNav.shop" class="nx-bc-link">Shop</a>
+        <span class="nx-bc-sep">/</span>
+        <span class="nx-bc-muted">{{ product.category }}</span>
+        <span class="nx-bc-sep">/</span>
+        <span class="nx-bc-current">{{ product.name }}</span>
+      </nav>
+
+      <div class="page-head">
+        <div>
+          <div class="page-title">{{ product.name }}</div>
+          <div class="page-sub">{{ product.category }}</div>
         </div>
-        <div class="gcard tilt-card" style="padding:24px;" id="prod-card">
-           <div class="card-glow"></div>
-           <div style="position:relative; z-index:2;">
-             <div style="font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--teal); margin-bottom:8px;">{{product.category}}</div>
-             <div style="font-family:'Playfair Display',serif; font-size:28px; margin-bottom:16px;">{{product.name}}</div>
-             
-             <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:20px;">
-               <div style="font-family:'Playfair Display',serif; font-size:32px;">{{product.basePrice | currency}}</div>
-             </div>
-
-             <div class="stock-wrap">
-               <div class="stock-row">
-                 <div class="stock-label"><div class="stock-dot low"></div><span class="stock-text low">Low Stock</span></div>
-                 <div class="stock-count low">Only {{product.stockQuantity || 8}} left</div>
-               </div>
-               <div class="stock-bar"><div class="stock-bar-fill low" style="width:18%"></div></div>
-             </div>
-             <div class="countdown-wrap low" style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;background:var(--amber-dim);border:1px solid rgba(232,169,74,0.1);margin-bottom:16px;width:fit-content;">
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="#E8A94A" stroke-width="1"/><path d="M5.5 3v2.5l1.5 1.5" stroke="#E8A94A" stroke-width="1" stroke-linecap="round"/></svg>
-                <span style="font-size:10px;color:var(--amber);">Selling fast</span>
-             </div>
-
-             <div style="height:1px; background:var(--border); margin:16px 0;"></div>
-
-             <p style="font-size:12px; color:var(--text2); line-height:1.6; margin-bottom:20px;">{{product.description}}</p>
-
-             <div style="display:flex; align-items:center; gap:10px; margin-top:30px;">
-                <button class="ripple-btn primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" (click)="addToCart($event, product)">
-                  <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M1 1h1.4l1.5 5h5l1.2-3.4H3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5.5" cy="10" r="1" fill="currentColor"/><circle cx="8.5" cy="10" r="1" fill="currentColor"/></svg>
-                  Add to Cart
-                </button>
-             </div>
-           </div>
+        <div class="head-r" style="align-self:center;display:flex;align-items:center;gap:10px;">
+          <a class="ripple-btn ghost" style="font-size:11px;padding:6px 14px;text-decoration:none;" [routerLink]="consumerNav.cart">View cart</a>
+          <app-nexus-theme-toggle></app-nexus-theme-toggle>
         </div>
       </div>
 
-      <!-- REVIEWS SECTION -->
+      <div class="row2 nx-product-grid">
+        <div class="gcard nx-product-media">
+          <img *ngIf="product.imageUrl" class="nx-product-img" [src]="product.imageUrl" [alt]="product.name" />
+          <div *ngIf="!product.imageUrl" class="nx-product-ph" aria-hidden="true">
+            <svg width="72" height="72" viewBox="0 0 72 72" fill="none"><rect x="10" y="18" width="52" height="36" rx="4" stroke="var(--teal)" stroke-width="1.4" opacity="0.45"/><rect x="18" y="26" width="36" height="20" rx="2" fill="rgba(62,207,178,0.06)"/></svg>
+            <span>No image</span>
+          </div>
+        </div>
+
+        <div class="gcard tilt-card nx-product-buy" (mousemove)="onProdCardMove($event)">
+          <div class="card-glow"></div>
+          <div style="position:relative; z-index:2;">
+            <div style="font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--teal); margin-bottom:8px;">{{ product.category }}</div>
+            <div style="font-family:'Playfair Display',serif; font-size:28px; margin-bottom:16px;">{{ product.name }}</div>
+
+            <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:20px;">
+              <div style="font-family:'Playfair Display',serif; font-size:32px;">{{ product.basePrice | currency }}</div>
+            </div>
+
+            <div class="stock-wrap" *ngIf="stockLevel !== 'out'">
+              <div class="stock-row">
+                <div class="stock-label">
+                  <div class="stock-dot" [class.low]="stockLevel === 'low'" [class.ok]="stockLevel === 'ok'"></div>
+                  <span class="stock-text" [class.low]="stockLevel === 'low'" [class.ok]="stockLevel === 'ok'">{{ stockLabel }}</span>
+                </div>
+                <div class="stock-count" [class.low]="stockLevel === 'low'" [class.ok]="stockLevel === 'ok'">{{ stockCountText }}</div>
+              </div>
+              <div class="stock-bar">
+                <div
+                  class="stock-bar-fill"
+                  [class.low]="stockLevel === 'low'"
+                  [class.ok]="stockLevel === 'ok'"
+                  [style.width.%]="stockBarPercent"
+                ></div>
+              </div>
+            </div>
+
+            <div *ngIf="stockLevel === 'out'" style="padding:12px 14px;border-radius:10px;background:var(--red-dim);border:1px solid rgba(224,112,112,0.2);color:var(--red);font-size:12px;margin-bottom:16px;">
+              Out of stock — check back later or browse similar items in the shop.
+            </div>
+
+            <div *ngIf="stockLevel === 'low'" class="countdown-wrap low" style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;background:var(--amber-dim);border:1px solid rgba(232,169,74,0.1);margin-bottom:16px;width:fit-content;">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="#E8A94A" stroke-width="1"/><path d="M5.5 3v2.5l1.5 1.5" stroke="#E8A94A" stroke-width="1" stroke-linecap="round"/></svg>
+              <span style="font-size:10px;color:var(--amber);">Selling fast — limited quantity</span>
+            </div>
+
+            <div style="height:1px; background:var(--border); margin:16px 0;"></div>
+
+            <p style="font-size:12px; color:var(--text2); line-height:1.6; margin-bottom:20px;">{{ product.description }}</p>
+
+            <div style="display:flex; align-items:center; gap:10px; margin-top:30px;">
+              <button type="button" class="ripple-btn primary" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px;" [disabled]="stockLevel === 'out'" (click)="addToCart($event, product)">
+                <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M1 1h1.4l1.5 5h5l1.2-3.4H3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5.5" cy="10" r="1" fill="currentColor"/><circle cx="8.5" cy="10" r="1" fill="currentColor"/></svg>
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="gcard" style="padding:24px; margin-top:20px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
           <div style="font-family:'Playfair Display',serif; font-size:18px;">Customer Reviews</div>
-          <div style="font-size:12px; color:var(--text3);" *ngIf="reviews.length > 0">{{reviews.length}} review{{reviews.length > 1 ? 's' : ''}} · Avg {{avgRating}}★</div>
+          <div style="font-size:12px; color:var(--text3);" *ngIf="reviews.length > 0">{{ reviews.length }} review{{ reviews.length > 1 ? 's' : '' }} · Avg {{ avgRating }}★</div>
         </div>
         <div *ngIf="reviews.length === 0" style="text-align:center; padding:24px; color:var(--text3); font-size:12px;">No reviews yet. Be the first to review this product!</div>
         <div *ngFor="let r of reviews" style="padding:14px 0; border-bottom:1px solid var(--border);">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
             <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width:28px; height:28px; border-radius:50%; background:var(--teal-dim); display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--teal); font-weight:600;">{{(r.user?.fullName || 'U').charAt(0)}}</div>
-              <div style="font-size:12px; font-weight:500; color:var(--text);">{{r.user?.fullName || 'Anonymous'}}</div>
+              <div style="width:28px; height:28px; border-radius:50%; background:var(--teal-dim); display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--teal); font-weight:600;">{{ (r.user?.fullName || 'U').charAt(0) }}</div>
+              <div style="font-size:12px; font-weight:500; color:var(--text);">{{ r.user?.fullName || 'Anonymous' }}</div>
             </div>
-            <div style="font-size:11px; color:var(--text3);">{{r.createdAt | date:'mediumDate'}}</div>
+            <div style="font-size:11px; color:var(--text3);">{{ r.createdAt | date:'mediumDate' }}</div>
           </div>
           <div style="display:flex; gap:2px; margin-bottom:6px;">
             <span *ngFor="let s of [1,2,3,4,5]" style="font-size:12px;" [style.color]="s <= r.rating ? '#E8A94A' : 'var(--text3)'">★</span>
           </div>
-          <div style="font-size:12px; color:var(--text2); line-height:1.5;">{{r.comment}}</div>
+          <div style="font-size:12px; color:var(--text2); line-height:1.5;">{{ r.comment }}</div>
           <div *ngIf="r.sentimentScore != null" style="margin-top:6px;">
             <span style="font-size:9px; padding:2px 8px; border-radius:8px; letter-spacing:0.05em; text-transform:uppercase;"
               [style.background]="r.sentimentScore > 0.6 ? 'rgba(62,201,138,0.1)' : r.sentimentScore < 0.4 ? 'rgba(224,112,112,0.1)' : 'rgba(107,168,200,0.1)'"
               [style.color]="r.sentimentScore > 0.6 ? '#3EC98A' : r.sentimentScore < 0.4 ? '#E07070' : '#6BA8C8'">
-              {{r.sentimentScore > 0.6 ? 'Positive' : r.sentimentScore < 0.4 ? 'Negative' : 'Neutral'}}
+              {{ r.sentimentScore > 0.6 ? 'Positive' : r.sentimentScore < 0.4 ? 'Negative' : 'Neutral' }}
             </span>
           </div>
         </div>
       </div>
-    </div>
-  `
+    </ng-container>
+  `,
+  styles: [`
+    .nx-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:11px; color:var(--text3); margin-bottom:14px; padding:0 2px; }
+    .nx-bc-link { color:var(--teal2); text-decoration:none; cursor:pointer; }
+    .nx-bc-link:hover { text-decoration:underline; }
+    .nx-bc-sep { opacity:0.45; user-select:none; }
+    .nx-bc-muted { color:var(--text2); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .nx-bc-current { color:var(--text); max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .nx-product-grid { grid-template-columns: 1fr minmax(280px, 370px); align-items:start; }
+    @media (max-width: 900px) {
+      .nx-product-grid { grid-template-columns: 1fr !important; }
+    }
+    .nx-product-media {
+      padding:0; overflow:hidden; min-height:280px; display:flex; align-items:center; justify-content:center;
+      background:var(--glass2); border:1px solid var(--border);
+    }
+    .nx-product-img { width:100%; height:100%; min-height:280px; max-height:520px; object-fit:cover; display:block; }
+    .nx-product-ph { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:48px; color:var(--text3); font-size:12px; }
+  `]
 })
 export class ProductDetailComponent implements OnInit {
-  product: any;
+  readonly consumerNav = CONSUMER_NAV;
+  product: any = null;
   reviews: any[] = [];
+  loadError = false;
+  detailReady = false;
   route = inject(ActivatedRoute);
   productService = inject(ProductService);
+  toast = inject(ToastService);
 
   get avgRating(): string {
     if (this.reviews.length === 0) return '0';
@@ -829,49 +908,94 @@ export class ProductDetailComponent implements OnInit {
     return avg.toFixed(1);
   }
 
+  /** Normalized on-hand quantity from API. */
+  get stockQty(): number {
+    const q = this.product?.stockQuantity;
+    if (q == null || !Number.isFinite(Number(q))) return 0;
+    return Math.max(0, Math.floor(Number(q)));
+  }
+
+  get stockLevel(): 'out' | 'low' | 'ok' {
+    const q = this.stockQty;
+    if (q <= 0) return 'out';
+    if (q < 15) return 'low';
+    return 'ok';
+  }
+
+  /** Bar fill 0–100 from quantity (reference max 80 units). */
+  get stockBarPercent(): number {
+    if (this.stockQty <= 0) return 0;
+    return Math.min(100, Math.round((this.stockQty / 80) * 100));
+  }
+
+  get stockLabel(): string {
+    if (this.stockLevel === 'out') return 'Out of stock';
+    if (this.stockLevel === 'low') return 'Low stock';
+    return 'In stock';
+  }
+
+  get stockCountText(): string {
+    if (this.stockLevel === 'out') return 'Unavailable';
+    if (this.stockLevel === 'low') return `${this.stockQty} left`;
+    return `${this.stockQty} units available`;
+  }
+
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
-      if (id) {
-        this.productService.getProducts().subscribe(res => {
-          this.product = res.find((p: any) => p.productId === +id);
-        });
-        this.productService.getReviews(+id).subscribe({
-          next: (res) => this.reviews = res || [],
-          error: () => this.reviews = []
-        });
+      this.detailReady = false;
+      if (!id) {
+        this.product = null;
+        this.loadError = true;
+        this.detailReady = true;
+        return;
       }
-    });
-
-    const card = document.getElementById('prod-card');
-    if (card) {
-      card.addEventListener('mousemove', e => {
-        const r = card.getBoundingClientRect();
-        const x = e.clientX - r.left;
-        const y = e.clientY - r.top;
-        card.style.setProperty('--cx', x + 'px');
-        card.style.setProperty('--cy', y + 'px');
+      this.loadError = false;
+      this.productService.getProducts().subscribe({
+        next: (res) => {
+          const found = (res || []).find((p: any) => p.productId === +id);
+          this.product = found || null;
+          this.loadError = !found;
+          this.detailReady = true;
+        },
+        error: () => {
+          this.product = null;
+          this.loadError = true;
+          this.detailReady = true;
+        }
       });
-    }
+      this.productService.getReviews(+id).subscribe({
+        next: (r) => (this.reviews = r || []),
+        error: () => (this.reviews = [])
+      });
+    });
   }
 
-  addToCart(event: any, product: any) {
-    // Add fly particle visually
-    const rect = event.target.getBoundingClientRect();
+  onProdCardMove(ev: MouseEvent) {
+    const el = ev.currentTarget as HTMLElement | null;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--cx', ev.clientX - r.left + 'px');
+    el.style.setProperty('--cy', ev.clientY - r.top + 'px');
+  }
+
+  addToCart(ev: MouseEvent, product: any) {
+    if (this.stockLevel === 'out') return;
+    const btn = (ev.target as HTMLElement).closest('button');
+    const rect = (btn || ev.target as HTMLElement).getBoundingClientRect();
     const p = document.createElement('div');
     p.className = 'fly-particle';
-    p.style.left = (rect.left + rect.width / 2) + 'px';
-    p.style.top = (rect.top + rect.height / 2) + 'px';
+    p.style.left = rect.left + rect.width / 2 + 'px';
+    p.style.top = rect.top + rect.height / 2 + 'px';
     document.body.appendChild(p);
 
-    const targetX = window.innerWidth - 60; // Approximate cart pos
+    const targetX = window.innerWidth - 60;
     const targetY = 40;
-
     const startX = parseFloat(p.style.left);
     const startY = parseFloat(p.style.top);
-    let start = performance.now();
+    const start = performance.now();
 
-    function flyAnim(ts: number) {
+    const flyAnim = (ts: number) => {
       const prog = Math.min((ts - start) / 500, 1);
       const ease = prog < 0.5 ? 2 * prog * prog : -1 + (4 - 2 * prog) * prog;
       const cx = startX + (targetX - startX) * ease;
@@ -880,17 +1004,17 @@ export class ProductDetailComponent implements OnInit {
       p.style.top = cy + 'px';
       p.style.transform = 'translate(-50%,-50%) scale(' + (1 - prog * 0.5) + ')';
       p.style.opacity = (1 - prog * 0.3).toString();
-
       if (prog < 1) requestAnimationFrame(flyAnim);
       else p.remove();
-    }
+    };
     requestAnimationFrame(flyAnim);
 
-    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    let existing = cart.find((item: any) => item.productId === product.productId);
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const existing = cart.find((item: any) => item.productId === product.productId);
     if (existing) existing.qty++;
-    else cart.push({...product, qty: 1});
+    else cart.push({ ...product, qty: 1 });
     localStorage.setItem('cart', JSON.stringify(cart));
+    this.toast.show('Added to cart');
   }
 }
 
@@ -912,7 +1036,7 @@ export class ProductDetailComponent implements OnInit {
         </button>
       </div>
     </div>
-    <div class="app-content">
+    <div class="app-content nx-orders-page">
 
       <!-- PURCHASE HISTORY TABLE -->
       <div class="gcard" style="margin-bottom:24px;" *ngIf="myOrders.length > 0">
@@ -951,23 +1075,26 @@ export class ProductDetailComponent implements OnInit {
       </div>
 
       <!-- SHIPMENT TRACKING (Dynamic per order) -->
-      <div *ngIf="selectedOrder" style="margin-bottom:40px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);">Tracking: #ORD-{{selectedOrder.orderId}}</div>
-          <select style="background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;" [(ngModel)]="selectedOrderId" (change)="onOrderSelect()">
-            <option *ngFor="let o of myOrders" [value]="o.orderId">ORD-{{o.orderId}} — {{o.totalAmount | currency}}</option>
+      <div class="nx-order-tracking-card" *ngIf="selectedOrder">
+        <div class="nx-order-tracking-head">
+          <div>
+            <div class="nx-order-tracking-kicker">Live tracking</div>
+            <div class="nx-order-tracking-title">Order <span class="nx-ord-mono">#ORD-{{selectedOrder.orderId}}</span></div>
+          </div>
+          <select class="nx-order-select" [(ngModel)]="selectedOrderId" (ngModelChange)="onOrderSelect()">
+            <option *ngFor="let o of myOrders" [ngValue]="o.orderId">ORD-{{o.orderId}} — {{o.totalAmount | currency}}</option>
           </select>
         </div>
-        <div class="progress-wrap">
-          <div class="progress-track">
-            <div class="progress-fill" [style.width.%]="trackingProgress"></div>
+        <div class="nx-progress-wrap">
+          <div class="nx-progress-track">
+            <div class="nx-progress-fill" [style.width.%]="trackingProgress"></div>
           </div>
-          <div class="progress-labels">
-            <span class="prog-label" [class.active]="isStepDone('PENDING')">Confirmed</span>
-            <span class="prog-label" [class.active]="isStepDone('PREPARING')">Preparing</span>
-            <span class="prog-label" [class.active]="isStepDone('SHIPPED')">Shipped</span>
-            <span class="prog-label" [class.active]="isStepDone('IN_TRANSIT')">In Transit</span>
-            <span class="prog-label" [class.active]="isStepDone('DELIVERED')">Delivered</span>
+          <div class="nx-progress-labels">
+            <span class="nx-prog-label" [class.active]="isStepDone('PENDING')">Confirmed</span>
+            <span class="nx-prog-label" [class.active]="isStepDone('PREPARING')">Preparing</span>
+            <span class="nx-prog-label" [class.active]="isStepDone('SHIPPED')">Shipped</span>
+            <span class="nx-prog-label" [class.active]="isStepDone('IN_TRANSIT')">In transit</span>
+            <span class="nx-prog-label" [class.active]="isStepDone('DELIVERED')">Delivered</span>
           </div>
         </div>
       </div>
@@ -975,7 +1102,7 @@ export class ProductDetailComponent implements OnInit {
       <div class="row2" *ngIf="selectedOrder">
         <div class="gcard" style="padding:22px;">
           <h3 style="font-family:'Playfair Display',serif;font-weight:400;font-style:italic;margin-bottom:20px;">Shipment Timeline</h3>
-          <div class="timeline">
+          <div class="timeline nx-order-timeline">
             <div class="tl-item done">
               <div class="tl-left"><div class="tl-dot done"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5" stroke="#3ECFB2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
               <div class="tl-right"><div class="tl-title done">Order Confirmed <span class="tl-time">{{selectedOrder.orderDate | date:'shortTime'}}</span></div><div class="tl-desc">Payment verified. Order confirmed.</div></div>
@@ -1034,80 +1161,76 @@ export class ProductDetailComponent implements OnInit {
       </div>
 
       <!-- REVIEW MODAL OVERLAY -->
-      <div id="overlay" [class.open]="isModalOpen" (click)="handleOverlayClick($event)">
-        <div class="modal" id="modal">
-          <!-- FORM STATE -->
+      <div class="nx-orders-overlay" [class.open]="isModalOpen" (click)="handleOverlayClick($event)">
+        <div class="nx-orders-modal" (click)="$event.stopPropagation()">
           <div *ngIf="!isSuccess">
-            <div class="modal-head">
-              <div class="mh-product">
-                <div class="mh-img">
+            <div class="nx-orders-modal-head">
+              <div class="nx-orders-mh-product">
+                <div class="nx-orders-mh-img">
                   <svg width="22" height="22" viewBox="0 0 28 28" fill="none"><rect x="3" y="7" width="22" height="14" rx="2.5" stroke="#3ECFB2" stroke-width="1.2" opacity="0.5"/><rect x="5" y="9" width="18" height="10" rx="1.5" fill="rgba(62,207,178,0.04)"/></svg>
                 </div>
                 <div>
-                  <div class="mh-name">Recent Order</div>
-                  <div class="mh-sub">Share your experience</div>
+                  <div class="nx-orders-mh-name">{{ reviewModalTitle }}</div>
+                  <div class="nx-orders-mh-sub">{{ reviewModalSub }}</div>
                 </div>
               </div>
-              <div class="close-btn" (click)="closeModal()">×</div>
+              <button type="button" class="nx-orders-close" (click)="closeModal()" aria-label="Close">×</button>
             </div>
 
-            <div class="modal-title">How would you <em>rate it?</em></div>
+            <div class="nx-orders-modal-title">How would you <em>rate it?</em></div>
 
-            <!-- STARS -->
-            <div class="stars-section">
-              <div class="stars-label">Overall rating</div>
-              <div class="stars-row">
-                <div class="star-btn" *ngFor="let s of [1,2,3,4,5]" 
+            <div class="nx-orders-stars-section">
+              <div class="nx-orders-stars-label">Overall rating</div>
+              <div class="nx-orders-stars-row">
+                <button type="button" class="nx-orders-star-btn" *ngFor="let s of [1,2,3,4,5]"
                      [class.selected]="rating >= s" [class.pop]="popStar === s"
                      (click)="setRating(s)" (mouseenter)="hoverRating = s" (mouseleave)="hoverRating = 0">
-                  <svg class="star-svg" width="36" height="36" viewBox="0 0 36 36" fill="none">
-                    <path d="M18 4l3.5 9H31l-7.7 5.6 3 9L18 22.5 9.7 27.6l3-9L5 13h9.5L18 4Z" 
-                          [attr.fill]="(hoverRating > 0 ? hoverRating >= s : rating >= s) ? '#E8A94A' : 'none'" 
-                          [attr.stroke]="(hoverRating > 0 ? hoverRating >= s : rating >= s) ? '#E8A94A' : '#344844'" 
+                  <svg class="nx-orders-star-svg" width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+                    <path d="M18 4l3.5 9H31l-7.7 5.6 3 9L18 22.5 9.7 27.6l3-9L5 13h9.5L18 4Z"
+                          [attr.fill]="(hoverRating > 0 ? hoverRating >= s : rating >= s) ? '#E8A94A' : 'none'"
+                          [attr.stroke]="(hoverRating > 0 ? hoverRating >= s : rating >= s) ? '#E8A94A' : '#344844'"
                           stroke-width="1.3" stroke-linejoin="round"/>
                   </svg>
-                </div>
+                </button>
               </div>
-              <div class="rating-text" [style.color]="ratingColor">{{ratingText}}</div>
+              <div class="nx-orders-rating-text" [style.color]="ratingColor">{{ratingText}}</div>
             </div>
 
-            <div class="review-body">
-              <div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Your review</div>
-              <textarea class="review-textarea" placeholder="What did you like or dislike?" [(ngModel)]="reviewText" (input)="updateChar()"></textarea>
-              <div class="char-row"><span class="char-count" [class.warn]="charCount > 400" [class.over]="charCount > 500">{{charCount}} / 500</span></div>
+            <div class="nx-orders-review-body">
+              <div class="nx-orders-field-k">Your review</div>
+              <textarea class="nx-orders-textarea" placeholder="What did you like or dislike?" [(ngModel)]="reviewText" (input)="updateChar()"></textarea>
+              <div class="nx-orders-char-row"><span class="nx-orders-char-count" [class.warn]="charCount > 400" [class.over]="charCount > 500">{{charCount}} / 500</span></div>
             </div>
 
-            <div class="tags-section">
-              <div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;">Quick tags</div>
-              <div class="tags-row">
-                <div class="tag" *ngFor="let t of tags" [class.selected]="t.selected" (click)="t.selected = !t.selected">{{t.label}}</div>
+            <div class="nx-orders-tags-section">
+              <div class="nx-orders-field-k">Quick tags</div>
+              <div class="nx-orders-tags-row">
+                <button type="button" class="nx-orders-tag" *ngFor="let t of tags" [class.selected]="t.selected" (click)="t.selected = !t.selected">{{t.label}}</button>
               </div>
             </div>
 
-            <div class="modal-foot">
-              <div class="foot-hint">Your review helps others</div>
-              <button class="submit-btn" [disabled]="!canSubmit()" (click)="submitReview()">
+            <div class="nx-orders-modal-foot">
+              <div class="nx-orders-foot-hint">Your review helps others</div>
+              <button type="button" class="nx-orders-submit-btn" [disabled]="!canSubmit()" (click)="submitReview()">
                 <ng-container *ngIf="!isSubmitting">
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5L5 10l6.5-7" stroke="#080808" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                   Submit Review
                 </ng-container>
-                <span *ngIf="isSubmitting" class="spin">
+                <span *ngIf="isSubmitting" class="nx-orders-spin">
                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5A5 5 0 1 1 1.5 6.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round"/></svg>
                 </span>
               </button>
             </div>
           </div>
 
-          <!-- SUCCESS STATE -->
-          <div class="success-state" *ngIf="isSuccess" style="display:flex;">
-            <div class="success-icon">
+          <div class="nx-orders-success" *ngIf="isSuccess">
+            <div class="nx-orders-success-icon">
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 14l7 7L24 7" stroke="#3EC98A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
-            <div class="success-title">Thank you for your <em>review!</em></div>
-            <div class="success-sub">Your feedback helps thousands of shoppers make better decisions. We really appreciate it.</div>
-            <button class="submit-btn" style="margin-top:8px;" (click)="closeModal()">Back to tracking →</button>
+            <div class="nx-orders-success-title">Thank you for your <em>review!</em></div>
+            <div class="nx-orders-success-sub">Your feedback helps thousands of shoppers make better decisions. We really appreciate it.</div>
+            <button type="button" class="nx-orders-submit-btn" style="margin-top:8px;" (click)="closeModal()">Back to tracking →</button>
           </div>
-
         </div>
       </div>
 
@@ -1128,6 +1251,8 @@ export class OrdersComponent implements OnInit {
   selectedOrderId: number | null = null;
   shipmentData: any = null;
   reviewProductId: number | null = null;
+  reviewModalTitle = 'Rate your purchase';
+  reviewModalSub = 'Share your experience';
 
   /** Order + shipment lifecycle (aligned with backend shipment statuses where applicable). */
   private readonly trackingSteps = ['PENDING', 'PREPARING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED'];
@@ -1190,6 +1315,10 @@ export class OrdersComponent implements OnInit {
   openReviewForOrder(order: any) {
     const firstItem = order?.items?.[0];
     this.reviewProductId = firstItem?.productId || firstItem?.product?.productId || null;
+    const oid = order?.orderId;
+    this.reviewModalTitle = oid != null ? `Order #ORD-${oid}` : 'Rate your purchase';
+    const pname = firstItem?.name || firstItem?.product?.name || firstItem?.productName || '';
+    this.reviewModalSub = pname ? pname : 'Share your experience';
     this.isModalOpen = true;
   }
 
@@ -1232,11 +1361,14 @@ export class OrdersComponent implements OnInit {
       this.reviewText = '';
       this.charCount = 0;
       this.tags.forEach(t => t.selected = false);
+      this.reviewModalTitle = 'Rate your purchase';
+      this.reviewModalSub = 'Share your experience';
     }, 400);
   }
 
   handleOverlayClick(e: Event) {
-    if ((e.target as HTMLElement).id === 'overlay') this.closeModal();
+    const el = e.target as HTMLElement;
+    if (el.classList.contains('nx-orders-overlay')) this.closeModal();
   }
 
   setRating(val: number) {

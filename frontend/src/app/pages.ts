@@ -5,6 +5,8 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService, AiService, ProductService, StoreService, AdminService, OrderService, CategoryService, CustomerProfileService, ToastService } from './services';
 import { NexusLogoComponent } from './nexus-logo.component';
 import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
+import { ConsumerNavPillsComponent } from './consumer-nav-pills.component';
+import { CONSUMER_NAV } from './consumer-nav.paths';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -296,7 +298,7 @@ export class LoginComponent {
           this.isLoading = false;
           if (user.role === 'ADMIN') this.router.navigate(['/admin']);
           else if (user.role === 'MANAGER') this.router.navigate(['/manager']);
-          else this.router.navigate(['/consumer']);
+          else this.router.navigate([CONSUMER_NAV.shop]);
         },
         error: () => {
           this.error = 'Invalid credentials. Please try again.';
@@ -325,7 +327,7 @@ export class LoginComponent {
         this.isLoading = false;
         if (user.role === 'ADMIN') this.router.navigate(['/admin']);
         else if (user.role === 'MANAGER') this.router.navigate(['/manager']);
-        else this.router.navigate(['/consumer']);
+        else this.router.navigate([CONSUMER_NAV.shop]);
       },
       error: (err) => {
         this.isLoading = false;
@@ -521,22 +523,26 @@ export class LoginComponent {
 .pcard:hover{border-color:rgba(62,207,178,0.2);transform:translateY(-3px);}
 .pcard:hover .pc-quick{opacity:1;}
 .pcard:hover .pc-wish{opacity:1;}
-.pc-img{aspect-ratio:1.1;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
-.pc-img-glow{position:absolute;inset:0;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+.pc-img{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.pc-img::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:3;border-radius:inherit;background:radial-gradient(ellipse 85% 85% at 50% 48%,rgba(0,0,0,0) 32%,rgba(0,0,0,0.15) 62%,rgba(0,0,0,0.45) 100%);}
+:host-context(html.light-mode) .pc-img::after{background:radial-gradient(ellipse 85% 85% at 50% 48%,rgba(0,0,0,0) 28%,rgba(0,0,0,0.12) 58%,rgba(0,0,0,0.35) 100%);}
+.pc-img-glow{position:absolute;inset:0;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:2;}
+.pc-img-photo{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12px);object-fit:cover;object-position:center;border-radius:14px;z-index:1;display:block;}
 .pcard:hover .pc-img-glow{opacity:1;}
-.pc-badges{position:absolute;top:8px;left:8px;display:flex;flex-direction:column;gap:4px;}
+/* Etiketler ürün adının altında, yatay sarma (görsel üstüne binmez) */
+.pc-badges{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:0 0 8px 0;position:static;}
 .pc-badge{font-size:9px;padding:2px 8px;border-radius:8px;font-weight:600;}
 .b-new{background:var(--teal-dim);color:var(--teal2);border:1px solid rgba(62,207,178,0.2);}
 .b-sale{background:rgba(224,112,112,0.1);color:var(--red);border:1px solid rgba(224,112,112,0.18);}
 .b-hot{background:rgba(232,169,74,0.1);color:var(--amber);border:1px solid rgba(232,169,74,0.18);}
-.pc-wish{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(8,8,8,0.7);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text3);opacity:0;transition:opacity 0.2s;cursor:pointer;z-index:5;}
+.pc-wish{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(8,8,8,0.7);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text3);opacity:0;transition:opacity 0.2s;cursor:pointer;z-index:6;}
 .pc-wish:hover{color:var(--red);border-color:rgba(224,112,112,0.3);}
-.pc-quick{position:absolute;bottom:0;left:0;right:0;padding:10px;background:linear-gradient(0deg,rgba(8,8,8,0.9) 0%,transparent 100%);opacity:0;transition:opacity 0.2s;display:flex;gap:6px;z-index:4;}
+.pc-quick{position:absolute;bottom:0;left:0;right:0;padding:10px;background:linear-gradient(0deg,rgba(8,8,8,0.9) 0%,transparent 100%);opacity:0;transition:opacity 0.2s;display:flex;gap:6px;z-index:5;}
 .pc-quick-btn{flex:1;padding:7px 0;border-radius:20px;background:var(--teal);color:#080808;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif;transition:background 0.15s;text-align:center;}
 .pc-quick-btn:hover{background:var(--teal2);}
 .pc-body{padding:11px 13px;}
 .pc-brand{font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:3px;}
-.pc-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:5px;line-height:1.3;}
+.pc-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;line-height:1.3;}
 .pc-stars{display:flex;align-items:center;gap:5px;margin-bottom:7px;}
 .pc-star{color:var(--amber);font-size:10px;}
 .pc-rcount{font-size:10px;color:var(--text3);}
@@ -569,10 +575,13 @@ export class LoginComponent {
 .wish-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 24px 24px;}
 .wcard{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.2s,transform 0.2s;position:relative;}
 .wcard:hover{border-color:rgba(62,207,178,0.15);transform:translateY(-2px);}
-.wc-img{aspect-ratio:1.2;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
-.wc-glow{position:absolute;inset:0;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+.wc-img{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.wc-img::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:3;border-radius:inherit;background:radial-gradient(ellipse 85% 85% at 50% 48%,rgba(0,0,0,0) 32%,rgba(0,0,0,0.15) 62%,rgba(0,0,0,0.45) 100%);}
+:host-context(html.light-mode) .wc-img::after{background:radial-gradient(ellipse 85% 85% at 50% 48%,rgba(0,0,0,0) 28%,rgba(0,0,0,0.12) 58%,rgba(0,0,0,0.35) 100%);}
+.wc-glow{position:absolute;inset:0;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:2;}
 .wcard:hover .wc-glow{opacity:1;}
-.wc-top-badges{position:absolute;top:8px;left:8px;right:8px;display:flex;align-items:flex-start;justify-content:space-between;}
+.wc-img-photo{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12px);object-fit:cover;object-position:center;border-radius:14px;z-index:1;display:block;}
+.wc-top-badges{position:absolute;top:8px;left:8px;right:8px;display:flex;align-items:flex-start;justify-content:space-between;z-index:6;}
 .wc-badge{font-size:9px;padding:2px 8px;border-radius:8px;font-weight:600;}
 .b-low{background:rgba(232,169,74,0.1);color:var(--amber);border:1px solid rgba(232,169,74,0.18);}
 .wc-remove{width:26px;height:26px;border-radius:50%;background:rgba(8,8,8,0.75);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text3);opacity:0;transition:all 0.2s;cursor:pointer;line-height:1;}
@@ -600,48 +609,6 @@ export class LoginComponent {
 .ab-text strong{color:var(--green);}
 .ab-btn{padding:6px 14px;border-radius:20px;font-size:11.5px;background:rgba(62,201,138,0.12);border:1px solid rgba(62,201,138,0.2);color:var(--green);cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;}
 
-/* === ORDERS TAB === */
-.orders-content{padding:24px;}
-.page-head-orders{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;}
-.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
-.sb-item{background:var(--bg);padding:14px 0;text-align:center;}
-.sb-val{font-family:'Playfair Display',serif;font-size:20px;color:var(--text);line-height:1;margin-bottom:3px;}
-.sb-val em{font-style:italic;color:var(--teal2);}
-.sb-label{font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
-.toolbar{display:flex;gap:8px;margin-bottom:20px;align-items:center;flex-wrap:wrap;}
-.search-box{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--glass);border:1px solid var(--border2);border-radius:10px;padding:9px 14px;}
-.search-box input{flex:1;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;}
-.search-box input::placeholder{color:var(--text3);}
-.filter-chips{display:flex;gap:6px;flex-wrap:wrap;}
-.orders{display:flex;flex-direction:column;gap:10px;}
-.ocard{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color 0.15s;}
-.ocard:hover{border-color:var(--border2);}
-.oc-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);}
-.och-left{display:flex;align-items:center;gap:16px;}
-.oc-id{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--teal);opacity:0.8;}
-.oc-date{font-size:11.5px;color:var(--text3);}
-.oc-items-count{font-size:11px;color:var(--text3);}
-.och-right{display:flex;align-items:center;gap:12px;}
-.oc-total{font-family:'Playfair Display',serif;font-size:17px;color:var(--text);}
-.spill{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 9px;border-radius:10px;font-weight:500;}
-.sp-g{background:var(--green-dim);color:var(--green);border:1px solid var(--green-border);}
-.sp-b{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(107,168,200,0.18);}
-.sp-a{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(232,169,74,0.18);}
-.sp-r{background:var(--red-dim);color:var(--red);border:1px solid rgba(224,112,112,0.18);}
-.oc-items-row{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.03);}
-.oi-img{width:40px;height:40px;border-radius:8px;background:var(--glass2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.oi-info{flex:1;min-width:0;}
-.oi-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.oi-var{font-size:11px;color:var(--text3);}
-.oi-qty{font-size:11px;color:var(--text3);white-space:nowrap;margin:0 8px;}
-.oi-price{font-family:'Playfair Display',serif;font-size:15px;color:var(--text);flex-shrink:0;}
-.oc-actions{display:flex;gap:7px;padding:11px 16px;}
-.oa-btn{padding:6px 16px;border-radius:20px;font-size:11.5px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.15s;}
-.oa-ghost{background:var(--glass2);border:1px solid var(--border);color:var(--text2);}
-.oa-ghost:hover{color:var(--text);}
-.oa-teal{background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);color:var(--teal2);}
-.oa-teal:hover{background:var(--teal);color:#080808;border-color:var(--teal);}
-
 /* CURATED BADGES */
 .pc-badge.tag-aesthetic { background:rgba(167,139,204,0.1); color:var(--purple); border:1px solid rgba(167,139,204,0.2); }
 .pc-badge.tag-productivity { background:rgba(107,168,200,0.1); color:var(--blue); border:1px solid rgba(107,168,200,0.2); }
@@ -650,7 +617,7 @@ export class LoginComponent {
 .pc-badge.tag-audio { background:rgba(232,169,74,0.1); color:var(--amber); border:1px solid rgba(232,169,74,0.18); }
 
 /* SETUP GRID */
-.setup-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; padding:20px 24px; }
+.setup-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px; padding:20px 24px; }
 .setup-card { position:relative; height:180px; border-radius:16px; overflow:hidden; cursor:pointer; transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); border:1px solid var(--border); }
 .setup-card:hover { transform:translateY(-4px); }
 .setup-img-overlay { position:absolute; inset:0; background:linear-gradient(0deg, rgba(8,8,8,0.9) 0%, transparent 65%); z-index:1; }
@@ -662,8 +629,11 @@ export class LoginComponent {
 .product-section{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);}
 .img-col{padding:24px;border-right:1px solid var(--border);}
 .main-img{width:100%;aspect-ratio:1;border-radius:12px;background:rgba(62,207,178,0.04);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:12px;position:relative;overflow:hidden;}
-.img-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(62,207,178,0.07),transparent 70%);pointer-events:none;}
-.img-badge{position:absolute;top:12px;left:12px;font-size:9px;padding:3px 9px;border-radius:10px;font-weight:600;}
+.main-img::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:3;border-radius:inherit;background:radial-gradient(ellipse 88% 88% at 50% 48%,rgba(0,0,0,0) 30%,rgba(0,0,0,0.15) 58%,rgba(0,0,0,0.4) 100%);}
+:host-context(html.light-mode) .main-img::after{background:radial-gradient(ellipse 88% 88% at 50% 48%,rgba(0,0,0,0) 26%,rgba(0,0,0,0.12) 56%,rgba(0,0,0,0.35) 100%);}
+.main-img-photo{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);object-fit:cover;object-position:center;border-radius:14px;z-index:1;display:block;}
+.img-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(62,207,178,0.07),transparent 70%);pointer-events:none;z-index:2;}
+.img-badge{position:absolute;top:12px;left:12px;font-size:9px;padding:3px 9px;border-radius:10px;font-weight:600;z-index:4;}
 .thumb-row{display:flex;gap:8px;}
 .thumb{width:52px;height:52px;border-radius:8px;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s;}
 .thumb.active{border-color:rgba(62,207,178,0.35);}
@@ -883,10 +853,6 @@ export class LoginComponent {
 .wcard:nth-child(4){animation:fadein 0.35s ease 0.16s both;}
 .wcard:nth-child(5){animation:fadein 0.35s ease 0.20s both;}
 .wcard:nth-child(6){animation:fadein 0.35s ease 0.24s both;}
-.ocard:nth-child(1){animation:fadein 0.3s ease 0.04s both;}
-.ocard:nth-child(2){animation:fadein 0.3s ease 0.08s both;}
-.ocard:nth-child(3){animation:fadein 0.3s ease 0.12s both;}
-.ocard:nth-child(4){animation:fadein 0.3s ease 0.16s both;}
 .hero-left{animation:fadein 0.5s ease 0.05s both;}
 .hero-right{animation:fadein 0.5s ease 0.15s both;}
 </style>
@@ -899,7 +865,7 @@ export class LoginComponent {
       <div class="npill" [class.active]="activeTab === 'home'" (click)="activeTab='home'; selectedProduct=null;">Home</div>
       <div class="npill" [class.active]="activeTab === 'shop' && !selectedProduct" (click)="activeTab='shop'; selectedProduct=null;">Shop</div>
       <div class="npill" [class.active]="activeTab === 'assistant'" (click)="activeTab='assistant'">AI Assistant</div>
-      <div class="npill" [class.active]="activeTab === 'orders'" (click)="activeTab='orders'">Orders</div>
+      <div class="npill" [routerLink]="consumerNav.orders" routerLinkActive="active">Orders</div>
       <div class="npill" [class.active]="activeTab === 'wishlist'" (click)="activeTab='wishlist'">Wishlist</div>
     </div>
     <div class="nav-r">
@@ -907,7 +873,7 @@ export class LoginComponent {
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12S1.5 8 1.5 4.5a3 3 0 0 1 5.5-1.6A3 3 0 0 1 12.5 4.5C12.5 8 7 12 7 12Z" stroke="#6A8A84" stroke-width="1.2"/></svg>
         <div class="nb">{{wishlist.length}}</div>
       </div>
-      <a class="nav-icon" routerLink="/cart" aria-label="Sepet">
+      <a class="nav-icon" [routerLink]="consumerNav.cart" aria-label="Cart">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="#6A8A84"/><circle cx="10" cy="11" r="1.2" fill="#6A8A84"/></svg>
         <div class="nb" *ngIf="cartCount > 0">{{cartCount}}</div>
       </a>
@@ -953,9 +919,9 @@ export class LoginComponent {
 
       <!-- QUICK LINKS -->
       <div class="quick-section">
-        <a class="qlink" routerLink="/cart" style="text-decoration:none;color:inherit;"><div class="ql-icon" style="background:var(--teal-dim);border:1px solid rgba(62,207,178,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 3h12l-1.5 9H4.5L3 3Z" stroke="#3ECFB2" stroke-width="1.2" stroke-linejoin="round"/><circle cx="7" cy="15" r="1.3" fill="#3ECFB2"/><circle cx="11" cy="15" r="1.3" fill="#3ECFB2"/></svg></div><div class="ql-label">Cart</div></a>
+        <a class="qlink" [routerLink]="consumerNav.cart" style="text-decoration:none;color:inherit;"><div class="ql-icon" style="background:var(--teal-dim);border:1px solid rgba(62,207,178,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 3h12l-1.5 9H4.5L3 3Z" stroke="#3ECFB2" stroke-width="1.2" stroke-linejoin="round"/><circle cx="7" cy="15" r="1.3" fill="#3ECFB2"/><circle cx="11" cy="15" r="1.3" fill="#3ECFB2"/></svg></div><div class="ql-label">Cart</div></a>
         <div class="qlink" (click)="activeTab='wishlist'"><div class="ql-icon" style="background:rgba(224,112,112,0.08);border:1px solid rgba(224,112,112,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 15S2 10.5 2 6a4 4 0 0 1 7-2.6A4 4 0 0 1 16 6c0 4.5-7 9-7 9Z" stroke="#E07070" stroke-width="1.2"/></svg></div><div class="ql-label">Wishlist</div></div>
-        <div class="qlink" (click)="activeTab='orders'"><div class="ql-icon" style="background:rgba(107,168,200,0.08);border:1px solid rgba(107,168,200,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5.5h14M5 9h8M7.5 12.5h3" stroke="#6BA8C8" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="ql-label">Orders</div></div>
+        <div class="qlink" [routerLink]="consumerNav.orders"><div class="ql-icon" style="background:rgba(107,168,200,0.08);border:1px solid rgba(107,168,200,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5.5h14M5 9h8M7.5 12.5h3" stroke="#6BA8C8" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="ql-label">Orders</div></div>
         <div class="qlink" (click)="activeTab='assistant'"><div class="ql-icon" style="background:rgba(62,201,138,0.08);border:1px solid rgba(62,201,138,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 6v6l7 4 7-4V6L9 2Z" stroke="#3EC98A" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 2v7M2 6l7 3.5 7-3.5" stroke="#3EC98A" stroke-width="1.2"/></svg></div><div class="ql-label">AI Assistant</div></div>
         <div class="qlink"><div class="ql-icon" style="background:rgba(232,169,74,0.08);border:1px solid rgba(232,169,74,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5L11 7H17L12.5 10.5l1.8 5.5L9 13.5l-5.3 2.5 1.8-5.5L1 7H7L9 1.5Z" stroke="#E8A94A" stroke-width="1.1" stroke-linejoin="round"/></svg></div><div class="ql-label">Deals</div></div>
         <div class="qlink" (click)="activeTab='settings'"><div class="ql-icon" style="background:rgba(167,139,204,0.08);border:1px solid rgba(167,139,204,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="7" r="4" stroke="#A78BCC" stroke-width="1.2"/><path d="M2 17c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#A78BCC" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="ql-label">Profile</div></div>
@@ -1009,16 +975,22 @@ export class LoginComponent {
           <div class="pcard" *ngFor="let p of products.slice(0,4)" (click)="selectProduct(p)">
             <div class="pc-img" style="background:rgba(62,207,178,0.04);">
               <div class="pc-img-glow" style="background:radial-gradient(circle,rgba(62,207,178,0.09),transparent 70%)"></div>
-              <img *ngIf="p.imageUrl" [src]="p.imageUrl" style="max-width:70%;max-height:70%;object-fit:contain;position:relative;z-index:1;"/>
+              <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="pc-img-photo" [alt]="p.name"/>
               <svg *ngIf="!p.imageUrl" width="70" height="70" viewBox="0 0 70 70" fill="none"><rect x="7" y="16" width="56" height="36" rx="5" stroke="#3ECFB2" stroke-width="1.2" opacity="0.42"/><rect x="28" y="52" width="14" height="3.5" rx="1.75" fill="rgba(62,207,178,0.2)"/></svg>
-              <div class="pc-badges"><div *ngIf="p.stockQuantity > 50" class="pc-badge b-new">New</div></div>
               <div class="pc-wish" (click)="$event.stopPropagation(); toggleWishlist(p)">♡</div>
               <div class="pc-quick"><button class="pc-quick-btn" (click)="$event.stopPropagation(); addToCart(p)">Add to Cart</button></div>
             </div>
             <div class="pc-body">
               <div class="pc-brand">{{p.brand}}</div>
-              <div class="pc-name">{{p.name}}</div>
-              <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;"><span class="pc-star">★★★★★</span><span class="pc-rcount">4.8</span></div>
+              <div class="pc-name" style="margin-bottom:4px;">{{p.name}}</div>
+              <div class="pc-badges" (click)="$event.stopPropagation()">
+                <div *ngIf="p.tags?.includes('Performance')" class="pc-badge b-new" style="background:var(--red-dim);color:var(--red);">Performance</div>
+                <div *ngIf="p.tags?.includes('Aesthetic')" class="pc-badge b-new" style="background:var(--purple-dim);color:var(--purple-lit);">Aesthetic</div>
+                <div *ngIf="p.tags?.includes('Stealth')" class="pc-badge b-new" style="background:rgba(255,255,255,0.05);color:#fff;border:1px solid rgba(255,255,255,0.1);">Stealth</div>
+                <div *ngIf="p.tags?.includes('Shadow Coder')" class="pc-badge b-new" style="background:rgba(62,207,178,0.1);color:var(--teal);">Shadow Coder</div>
+                <div *ngIf="p.tags?.includes('Organic Creator')" class="pc-badge b-new" style="background:rgba(232,169,74,0.1);color:var(--amber);">Organic Creator</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;"><span class="pc-star">★★★★★</span><span class="pc-rcount">4.9</span></div>
               <div class="pc-bottom"><div><span class="pc-price">{{p.basePrice | currency}}</span></div></div>
             </div>
           </div>
@@ -1031,28 +1003,36 @@ export class LoginComponent {
           <div><div class="sec-title">Shop by Personality</div><div class="sec-sub">Curated tech setups for your lifestyle</div></div>
         </div>
         <div class="setup-grid">
-          <div class="setup-card" (click)="activeTab='shop'; searchQuery='minimal';">
+          <div class="setup-card" (click)="activeTab='shop'; searchQuery='Shadow Coder';">
             <div class="setup-img-overlay"></div>
             <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(62,207,178,0.1), transparent);z-index:0;"></div>
             <div class="setup-content">
-              <div class="setup-tag">Minimalist</div>
-              <div class="setup-name">The Clean Slate</div>
+              <div class="setup-tag">Performance</div>
+              <div class="setup-name">Shadow Coder</div>
             </div>
           </div>
-          <div class="setup-card" (click)="activeTab='shop'; searchQuery='gaming';">
-            <div class="setup-img-overlay"></div>
-            <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(224,112,112,0.1), transparent);z-index:0;"></div>
-            <div class="setup-content">
-              <div class="setup-tag">High Perf</div>
-              <div class="setup-name">Gamer Beast</div>
-            </div>
-          </div>
-          <div class="setup-card" (click)="activeTab='shop'; searchQuery='aesthetic';">
+          <div class="setup-card" (click)="activeTab='shop'; searchQuery='Organic Creator';">
             <div class="setup-img-overlay"></div>
             <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(167,139,204,0.1), transparent);z-index:0;"></div>
             <div class="setup-content">
-              <div class="setup-tag">Design First</div>
-              <div class="setup-name">Creator Studio</div>
+              <div class="setup-tag">Aesthetic</div>
+              <div class="setup-name">Organic Creator</div>
+            </div>
+          </div>
+          <div class="setup-card" (click)="activeTab='shop'; searchQuery='Discovery';">
+            <div class="setup-img-overlay"></div>
+            <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(224,112,112,0.1), transparent);z-index:0;"></div>
+            <div class="setup-content">
+              <div class="setup-tag">Exclusive</div>
+              <div class="setup-name">The Discovery</div>
+            </div>
+          </div>
+          <div class="setup-card" (click)="activeTab='shop'; searchQuery='Global Nomad';">
+            <div class="setup-img-overlay"></div>
+            <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(62,201,207,0.1), transparent);z-index:0;"></div>
+            <div class="setup-content">
+              <div class="setup-tag">Mobility</div>
+              <div class="setup-name">Global Nomad</div>
             </div>
           </div>
         </div>
@@ -1110,9 +1090,9 @@ export class LoginComponent {
           <div class="fsec">
             <div class="fsec-label">Brand <span>▾</span></div>
             <div class="fsec-body">
-              <div class="fcheck" *ngFor="let b of brands" [class.on]="b.checked" (click)="b.checked = !b.checked">
+              <div class="fcheck" *ngFor="let b of brands" [class.on]="b.checked" (click)="toggleBrand(b.name)">
                 <div class="fbox"><svg *ngIf="b.checked" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-                <span class="flabel">{{b.name}}</span><span class="fcount">12</span>
+                <span class="flabel">{{b.name}}</span>
               </div>
             </div>
           </div>
@@ -1136,7 +1116,18 @@ export class LoginComponent {
           <div class="fsec">
             <div class="fsec-label">Availability <span>▾</span></div>
             <div class="fsec-body">
-              <div class="fcheck" [class.on]="availability.inStock" (click)="availability.inStock = !availability.inStock"><div class="fbox"><svg *ngIf="availability.inStock" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="flabel">In Stock</span></div>
+              <div class="fcheck" [class.on]="availability.inStock" (click)="availability.inStock = !availability.inStock">
+                <div class="fbox"><svg *ngIf="availability.inStock" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <span class="flabel">In Stock</span>
+              </div>
+              <div class="fcheck" [class.on]="availability.onSale" (click)="availability.onSale = !availability.onSale">
+                <div class="fbox"><svg *ngIf="availability.onSale" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <span class="flabel">On Sale</span>
+              </div>
+              <div class="fcheck" [class.on]="availability.newArrivals" (click)="availability.newArrivals = !availability.newArrivals">
+                <div class="fbox"><svg *ngIf="availability.newArrivals" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <span class="flabel">New Arrivals</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1153,18 +1144,18 @@ export class LoginComponent {
             <div class="pcard" *ngFor="let p of filteredProducts" (click)="selectProduct(p)">
               <div class="pc-img" style="background:rgba(62,207,178,0.04);">
                 <div class="pc-img-glow" style="background:radial-gradient(circle,rgba(62,207,178,0.09),transparent 70%)"></div>
-                <img *ngIf="p.imageUrl" [src]="p.imageUrl" style="max-width:80%;max-height:80%;object-fit:contain;position:relative;z-index:1;"/>
+                <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="pc-img-photo" [alt]="p.name"/>
                 <svg *ngIf="!p.imageUrl" width="80" height="80" viewBox="0 0 80 80" fill="none"><rect x="8" y="18" width="64" height="40" rx="5" stroke="#3ECFB2" stroke-width="1.3" opacity="0.4"/><rect x="32" y="58" width="16" height="4" rx="2" fill="rgba(62,207,178,0.2)"/></svg>
-                <div class="pc-badges">
-                  <div *ngFor="let tag of getTags(p.tags)" class="pc-badge" [ngClass]="getTagClass(tag)">{{tag}}</div>
-                  <div *ngIf="p.stockQuantity > 50" class="pc-badge b-new">New</div>
-                </div>
                 <div class="pc-wish" (click)="$event.stopPropagation(); toggleWishlist(p)">♡</div>
                 <div class="pc-quick"><button class="pc-quick-btn" (click)="$event.stopPropagation(); addToCart(p)">Add to Cart</button></div>
               </div>
               <div class="pc-body">
                 <div class="pc-brand">{{p.brand}}</div>
                 <div class="pc-name">{{p.name}}</div>
+                <div class="pc-badges" (click)="$event.stopPropagation()">
+                  <div *ngFor="let tag of getTags(p.tags)" class="pc-badge" [ngClass]="getTagClass(tag)">{{tag}}</div>
+                  <div *ngIf="p.stockQuantity > 50" class="pc-badge b-new">New</div>
+                </div>
                 <div class="pc-stars"><span class="pc-star">★★★★★</span><span class="pc-rcount">4.8</span></div>
                 <div class="pc-bottom">
                   <div><span class="pc-price">{{p.basePrice | currency}}</span></div>
@@ -1189,7 +1180,7 @@ export class LoginComponent {
           <div class="main-img">
             <div class="img-glow"></div>
             <div *ngIf="selectedProduct.stockQuantity > 50" class="img-badge b-new">New</div>
-            <img *ngIf="selectedProduct.imageUrl" [src]="selectedProduct.imageUrl" style="max-width:80%;max-height:80%;object-fit:contain;position:relative;z-index:1;"/>
+            <img *ngIf="selectedProduct.imageUrl" [src]="selectedProduct.imageUrl" class="main-img-photo" [alt]="selectedProduct.name"/>
             <svg *ngIf="!selectedProduct.imageUrl" width="160" height="160" viewBox="0 0 160 160" fill="none"><rect x="16" y="38" width="128" height="80" rx="8" stroke="#3ECFB2" stroke-width="1.5" opacity="0.45"/><rect x="60" y="118" width="40" height="8" rx="4" fill="rgba(62,207,178,0.15)"/></svg>
           </div>
           <div class="thumb-row">
@@ -1304,7 +1295,7 @@ export class LoginComponent {
         <div class="wcard" *ngFor="let p of wishlist">
           <div class="wc-img" style="background:rgba(62,207,178,0.04);">
             <div class="wc-glow" style="background:radial-gradient(circle,rgba(62,207,178,0.08),transparent 70%)"></div>
-            <img *ngIf="p.imageUrl" [src]="p.imageUrl" style="max-width:70%;max-height:70%;object-fit:contain;position:relative;z-index:1;"/>
+            <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="wc-img-photo" [alt]="p.name"/>
             <svg *ngIf="!p.imageUrl" width="72" height="72" viewBox="0 0 72 72" fill="none"><rect x="8" y="18" width="56" height="36" rx="5" stroke="#3ECFB2" stroke-width="1.3" opacity="0.45"/></svg>
             <div class="wc-top-badges">
               <div *ngIf="p.stockQuantity > 50" class="wc-badge b-new">New</div>
@@ -1326,81 +1317,6 @@ export class LoginComponent {
         <div style="font-size:14px;margin-bottom:8px;color:var(--text2);">Your wishlist is empty</div>
         <div style="font-size:12px;margin-bottom:20px;">Browse products and save your favorites here.</div>
         <button class="btn-primary" style="display:inline-flex;" (click)="activeTab='shop'">Browse Products →</button>
-      </div>
-    </ng-container>
-
-    <!-- ==================== ORDERS TAB ==================== -->
-    <ng-container *ngIf="activeTab === 'orders'">
-      <div class="orders-content">
-        <div class="page-head-orders">
-          <div>
-            <div class="ph-title">Purchase History</div>
-            <div class="ph-sub">{{consumerOrders.length}} orders · Your spending analytics</div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <div class="ph-btn ph-ghost">Export PDF</div>
-            <div class="ph-btn ph-teal">Track Active Orders</div>
-          </div>
-        </div>
-
-        <div class="summary-bar">
-          <div class="sb-item"><div class="sb-val">{{consumerOrders.length}}</div><div class="sb-label">Total Orders</div></div>
-          <div class="sb-item"><div class="sb-val">{{consumerTotalSpent | currency:'USD':'symbol':'1.0-0'}}</div><div class="sb-label">Total Spent</div></div>
-          <div class="sb-item"><div class="sb-val">{{consumerActiveOrders}}</div><div class="sb-label">Active Orders</div></div>
-          <div class="sb-item"><div class="sb-val">{{consumerAvgRating}}<em>★</em></div><div class="sb-label">Avg. Rating</div></div>
-        </div>
-
-        <div class="toolbar">
-          <div class="search-box">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="#344844" stroke-width="1.2"/><path d="M9 9l2.5 2.5" stroke="#344844" stroke-width="1.2" stroke-linecap="round"/></svg>
-            <input placeholder="Search orders by product or ID…"/>
-          </div>
-          <div class="filter-chips">
-            <div class="fchip active">All ({{consumerOrders.length}})</div>
-            <div class="fchip">Active ({{consumerActiveOrders}})</div>
-            <div class="fchip">Delivered ({{consumerDelivered}})</div>
-            <div class="fchip">Cancelled ({{consumerCancelled}})</div>
-          </div>
-        </div>
-
-        <div class="orders">
-          <div class="ocard" *ngFor="let o of consumerOrders" [style.border-color]="o.status === 'CANCELLED' ? 'rgba(224,112,112,0.08)' : ''">
-            <div class="oc-header">
-              <div class="och-left">
-                <div class="oc-id">#ORD-{{o.orderId}}</div>
-                <div class="oc-date">{{o.orderDate | date:'mediumDate'}}</div>
-                <div class="oc-items-count">{{o.items?.length || 0}} item{{(o.items?.length || 0) > 1 ? 's' : ''}}</div>
-              </div>
-              <div class="och-right">
-                <div class="oc-total">{{o.totalAmount | currency}}</div>
-                <div class="spill" [class.sp-b]="o.status === 'SHIPPED' || o.status === 'PROCESSING'" [class.sp-g]="o.status === 'DELIVERED'" [class.sp-r]="o.status === 'CANCELLED'" [class.sp-a]="o.status === 'PENDING'">● {{o.status}}</div>
-              </div>
-            </div>
-            <ng-container *ngIf="o.items && o.items.length > 0">
-              <div class="oc-items-row" *ngFor="let item of o.items.slice(0,3)">
-                <div class="oi-img" style="background:rgba(62,207,178,0.04);">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2" stroke="#3ECFB2" stroke-width="1.1" opacity="0.5"/></svg>
-                </div>
-                <div class="oi-info">
-                  <div class="oi-name">{{item.product?.name || 'Product'}}</div>
-                  <div class="oi-var">{{item.product?.category || ''}}</div>
-                </div>
-                <div class="oi-qty">×{{item.quantity}}</div>
-                <div class="oi-price">{{item.priceAtPurchase | currency}}</div>
-              </div>
-            </ng-container>
-            <div class="oc-actions">
-              <div class="oa-btn oa-teal" *ngIf="o.status !== 'CANCELLED' && o.status !== 'DELIVERED'" routerLink="/orders">Track Order</div>
-              <div class="oa-btn oa-ghost" *ngIf="o.status === 'DELIVERED'" routerLink="/orders">Write Review</div>
-              <div class="oa-btn oa-ghost" *ngIf="o.status === 'CANCELLED'" (click)="reorder(o)">Reorder</div>
-            </div>
-          </div>
-
-          <div *ngIf="consumerOrders.length === 0" style="text-align:center;padding:48px;color:var(--text3);">
-            <div style="font-size:36px;margin-bottom:12px;opacity:0.15;">📦</div>
-            <div style="font-size:13px;">No orders yet. Start shopping!</div>
-          </div>
-        </div>
       </div>
     </ng-container>
 
@@ -1616,6 +1532,7 @@ export class LoginComponent {
   `,
 })
 export class ConsumerComponent implements OnInit {
+  readonly consumerNav = CONSUMER_NAV;
   activeTab = 'home';
   settingsTab = 'personal';
   filtersOpen = true;
@@ -1630,25 +1547,24 @@ export class ConsumerComponent implements OnInit {
   minPrice = 0;
   selectedRating = 0;
   selectedCat = 'All';
-  availability = { inStock: false, onSale: false };
+  availability = { inStock: true, onSale: false, newArrivals: false };
   notifPrefs = { orders: true, marketing: false };
   categories: { name: string, checked: boolean }[] = [];
-  brands: { name: string, checked: boolean }[] = [
-    { name: 'Apple', checked: false },
-    { name: 'Sony', checked: false },
-    { name: 'Keychron', checked: false },
-    { name: 'Logitech', checked: false },
-    { name: 'LG', checked: false }
-  ];
+  selectedBrands: string[] = [];
+  get brands() {
+    const bNames = Array.from(new Set(this.products.map(p => p.brand))).filter(b => b);
+    return bNames.map(name => ({
+      name,
+      checked: this.selectedBrands.includes(name)
+    }));
+  }
   wishlist: any[] = [];
   qty = 1;
   isTyping = false;
   chatSuggestions = ['Top selling products', 'Recommend a laptop for my budget', 'Order status', 'Discounted items', 'Apple vs Samsung compare'];
-  consumerOrders: any[] = [];
   auth = inject(AuthService);
   ai = inject(AiService);
   productService = inject(ProductService);
-  orderService = inject(OrderService);
   toast = inject(ToastService);
   router = inject(Router);
 
@@ -1657,36 +1573,6 @@ export class ConsumerComponent implements OnInit {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       return cart.reduce((sum: number, i: any) => sum + (i.qty || i.quantity || 1), 0);
     } catch { return 0; }
-  }
-
-  get consumerTotalSpent(): number {
-    return this.consumerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  }
-  get consumerActiveOrders(): number {
-    return this.consumerOrders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING' || o.status === 'SHIPPED').length;
-  }
-  get consumerDelivered(): number {
-    return this.consumerOrders.filter(o => o.status === 'DELIVERED').length;
-  }
-  get consumerCancelled(): number {
-    return this.consumerOrders.filter(o => o.status === 'CANCELLED').length;
-  }
-  get consumerAvgRating(): string {
-    return '4.8';
-  }
-
-  reorder(order: any) {
-    if (order?.items) {
-      let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      order.items.forEach((item: any) => {
-        const existing = cart.find((c: any) => c.productId === item.product?.productId);
-        if (existing) { existing.qty += item.quantity; }
-        else { cart.push({ ...item.product, qty: item.quantity }); }
-      });
-      localStorage.setItem('cart', JSON.stringify(cart));
-      this.toast.show('Items added to cart!');
-      this.router.navigate(['/cart']);
-    }
   }
 
   private getTimeNow(): string {
@@ -1707,10 +1593,6 @@ export class ConsumerComponent implements OnInit {
       const cats = Array.from(new Set(this.products.map(p => p.category)));
       this.categories = cats.map((c: any) => ({ name: c, checked: false }));
     });
-
-    this.orderService.getMyOrders().subscribe(res => {
-      this.consumerOrders = res || [];
-    });
   }
 
   getTags(tagsStr: string): string[] {
@@ -1724,13 +1606,21 @@ export class ConsumerComponent implements OnInit {
     if (t.includes('prod') || t.includes('silent') || t.includes('work')) return 'tag-productivity';
     if (t.includes('gaming') || t.includes('perf')) return 'tag-gaming';
     if (t.includes('audio') || t.includes('listen')) return 'tag-audio';
+    if (t.includes('nomad') || t.includes('travel')) return 'tag-productivity'; // Reusing blue for nomadic
     return 'tag-minimal';
   }
 
+  toggleBrand(name: string) {
+    if (this.selectedBrands.includes(name)) {
+      this.selectedBrands = this.selectedBrands.filter(b => b !== name);
+    } else {
+      this.selectedBrands.push(name);
+    }
+  }
+
   get activeFilters() {
-    const brandFilters = this.brands.filter(b => b.checked).map(b => b.name);
     const catFilters = this.categories.filter(c => c.checked).map(c => c.name);
-    return [...brandFilters, ...catFilters];
+    return [...this.selectedBrands, ...catFilters];
   }
 
   get filteredProducts() {
@@ -1765,8 +1655,9 @@ export class ConsumerComponent implements OnInit {
   }
 
   removeChip(f: string) {
-    const brand = this.brands.find(b => b.name === f);
-    if (brand) brand.checked = false;
+    if (this.selectedBrands.includes(f)) {
+      this.selectedBrands = this.selectedBrands.filter(b => b !== f);
+    }
     const cat = this.categories.find(c => c.name === f);
     if (cat) cat.checked = false;
   }
@@ -1778,7 +1669,7 @@ export class ConsumerComponent implements OnInit {
     this.selectedCat = 'All';
     this.brands.forEach(b => b.checked = false);
     this.categories.forEach(c => c.checked = false);
-    this.availability = { inStock: false, onSale: false };
+    this.availability = { inStock: false, onSale: false, newArrivals: false };
     this.searchQuery = '';
   }
 
@@ -2013,7 +1904,10 @@ export class ConsumerComponent implements OnInit {
 .mpg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .mpc{background:var(--glass);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color 0.15s;}
 .mpc:hover{border-color:var(--border2);}
-.mpci{height:72px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);}
+.mpci{height:72px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);}
+.mpci::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse 90% 90% at 50% 50%,rgba(0,0,0,0) 25%,rgba(0,0,0,0.25) 100%);}
+:host-context(html.light-mode) .mpci::after{background:radial-gradient(ellipse 90% 90% at 50% 50%,rgba(0,0,0,0) 22%,rgba(0,0,0,0.2) 100%);}
+.mpci-photo{position:absolute;inset:3px;width:calc(100% - 6px);height:calc(100% - 6px);object-fit:cover;object-position:center;border-radius:8px;z-index:1;display:block;}
 .mpcb{padding:9px 11px;}
 .mpcn{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;}
 .mpcpr{font-family:'Playfair Display',serif;font-size:14px;color:var(--text);}
@@ -2235,7 +2129,7 @@ export class ConsumerComponent implements OnInit {
         <div class="mpg">
           <div class="mpc" *ngFor="let p of products">
             <div class="mpci" style="background:rgba(62,207,178,0.04);">
-              <img *ngIf="p.imageUrl" [src]="p.imageUrl" style="max-width:60%;max-height:60%;object-fit:contain;"/>
+              <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="mpci-photo" [alt]="p.name"/>
               <svg *ngIf="!p.imageUrl" width="44" height="44" viewBox="0 0 44 44" fill="none"><rect x="4" y="11" width="36" height="22" rx="3.5" stroke="#3ECFB2" stroke-width="1.1" opacity="0.5"/></svg>
             </div>
             <div class="mpcb">
@@ -2419,7 +2313,7 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   private categoryChart: Chart | null = null;
 
   ngOnInit() {
-    this.productService.getProducts().subscribe(res => {
+    this.productService.getMyStoreProducts().subscribe(res => {
       this.products = res;
       this.buildCategoryChart();
     });
@@ -2608,6 +2502,8 @@ export class ManagerComponent implements OnInit, AfterViewInit {
 .logo-a { font-family:'Playfair Display',serif; font-style:italic; font-size:18px; color:var(--text); display:flex; align-items:center; gap:8px; }
 .logo-dot-a { width:6px; height:6px; border-radius:50%; background:var(--teal); box-shadow:0 0 8px var(--teal-glow); }
 .badge-a { background:var(--teal-dim); border:1px solid rgba(62,207,178,0.2); color:var(--teal); font-size:9px; padding:2px 8px; border-radius:8px; text-transform:uppercase; letter-spacing:0.06em; }
+.pc-badges { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; margin-bottom:8px; }
+.pc-badge { font-size:9px; font-weight:700; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.02em; background:var(--glass2); color:var(--text2); }
 .nav-r-a { display:flex; align-items:center; gap:12px; }
 .nav-av-a { width:30px; height:30px; border-radius:50%; background:var(--teal-dim); border:1px solid rgba(62,207,178,0.2); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:var(--teal); }
 
@@ -2708,7 +2604,10 @@ export class ManagerComponent implements OnInit, AfterViewInit {
 .prod-mgmt-grid-a { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
 .pm-card-a { background:var(--glass); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:all 0.3s; }
 .pm-card-a:hover { border-color:var(--teal-dim); transform:translateY(-2px); }
-.pm-img-a { height:120px; background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--border); position:relative; }
+.pm-img-a { height:120px; background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--border); position:relative; overflow:hidden; }
+.pm-img-a::after { content:''; position:absolute; inset:0; pointer-events:none; z-index:2; background:radial-gradient(ellipse 88% 88% at 50% 48%, rgba(0,0,0,0) 28%, rgba(0,0,0,0.25) 100%); }
+:host-context(html.light-mode) .pm-img-a::after { background:radial-gradient(ellipse 88% 88% at 50% 48%, rgba(0,0,0,0) 24%, rgba(0,0,0,0.2) 100%); }
+.pm-img-a-photo { position:absolute; inset:8px; width:calc(100% - 16px); height:calc(100% - 16px); object-fit:cover; object-position:center; border-radius:14px; z-index:1; display:block; }
 .pm-body-a { padding:15px; }
 .pm-name-a { font-size:13px; font-weight:600; color:var(--text); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pm-row-a { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
@@ -2982,7 +2881,7 @@ export class ManagerComponent implements OnInit, AfterViewInit {
         <div class="prod-mgmt-grid-a">
           <div class="pm-card-a" *ngFor="let p of pagedProducts.slice(0,9)">
             <div class="pm-img-a">
-              <img *ngIf="p.imageUrl" [src]="p.imageUrl" style="max-height:80px;"/>
+              <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="pm-img-a-photo" [alt]="p.name"/>
               <svg *ngIf="!p.imageUrl" width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="4" y="9" width="32" height="20" rx="3" stroke="var(--teal)" stroke-width="1.1" opacity="0.3"/></svg>
             </div>
             <div class="pm-body-a">
@@ -3347,12 +3246,13 @@ export class AdminComponent implements OnInit, AfterViewInit {
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent, ConsumerNavPillsComponent],
   template: `
     <div class="page-frame">
       <div class="navbar-nexus">
-        <div style="display:flex;align-items:center;gap:15px;">
-          <div class="logo-admin" routerLink="/consumer"><app-nexus-logo size="sm" wordmark="Nexus Settings"></app-nexus-logo></div>
+        <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;">
+          <div class="logo-admin" [routerLink]="consumerNav.shop"><app-nexus-logo size="sm" wordmark="Nexus Settings"></app-nexus-logo></div>
+          <app-consumer-nav-pills *ngIf="editUser?.role === 'CONSUMER'" style="display:flex;align-items:center;" />
         </div>
         <div class="nav-r-nexus" style="display:flex;align-items:center;gap:10px;">
           <app-nexus-theme-toggle></app-nexus-theme-toggle>
@@ -3476,6 +3376,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
   `]
 })
 export class SettingsComponent implements OnInit {
+  readonly consumerNav = CONSUMER_NAV;
   tab = 'personal';
   editUser: any = {};
   profile: any = { gender: '', age: null, city: '', country: '', membershipType: 'BASIC' };
@@ -3513,7 +3414,7 @@ export class SettingsComponent implements OnInit {
     const role = this.editUser.role || 'CONSUMER';
     if (role === 'ADMIN') this.router.navigate(['/admin']);
     else if (role === 'MANAGER') this.router.navigate(['/manager']);
-    else this.router.navigate(['/consumer']);
+    else this.router.navigate([CONSUMER_NAV.shop]);
   }
 
   saveProfile(event: any) {
@@ -3580,6 +3481,7 @@ export class SettingsComponent implements OnInit {
   imports: [CommonModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
+:host { display: block; }
 .landing-page-full {
   background: #080808;
   font-family: 'Plus Jakarta Sans', sans-serif;
@@ -3712,16 +3614,28 @@ export class SettingsComponent implements OnInit {
 .showcase-row-l { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .showcase-card-l { background: var(--glass); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; backdrop-filter: blur(12px); transition: border-color 0.2s, transform 0.2s; cursor: pointer; }
 .showcase-card-l:hover { border-color: rgba(62,207,178,0.2); transform: translateY(-3px); }
-.sc-img-l { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border); font-size: 48px; position: relative; }
-.sc-glow-l { position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; }
+.sc-img-l { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border); font-size: 48px; position: relative; overflow: hidden; }
+.sc-img-l::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3; border-radius: inherit; background: radial-gradient(ellipse 85% 85% at 50% 48%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.18) 62%, rgba(0,0,0,0.45) 100%); }
+:host-context(html.light-mode) .sc-img-l::after { background: radial-gradient(ellipse 85% 85% at 50% 48%, rgba(0,0,0,0) 28%, rgba(0,0,0,0.15) 58%, rgba(0,0,0,0.35) 100%); }
+.sc-glow-l { position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; z-index: 2; pointer-events: none; }
 .showcase-card-l:hover .sc-glow-l { opacity: 1; }
 .sc-body-l { padding: 16px 18px; }
 .sc-cat-l { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-deep); margin-bottom: 4px; }
-.sc-name-l { font-size: 14px; font-weight: 500; color: #E6F0EE; margin-bottom: 10px; }
 .sc-bottom-l { display: flex; align-items: center; justify-content: space-between; }
 .sc-price-l { font-family: 'Playfair Display', serif; font-size: 18px; color: #E6F0EE; }
 .sc-btn-l { font-size: 11px; padding: 5px 14px; border-radius: 20px; background: var(--teal-dim); border: 1px solid rgba(62,207,178,0.2); color: var(--teal2); cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.18s; }
 .showcase-card-l:hover .sc-btn-l { background: var(--teal); color: #080808; border-color: var(--teal); }
+a.showcase-card-l { text-decoration: none; color: inherit; display: block; }
+.sc-img-l img.sc-thumb-l { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); object-fit: cover; object-position: center; border-radius: 14px; z-index: 1; display: block; }
+.sc-img-l svg { position: relative; z-index: 4; }
+.sc-name-l { font-size: 14px; font-weight: 500; color: #E6F0EE; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; min-height: 2.7em; }
+.showcase-skel-l { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.showcase-skel-card { height: 300px; border-radius: 12px; background: var(--glass); border: 1px solid var(--border); animation: skel-pulse-l 1.2s ease-in-out infinite; }
+@keyframes skel-pulse-l { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+.showcase-empty-l { text-align: center; padding: 28px 20px; color: var(--text-dim); font-size: 13px; border: 1px dashed var(--border); border-radius: 12px; max-width: 480px; margin: 0 auto; }
+@media (max-width: 900px) {
+  .showcase-row-l, .showcase-skel-l { grid-template-columns: 1fr !important; }
+}
 
 .cta-section-l { padding: 80px 40px; text-align: center; border-top: 1px solid var(--border); position: relative; overflow: hidden; }
 .cta-glow-l { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; height: 300px; background: radial-gradient(ellipse, rgba(62,207,178,0.07) 0%, transparent 65%); pointer-events: none; }
@@ -3744,7 +3658,7 @@ export class SettingsComponent implements OnInit {
     <div class="logo-l"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
     <div class="nav-pills-l">
       <a class="npill-l active" routerLink="/">Home</a>
-      <a class="npill-l" routerLink="/consumer">Shop</a>
+      <a class="npill-l" [routerLink]="consumerNav.shop">Shop</a>
       <a class="npill-l" href="#">About</a>
       <a class="npill-l" href="#">Contact</a>
     </div>
@@ -3774,7 +3688,7 @@ export class SettingsComponent implements OnInit {
     </div>
 
     <div class="hero-cta-l">
-      <a class="btn-primary-l" routerLink="/consumer">Shop Now →</a>
+      <a class="btn-primary-l" [routerLink]="consumerNav.shop">Shop Now →</a>
       <a class="btn-secondary-l" href="#">Learn more</a>
     </div>
   </div>
@@ -3829,56 +3743,36 @@ export class SettingsComponent implements OnInit {
     </div>
   </div>
 
-  <!-- PRODUCT SHOWCASE -->
+  <!-- PRODUCT SHOWCASE (API: trending = stok × rating skoru, ilk 3) -->
   <div class="showcase-section-l">
     <div class="section-eyebrow-l">Featured Products</div>
     <div class="section-title-l" style="margin-bottom:32px;">Trending <em>this week</em></div>
 
-    <div class="showcase-row-l">
-      <div class="showcase-card-l" routerLink="/consumer">
-        <div class="sc-img-l" style="background:rgba(62,207,178,0.04);">
-          <div class="sc-glow-l" style="background:radial-gradient(circle,rgba(62,207,178,0.08),transparent 70%)"></div>
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><rect x="8" y="16" width="48" height="32" rx="4" stroke="#3ECFB2" stroke-width="1.5" opacity="0.6"/><rect x="24" y="48" width="16" height="3" rx="1.5" fill="#3ECFB2" opacity="0.3"/><rect x="12" y="20" width="40" height="24" rx="2" fill="rgba(62,207,178,0.06)"/></svg>
-        </div>
-        <div class="sc-body-l">
-          <div class="sc-cat-l">Electronics</div>
-          <div class="sc-name-l">MacBook Pro 14"</div>
-          <div class="sc-bottom-l">
-            <div class="sc-price-l">$1,299</div>
-            <div class="sc-btn-l">Add to cart</div>
-          </div>
-        </div>
-      </div>
+    <div class="showcase-skel-l" *ngIf="trendingLoading">
+      <div class="showcase-skel-card" *ngFor="let _ of skelSlots"></div>
+    </div>
 
-      <div class="showcase-card-l" routerLink="/consumer">
-        <div class="sc-img-l" style="background:rgba(107,168,200,0.04);">
-          <div class="sc-glow-l" style="background:radial-gradient(circle,rgba(107,168,200,0.08),transparent 70%)"></div>
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><path d="M32 14c-10 0-18 8-18 18s8 18 18 18 18-8 18-18-8-18-18-18Z" stroke="#6BA8C8" stroke-width="1.5" opacity="0.6"/><path d="M22 32c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke="#6BA8C8" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><circle cx="32" cy="32" r="4" fill="rgba(107,168,200,0.15)" stroke="#6BA8C8" stroke-width="1.2"/></svg>
+    <div class="showcase-row-l" *ngIf="!trendingLoading && trendingProducts.length > 0">
+      <a class="showcase-card-l" *ngFor="let p of trendingProducts" [routerLink]="['/product', p.productId]">
+        <div class="sc-img-l" [style.background]="'linear-gradient(145deg, rgba(62,207,178,0.08) 0%, rgba(8,8,8,0.4) 100%)'">
+          <div class="sc-glow-l" style="background:radial-gradient(circle,rgba(62,207,178,0.12),transparent 70%)"></div>
+          <img *ngIf="p.imageUrl" class="sc-thumb-l" [src]="p.imageUrl" [alt]="p.name"/>
+          <svg *ngIf="!p.imageUrl" width="56" height="56" viewBox="0 0 64 64" fill="none" style="position:relative;z-index:1;opacity:0.55;"><rect x="8" y="16" width="48" height="32" rx="4" stroke="#3ECFB2" stroke-width="1.5"/><rect x="12" y="20" width="40" height="24" rx="2" fill="rgba(62,207,178,0.06)"/></svg>
         </div>
         <div class="sc-body-l">
-          <div class="sc-cat-l">Accessories</div>
-          <div class="sc-name-l">AirPods Pro Max</div>
+          <div class="sc-cat-l">{{ p.category || 'Product' }}</div>
+          <div class="sc-name-l">{{ p.name }}</div>
           <div class="sc-bottom-l">
-            <div class="sc-price-l">$479</div>
-            <div class="sc-btn-l">Add to cart</div>
+            <div class="sc-price-l">{{ p.basePrice | currency }}</div>
+            <span class="sc-btn-l">View</span>
           </div>
         </div>
-      </div>
+      </a>
+    </div>
 
-      <div class="showcase-card-l" routerLink="/consumer">
-        <div class="sc-img-l" style="background:rgba(200,160,100,0.04);">
-          <div class="sc-glow-l" style="background:radial-gradient(circle,rgba(200,160,100,0.08),transparent 70%)"></div>
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><rect x="10" y="24" width="44" height="28" rx="4" stroke="#C8A064" stroke-width="1.5" opacity="0.6"/><rect x="16" y="18" width="8" height="6" rx="2" fill="rgba(200,160,100,0.1)" stroke="#C8A064" stroke-width="1.2" opacity="0.5"/><rect x="16" y="30" width="32" height="4" rx="2" fill="rgba(200,160,100,0.1)"/><rect x="16" y="38" width="24" height="4" rx="2" fill="rgba(200,160,100,0.07)"/></svg>
-        </div>
-        <div class="sc-body-l">
-          <div class="sc-cat-l">Peripherals</div>
-          <div class="sc-name-l">Keychron Q1 Pro</div>
-          <div class="sc-bottom-l">
-            <div class="sc-price-l">$199</div>
-            <div class="sc-btn-l">Add to cart</div>
-          </div>
-        </div>
-      </div>
+    <div class="showcase-empty-l" *ngIf="!trendingLoading && trendingProducts.length === 0">
+      No products loaded. Start the API and refresh, or
+      <a [routerLink]="consumerNav.shop" style="color:var(--teal2);text-decoration:underline;">open the shop</a> (sign in may be required).
     </div>
   </div>
 
@@ -3888,7 +3782,7 @@ export class SettingsComponent implements OnInit {
     <div class="cta-title-l">Ready to <em>explore</em><br>the collection?</div>
     <div class="cta-sub-l">Join 2 million+ customers who trust Nexus for their tech needs.</div>
     <div class="cta-btns-l">
-      <a class="btn-primary-l" routerLink="/consumer">Browse all products →</a>
+      <a class="btn-primary-l" [routerLink]="consumerNav.shop">Browse all products →</a>
       <a class="btn-secondary-l" routerLink="/login">Sign Up Now</a>
     </div>
   </div>
@@ -3908,13 +3802,51 @@ export class SettingsComponent implements OnInit {
 </div>
   `,
 })
-export class LandingComponent {
+export class LandingComponent implements OnInit {
+  readonly consumerNav = CONSUMER_NAV;
   auth = inject(AuthService);
+  private productService = inject(ProductService);
+  trendingProducts: any[] = [];
+  trendingLoading = true;
+  /** Sabit 3 skeleton slotu */
+  readonly skelSlots = [1, 2, 3];
+
+  ngOnInit(): void {
+    this.productService.getProducts().subscribe({
+      next: (list) => {
+        this.trendingProducts = this.pickTrending(list || []);
+        this.trendingLoading = false;
+      },
+      error: () => {
+        this.trendingProducts = [];
+        this.trendingLoading = false;
+      },
+    });
+  }
+
+  /** Stok + (varsa) rating ile sıralayıp en üstteki 3 ürün — API’deki gerçek veri */
+  private pickTrending(products: any[]): any[] {
+    if (!products.length) return [];
+    const score = (p: any) => {
+      const stock = Math.max(0, Number(p.stockQuantity) || 0);
+      const rating = Number(p.rating);
+      const r = Number.isFinite(rating) && rating > 0 ? rating : 4.3;
+      return stock * r;
+    };
+    return [...products]
+      .sort((a, b) => {
+        const d = score(b) - score(a);
+        if (d !== 0) return d;
+        return (Number(b.productId) || 0) - (Number(a.productId) || 0);
+      })
+      .slice(0, 3);
+  }
+
   get dashboardLink() {
     const role = this.auth.currentUserValue?.role;
     if (role === 'ADMIN') return '/admin';
     if (role === 'MANAGER') return '/manager';
-    return '/consumer';
+    return CONSUMER_NAV.shop;
   }
 }
 
