@@ -392,8 +392,9 @@ public class DbInitializer {
         updateOrSaveUser("Nexus Admin", "admin@nexus.io", "admin123", Role.ADMIN);
         
         // Managers
-        updateOrSaveUser("Marcus Chen", "marcus@techhub.pro", "manager123", Role.MANAGER);
-        updateOrSaveUser("Elena Rodriguez", "elena@gadgetpro.co", "manager123", Role.MANAGER);
+        User marcus = updateOrSaveUser("Marcus Chen", "marcus@techhub.pro", "manager123", Role.MANAGER);
+        User elena = updateOrSaveUser("Elena Rodriguez", "elena@gadgetpro.co", "manager123", Role.MANAGER);
+        User adminUser = userRepository.findByEmail("admin@nexus.io").orElse(null);
         
         // Customer
         User daniel = updateOrSaveUser("Daniel Smith", "daniel@nexus.io", "user123", Role.CONSUMER);
@@ -412,9 +413,9 @@ public class DbInitializer {
         createProfile(test, "All-Rounder", "A bit of everything for the ultimate workspace.");
 
         // Stores
-        storeRepository.save(Store.builder().name("Nexus Central").ownerName("Nexus Admin").totalRevenue(500000.0).orderCount(12000).rating(5.0).status("OPEN").build());
-        storeRepository.save(Store.builder().name("TechHub Performance").ownerName("Marcus Chen").totalRevenue(285000.0).orderCount(4500).rating(4.8).status("OPEN").build());
-        storeRepository.save(Store.builder().name("GadgetPro Lifestyle").ownerName("Elena Rodriguez").totalRevenue(195000.0).orderCount(2800).rating(4.9).status("OPEN").build());
+        storeRepository.save(Store.builder().name("Nexus Central").ownerName("Nexus Admin").ownerId(adminUser != null ? adminUser.getUserId() : null).totalRevenue(500000.0).orderCount(12000).rating(5.0).status("OPEN").build());
+        storeRepository.save(Store.builder().name("TechHub Performance").ownerName("Marcus Chen").ownerId(marcus.getUserId()).totalRevenue(285000.0).orderCount(4500).rating(4.8).status("OPEN").build());
+        storeRepository.save(Store.builder().name("GadgetPro Lifestyle").ownerName("Elena Rodriguez").ownerId(elena.getUserId()).totalRevenue(195000.0).orderCount(2800).rating(4.9).status("OPEN").build());
     }
 
     private User updateOrSaveUser(String name, String email, String pass, Role role) {

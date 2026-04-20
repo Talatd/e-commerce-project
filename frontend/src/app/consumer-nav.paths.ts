@@ -18,6 +18,7 @@ export const FULLPAGE_STANDALONE_PATHS: readonly string[] = [
   CONSUMER_NAV.shop,
   CONSUMER_NAV.settings,
   CONSUMER_NAV.cart,
+  CONSUMER_NAV.orders,
 ];
 
 export function pathWithoutQuery(url: string): string {

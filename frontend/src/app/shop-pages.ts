@@ -1021,20 +1021,21 @@ export class ProductDetailComponent implements OnInit {
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NexusThemeToggleComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NexusThemeToggleComponent, ConsumerStandaloneTopNavComponent],
   template: `
-    <div class="nx-orders-shell">
-    <div class="page-head nx-orders-page-head">
-      <div>
-        <div class="page-title">My Orders</div>
-        <div class="page-sub">Purchase history & tracking</div>
-      </div>
-      <div class="head-r" style="display:flex;align-items:center;gap:10px;">
+    <div class="nx-page nx-checkout-clean">
+      <app-consumer-standalone-top-nav>
         <app-nexus-theme-toggle></app-nexus-theme-toggle>
         <button type="button" class="ripple-btn ghost" style="font-size:11px;padding:6px 16px;" (click)="exportOrders()">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v8M3 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
           Export CSV
         </button>
+      </app-consumer-standalone-top-nav>
+    <div class="nx-orders-shell">
+    <div class="page-head nx-orders-page-head">
+      <div>
+        <div class="page-title">My Orders</div>
+        <div class="page-sub">Purchase history & tracking</div>
       </div>
     </div>
     <div class="app-content nx-orders-page">
@@ -1237,6 +1238,7 @@ export class ProductDetailComponent implements OnInit {
         </div>
       </div>
 
+    </div>
     </div>
     </div>
   `

@@ -1,16 +1,16 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService, AiService, ProductService, OrderService, ToastService } from '../services';
-import { NexusLogoComponent } from '../nexus-logo.component';
 import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
+import { ConsumerStandaloneTopNavComponent } from '../consumer-standalone-top-nav.component';
 import { CONSUMER_NAV } from '../consumer-nav.paths';
 
 @Component({
   selector: 'app-consumer',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NexusThemeToggleComponent, ConsumerStandaloneTopNavComponent],
   template: `
 <style>
 :host {
@@ -35,16 +35,9 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
   --blue:#4A8AC7;--blue-dim:rgba(74,138,199,0.12);
   --purple:#A78BCC;
 }
-:host-context(html.light-mode) .navbar{background:rgba(245,242,237,0.96);}
 :host-context(html.light-mode) .hero-stat{background:rgba(255,255,255,0.92);border-color:var(--border2);}
 
 .page{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);overflow:hidden;display:flex;flex-direction:column;height:100vh;}
-
-/* NAVBAR */
-.navbar{display:grid;grid-template-columns:minmax(100px,1fr) auto minmax(100px,1fr);align-items:center;gap:12px 16px;padding:12px 24px;border-bottom:1px solid var(--border);background:rgba(8,8,8,0.93);backdrop-filter:blur(20px);flex-shrink:0;z-index:50;}
-.navbar-brand{justify-self:start;}
-.navbar-center{justify-self:center;}
-.navbar-end{justify-self:end;}
 .logo{font-family:'Playfair Display',serif;font-style:italic;font-size:19px;color:var(--text);display:flex;align-items:center;gap:7px;cursor:pointer;}
 .logo-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal-glow);}
 .nav-r{display:flex;align-items:center;gap:8px;}
@@ -533,37 +526,22 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 </style>
 
 <div class="page">
-  <!-- NAVBAR -->
-  <div class="navbar">
-    <div class="navbar-brand">
-      <div class="logo" (click)="activeTab='home'; selectedProduct=null;"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
+  <app-consumer-standalone-top-nav [logoClickHandler]="onLogoGoHome">
+    <app-nexus-theme-toggle></app-nexus-theme-toggle>
+    <div class="nav-icon" (click)="openWishlistTab()" role="button" tabindex="0" (keyup.enter)="openWishlistTab()" title="Wishlist">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12S1.5 8 1.5 4.5a3 3 0 0 1 5.5-1.6A3 3 0 0 1 12.5 4.5C12.5 8 7 12 7 12Z" stroke="#6A8A84" stroke-width="1.2"/></svg>
+      <div class="nb">{{wishlist.length}}</div>
     </div>
-    <div class="navbar-center">
-      <nav class="nx-nav-pills" aria-label="Store">
-        <button type="button" class="nx-npill" [class.active]="activeTab === 'home'" (click)="activeTab='home'; selectedProduct=null;">Home</button>
-        <button type="button" class="nx-npill" [class.active]="activeTab === 'shop'" (click)="activeTab='shop'; selectedProduct=null;">Shop</button>
-        <button type="button" class="nx-npill" [class.active]="activeTab === 'assistant'" (click)="activeTab='assistant'">AI Assistant</button>
-        <a class="nx-npill" [routerLink]="consumerNav.orders" routerLinkActive="active">Orders</a>
-        <button type="button" class="nx-npill" [class.active]="activeTab === 'wishlist'" (click)="activeTab='wishlist'">Wishlist</button>
-      </nav>
-    </div>
-    <div class="nav-r navbar-end">
-      <div class="nav-icon" (click)="activeTab='wishlist'">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12S1.5 8 1.5 4.5a3 3 0 0 1 5.5-1.6A3 3 0 0 1 12.5 4.5C12.5 8 7 12 7 12Z" stroke="#6A8A84" stroke-width="1.2"/></svg>
-        <div class="nb">{{wishlist.length}}</div>
-      </div>
-      <a class="nav-icon" [routerLink]="consumerNav.cart" aria-label="Cart">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="#6A8A84"/><circle cx="10" cy="11" r="1.2" fill="#6A8A84"/></svg>
-        <div class="nb" *ngIf="cartCount > 0">{{cartCount}}</div>
-      </a>
-      <app-nexus-theme-toggle></app-nexus-theme-toggle>
-      <div class="user-pill" (click)="activeTab='settings'">
-        <div class="uav">{{auth.currentUserValue?.fullName?.substring(0,2)?.toUpperCase()}}</div>
-        <span style="font-size:12px;color:var(--text);font-weight:500;">{{auth.currentUserValue?.fullName}}</span>
-        <span style="font-size:9px;color:var(--text3);">▾</span>
-      </div>
-    </div>
-  </div>
+    <a class="nav-icon nx-icon-btn" [routerLink]="consumerNav.cart" aria-label="Cart">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="#6A8A84"/><circle cx="10" cy="11" r="1.2" fill="#6A8A84"/></svg>
+      <div class="nb" *ngIf="cartCount > 0">{{cartCount}}</div>
+    </a>
+    <a class="user-pill" [routerLink]="consumerNav.settings" style="text-decoration:none;color:inherit;">
+      <div class="uav">{{auth.currentUserValue?.fullName?.substring(0,2)?.toUpperCase()}}</div>
+      <span style="font-size:12px;color:var(--text);font-weight:500;">{{auth.currentUserValue?.fullName}}</span>
+      <span style="font-size:9px;color:var(--text3);">▾</span>
+    </a>
+  </app-consumer-standalone-top-nav>
 
   <div class="main-scroll">
 
@@ -576,8 +554,8 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
           <div class="hero-title">What will you<br><em>discover</em> today?</div>
           <div class="hero-sub">Browse our curated collection of premium tech. New arrivals are waiting for you.</div>
           <div class="hero-cta">
-            <button class="btn-primary" (click)="activeTab='shop'">Continue Shopping →</button>
-            <button class="btn-ghost" (click)="activeTab='assistant'">Ask AI Assistant</button>
+            <button class="btn-primary" (click)="goShopTab()">Continue Shopping →</button>
+            <button class="btn-ghost" (click)="openAssistantTab()">Ask AI Assistant</button>
           </div>
         </div>
         <div class="hero-right">
@@ -599,11 +577,11 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
       <!-- QUICK LINKS -->
       <div class="quick-section">
         <a class="qlink" [routerLink]="consumerNav.cart" style="text-decoration:none;color:inherit;"><div class="ql-icon" style="background:var(--teal-dim);border:1px solid rgba(62,207,178,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 3h12l-1.5 9H4.5L3 3Z" stroke="#3ECFB2" stroke-width="1.2" stroke-linejoin="round"/><circle cx="7" cy="15" r="1.3" fill="#3ECFB2"/><circle cx="11" cy="15" r="1.3" fill="#3ECFB2"/></svg></div><div class="ql-label">Cart</div></a>
-        <div class="qlink" (click)="activeTab='wishlist'"><div class="ql-icon" style="background:rgba(224,112,112,0.08);border:1px solid rgba(224,112,112,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 15S2 10.5 2 6a4 4 0 0 1 7-2.6A4 4 0 0 1 16 6c0 4.5-7 9-7 9Z" stroke="#E07070" stroke-width="1.2"/></svg></div><div class="ql-label">Wishlist</div></div>
+        <div class="qlink" (click)="openWishlistTab()"><div class="ql-icon" style="background:rgba(224,112,112,0.08);border:1px solid rgba(224,112,112,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 15S2 10.5 2 6a4 4 0 0 1 7-2.6A4 4 0 0 1 16 6c0 4.5-7 9-7 9Z" stroke="#E07070" stroke-width="1.2"/></svg></div><div class="ql-label">Wishlist</div></div>
         <div class="qlink" [routerLink]="consumerNav.orders"><div class="ql-icon" style="background:rgba(107,168,200,0.08);border:1px solid rgba(107,168,200,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5.5h14M5 9h8M7.5 12.5h3" stroke="#6BA8C8" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="ql-label">Orders</div></div>
-        <div class="qlink" (click)="activeTab='assistant'"><div class="ql-icon" style="background:rgba(62,201,138,0.08);border:1px solid rgba(62,201,138,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 6v6l7 4 7-4V6L9 2Z" stroke="#3EC98A" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 2v7M2 6l7 3.5 7-3.5" stroke="#3EC98A" stroke-width="1.2"/></svg></div><div class="ql-label">AI Assistant</div></div>
+        <div class="qlink" (click)="openAssistantTab()"><div class="ql-icon" style="background:rgba(62,201,138,0.08);border:1px solid rgba(62,201,138,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 6v6l7 4 7-4V6L9 2Z" stroke="#3EC98A" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 2v7M2 6l7 3.5 7-3.5" stroke="#3EC98A" stroke-width="1.2"/></svg></div><div class="ql-label">AI Assistant</div></div>
         <div class="qlink"><div class="ql-icon" style="background:rgba(232,169,74,0.08);border:1px solid rgba(232,169,74,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5L11 7H17L12.5 10.5l1.8 5.5L9 13.5l-5.3 2.5 1.8-5.5L1 7H7L9 1.5Z" stroke="#E8A94A" stroke-width="1.1" stroke-linejoin="round"/></svg></div><div class="ql-label">Deals</div></div>
-        <div class="qlink" (click)="activeTab='settings'"><div class="ql-icon" style="background:rgba(167,139,204,0.08);border:1px solid rgba(167,139,204,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="7" r="4" stroke="#A78BCC" stroke-width="1.2"/><path d="M2 17c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#A78BCC" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="ql-label">Profile</div></div>
+        <a class="qlink" [routerLink]="consumerNav.settings" style="text-decoration:none;color:inherit;"><div class="ql-icon" style="background:rgba(167,139,204,0.08);border:1px solid rgba(167,139,204,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="7" r="4" stroke="#A78BCC" stroke-width="1.2"/><path d="M2 17c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#A78BCC" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="ql-label">Profile</div></a>
       </div>
 
       <!-- FLASH SALE -->
@@ -621,7 +599,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             <div class="fb-unit">23</div><div class="fb-sep">:</div>
             <div class="fb-unit">17</div>
           </div>
-          <button class="fb-btn" (click)="activeTab='shop'">View Deals →</button>
+          <button class="fb-btn" (click)="goShopTab()">View Deals →</button>
         </div>
       </div>
 
@@ -629,7 +607,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
       <div class="continue-section" *ngIf="products.length > 0">
         <div class="sec-header">
           <div><div class="sec-title">Continue Where You Left Off</div><div class="sec-sub">Recently viewed products</div></div>
-          <div class="sec-link" (click)="activeTab='shop'">See all →</div>
+          <div class="sec-link" (click)="goShopTab()">See all →</div>
         </div>
         <div class="continue-grid">
           <div class="cs-card" *ngFor="let p of products.slice(0,4)" (click)="selectProduct(p)">
@@ -648,7 +626,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
       <div class="trending-section" *ngIf="products.length > 0">
         <div class="sec-header">
           <div><div class="sec-title">Trending This Week</div><div class="sec-sub">Best-selling products right now</div></div>
-          <div class="sec-link" (click)="activeTab='shop'">See all →</div>
+          <div class="sec-link" (click)="goShopTab()">See all →</div>
         </div>
         <div class="prod-grid" style="grid-template-columns:repeat(4,1fr);">
           <div class="pcard" *ngFor="let p of products.slice(0,4)" (click)="selectProduct(p)">
@@ -682,7 +660,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
           <div><div class="sec-title">Shop by Personality</div><div class="sec-sub">Curated tech setups for your lifestyle</div></div>
         </div>
         <div class="setup-grid">
-          <div class="setup-card" (click)="activeTab='shop'; searchQuery='Shadow Coder';">
+          <div class="setup-card" (click)="goShopTab(); searchQuery = 'Shadow Coder'">
             <img src="/products/shadow-coder-keyboard.png" class="setup-img" alt="Shadow Coder">
             <div class="setup-img-overlay"></div>
             <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(62,207,178,0.1), transparent);z-index:0;"></div>
@@ -725,7 +703,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
       <div class="categories-section">
         <div class="sec-header">
           <div><div class="sec-title">Shop by Category</div></div>
-          <div class="sec-link" (click)="activeTab='shop'">See all →</div>
+          <div class="sec-link" (click)="goShopTab()">See all →</div>
         </div>
         <div class="cat-grid">
           <div class="cat-card" *ngFor="let c of categories" (click)="activeTab='shop'; selectedCat=c.name;">
@@ -956,7 +934,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
       <div class="alert-banner" *ngIf="wishlist.length > 0">
         <div class="ab-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L10 6H15L11 9l1.5 5L8 11.5 4.5 14 6 9 2 6H7L8 1.5Z" fill="#3EC98A" opacity="0.8"/></svg></div>
         <div class="ab-text"><strong>Price drop!</strong> {{wishlist.length}} items on your wishlist. Check for deals today.</div>
-        <div class="ab-btn" (click)="activeTab='shop'">View deals →</div>
+        <div class="ab-btn" (click)="goShopTab()">View deals →</div>
       </div>
       <div class="page-header">
         <div class="ph-top">
@@ -999,7 +977,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
         <div style="font-size:40px;margin-bottom:16px;opacity:0.3;">♡</div>
         <div style="font-size:14px;margin-bottom:8px;color:var(--text2);">Your wishlist is empty</div>
         <div style="font-size:12px;margin-bottom:20px;">Browse products and save your favorites here.</div>
-        <button class="btn-primary" style="display:inline-flex;" (click)="activeTab='shop'">Browse Products →</button>
+        <button class="btn-primary" style="display:inline-flex;" (click)="goShopTab()">Browse Products →</button>
       </div>
     </ng-container>
 
@@ -1128,88 +1106,6 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
       </div>
     </ng-container>
 
-    <!-- ==================== SETTINGS ==================== -->
-    <ng-container *ngIf="activeTab === 'settings'">
-      <div style="padding:24px;">
-        <div class="ph-title" style="margin-bottom:20px;">Settings</div>
-        <div class="settings-frame">
-          <div class="settings-nav">
-            <div class="s-group-title">Account</div>
-            <div class="s-item" [class.active]="settingsTab==='personal'" (click)="settingsTab='personal'">
-              <svg class="s-item-icon" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="5" r="3" stroke="currentColor" stroke-width="1.1"/><path d="M2 13c0-3 2.5-4.5 5.5-4.5S13 10 13 13" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-              Personal Info
-            </div>
-            <div class="s-item" [class.active]="settingsTab==='security'" (click)="settingsTab='security'">
-              <svg class="s-item-icon" viewBox="0 0 15 15" fill="none"><rect x="2.5" y="6" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M5 6V4.5a2.5 2.5 0 0 1 5 0V6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-              Security
-            </div>
-            <div class="s-group-title">Shopping</div>
-            <div class="s-item" [class.active]="settingsTab==='addresses'" (click)="settingsTab='addresses'">
-              <svg class="s-item-icon" viewBox="0 0 15 15" fill="none"><path d="M7.5 2C5.3 2 3.5 3.8 3.5 6c0 3.5 4 7 4 7s4-3.5 4-7c0-2.2-1.8-4-4-4Z" stroke="currentColor" stroke-width="1.1"/></svg>
-              Addresses
-            </div>
-            <div class="s-item" [class.active]="settingsTab==='notifications'" (click)="settingsTab='notifications'">
-              <svg class="s-item-icon" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5C5.3 1.5 3.5 3.3 3.5 5.5V8l-1 1.5h10L11.5 8V5.5c0-2.2-1.8-4-4-4Z" stroke="currentColor" stroke-width="1.1"/><path d="M6 11.5c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="currentColor" stroke-width="1.1"/></svg>
-              Notifications
-            </div>
-            <div class="s-item" style="margin-top:20px;color:var(--red);" (click)="settingsTab='danger'">
-              <svg class="s-item-icon" viewBox="0 0 15 15" fill="none"><path d="M3 13h9l-4.5-9L3 13Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
-              Danger Zone
-            </div>
-          </div>
-          <div class="settings-main">
-            <ng-container *ngIf="settingsTab === 'personal'">
-              <div class="av-section">
-                <div class="av-circle">{{auth.currentUserValue?.fullName?.charAt(0)}}</div>
-                <div style="flex:1;"><div style="font-size:18px;font-weight:600;">{{auth.currentUserValue?.fullName}}</div><div style="font-size:12px;color:var(--text3);">{{auth.currentUserValue?.email}}</div></div>
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-                <div><div class="f-label">Full Name</div><input class="fi" [value]="auth.currentUserValue?.fullName"/></div>
-                <div><div class="f-label">Email</div><input class="fi" [value]="auth.currentUserValue?.email" readonly/></div>
-                <div><div class="f-label">Phone</div><input class="fi" value="+90 555 123 4567"/></div>
-                <div><div class="f-label">Location</div><input class="fi" value="Istanbul, TR"/></div>
-              </div>
-              <div style="margin-top:32px;display:flex;justify-content:space-between;align-items:center;">
-                <button class="save-btn">Save Changes</button>
-                <button (click)="logout()" style="background:transparent;color:var(--red);border:none;cursor:pointer;font-size:13px;font-weight:500;">Sign Out</button>
-              </div>
-            </ng-container>
-            <ng-container *ngIf="settingsTab === 'security'">
-              <div style="margin-bottom:24px;"><div class="sec-title">Security</div><div style="font-size:12px;color:var(--text3);">Manage your password.</div></div>
-              <div style="max-width:400px;display:flex;flex-direction:column;gap:16px;">
-                <div><div class="f-label">Current Password</div><input type="password" class="fi" placeholder="••••••••"/></div>
-                <div><div class="f-label">New Password</div><input type="password" class="fi" placeholder="Min. 8 characters"/></div>
-                <button class="save-btn">Update Password</button>
-              </div>
-            </ng-container>
-            <ng-container *ngIf="settingsTab === 'addresses'">
-              <div style="margin-bottom:24px;"><div class="sec-title">Addresses</div><div style="font-size:12px;color:var(--text3);">Manage your shipping locations.</div></div>
-              <div class="addr-card default">
-                <div style="width:34px;height:34px;border-radius:8px;background:var(--glass2);display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 15 15" fill="none"><path d="M7.5 2C5.3 2 3.5 3.8 3.5 6c0 3.5 4 7 4 7s4-3.5 4-7c0-2.2-1.8-4-4-4Z" stroke="currentColor" stroke-width="1.1"/></svg></div>
-                <div style="flex:1;"><div style="font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;">Home <span style="font-size:9px;padding:2px 6px;background:var(--teal-dim);color:var(--teal);border-radius:6px;border:1px solid rgba(62,207,178,0.2);">Default</span></div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5;">Istanbul, TR</div></div>
-              </div>
-            </ng-container>
-            <ng-container *ngIf="settingsTab === 'notifications'">
-              <div style="margin-bottom:24px;"><div class="sec-title">Notifications</div><div style="font-size:12px;color:var(--text3);">Choose how you want to be alerted.</div></div>
-              <div style="background:var(--glass);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
-                <div class="notif-row"><div style="flex:1;"><div style="font-size:14px;font-weight:500;">Order Updates</div><div style="font-size:11px;color:var(--text3);">Real-time tracking of packages</div></div><div class="tog" [class.on]="notifPrefs.orders" (click)="notifPrefs.orders = !notifPrefs.orders"><div class="tog-thumb"></div></div></div>
-                <div class="notif-row"><div style="flex:1;"><div style="font-size:14px;font-weight:500;">Marketing & Deals</div><div style="font-size:11px;color:var(--text3);">Price drops and offers</div></div><div class="tog" [class.on]="notifPrefs.marketing" (click)="notifPrefs.marketing = !notifPrefs.marketing"><div class="tog-thumb"></div></div></div>
-              </div>
-              <button class="save-btn" style="margin-top:24px;">Save Preferences</button>
-            </ng-container>
-            <ng-container *ngIf="settingsTab === 'danger'">
-              <div style="color:var(--red);font-family:'Playfair Display';font-size:24px;font-style:italic;margin-bottom:16px;">Danger Zone</div>
-              <div class="danger-box">
-                <div class="dz-title">Delete My Account</div>
-                <div class="dz-desc">Permanently remove your account and all associated data. This action is irreversible.</div>
-                <button style="padding:10px 20px;border-radius:20px;border:1px solid var(--red-border);color:var(--red);background:transparent;cursor:pointer;">Deactivate Account</button>
-              </div>
-            </ng-container>
-          </div>
-        </div>
-      </div>
-    </ng-container>
-
   </div>
 </div>
   `,
@@ -1217,7 +1113,6 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 export class ConsumerComponent implements OnInit {
   readonly consumerNav = CONSUMER_NAV;
   activeTab = 'home';
-  settingsTab = 'personal';
   filtersOpen = true;
   selectedProduct: any = null;
   products: any[] = [];
@@ -1231,7 +1126,6 @@ export class ConsumerComponent implements OnInit {
   selectedRating = 0;
   selectedCat = 'All';
   availability = { inStock: true, onSale: false, newArrivals: false };
-  notifPrefs = { orders: true, marketing: false };
   categories: { name: string, checked: boolean }[] = [];
   selectedBrands: string[] = [];
   get brands() {
@@ -1249,7 +1143,8 @@ export class ConsumerComponent implements OnInit {
   ai = inject(AiService);
   productService = inject(ProductService);
   toast = inject(ToastService);
-  router = inject(Router);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   get cartCount(): number {
     try {
@@ -1258,12 +1153,44 @@ export class ConsumerComponent implements OnInit {
     } catch { return 0; }
   }
 
+  onLogoGoHome = () => this.goHomeTab();
+
+  goHomeTab() {
+    this.selectedProduct = null;
+    this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'home' }, replaceUrl: true });
+  }
+
+  goShopTab() {
+    this.selectedProduct = null;
+    this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'shop' }, replaceUrl: true });
+  }
+
+  openAssistantTab() {
+    this.activeTab = 'assistant';
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+  }
+
+  openWishlistTab() {
+    this.activeTab = 'wishlist';
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+  }
+
   private getTimeNow(): string {
     const d = new Date();
     return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
   }
 
   ngOnInit() {
+    this.route.queryParamMap.subscribe(q => {
+      const t = q.get('tab');
+      if (t === 'shop') this.activeTab = 'shop';
+      else if (t === 'home') this.activeTab = 'home';
+    });
+    const snap = this.route.snapshot.queryParamMap.get('tab');
+    if (snap !== 'shop' && snap !== 'home') {
+      this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'home' }, replaceUrl: true });
+    }
+
     const userName = this.auth.currentUserValue?.fullName || 'there';
     this.chatMessages.push({
       sender: 'ai',
@@ -1365,6 +1292,7 @@ export class ConsumerComponent implements OnInit {
     this.activeTab = 'shop';
     this.qty = 1;
     this.checkSentiment(p);
+    this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'shop' }, replaceUrl: true });
   }
 
   checkSentiment(p: any) {
@@ -1475,10 +1403,5 @@ export class ConsumerComponent implements OnInit {
       const fn = new Function('data', 'Plotly', 'containerId', vizCode.replace('fig.to_json()', `Plotly.newPlot(containerId, fig.data, {...fig.layout, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#7A918D'}}, {responsive:true, displayModeBar:false})`));
       fn(data, Plotly, containerId);
     } catch { /* visualization rendering failed silently */ }
-  }
-
-  logout() {
-    this.auth.logout();
-    this.router.navigate(['/login']);
   }
 }

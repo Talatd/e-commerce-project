@@ -16,6 +16,7 @@ public class Store {
 
     private String name;
     private String ownerName;
+    private Long ownerId; // Link to user_id
     private Double totalRevenue;
     private Integer orderCount;
     private Double rating;
