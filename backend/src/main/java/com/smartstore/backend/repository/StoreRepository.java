@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface StoreRepository extends JpaRepository<Store, Long> {
     java.util.Optional<Store> findByName(String name);
+    java.util.Optional<Store> findByOwnerId(Long ownerId);
+    java.util.Optional<Store> findByOwnerName(String ownerName);
 }
