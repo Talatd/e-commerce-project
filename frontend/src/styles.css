@@ -736,6 +736,30 @@ router-outlet + * {
   animation: nexus-route-enter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
+/* Global search overlay: closed = no hit-testing (avoids blocking clicks on /consumer, /cart, etc.) */
+#search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding-top: 10vh;
+  background: rgba(8, 8, 8, 0.55);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+#search-overlay.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+:root.light-mode #search-overlay {
+  background: rgba(245, 242, 237, 0.72);
+}
+
 /* SCROLLBARS */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

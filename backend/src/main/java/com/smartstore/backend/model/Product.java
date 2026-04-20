@@ -40,6 +40,7 @@ public class Product {
     private String imageUrl;
 
     private Integer stockQuantity = 0;
+    private String tags;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<RegionalInventory> regionalInventories;

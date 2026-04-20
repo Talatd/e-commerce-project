@@ -736,13 +736,13 @@ export class CartComponent implements OnInit, OnDestroy {
   standalone: true,
   imports: [CommonModule, NexusThemeToggleComponent],
   template: `
-    <div class="nx-floating-theme" style="position:fixed;bottom:22px;right:22px;z-index:2000;">
-      <app-nexus-theme-toggle></app-nexus-theme-toggle>
-    </div>
     <div class="page-head" *ngIf="product">
       <div>
         <div class="page-title">{{product.name}}</div>
         <div class="page-sub">{{product.category}}</div>
+      </div>
+      <div class="head-r" style="align-self:center;">
+        <app-nexus-theme-toggle></app-nexus-theme-toggle>
       </div>
     </div>
     <div class="app-content" *ngIf="product">
@@ -899,15 +899,13 @@ export class ProductDetailComponent implements OnInit {
   standalone: true,
   imports: [CommonModule, FormsModule, NexusThemeToggleComponent],
   template: `
-    <div class="nx-floating-theme" style="position:fixed;bottom:22px;right:22px;z-index:2000;">
-      <app-nexus-theme-toggle></app-nexus-theme-toggle>
-    </div>
     <div class="page-head">
       <div>
         <div class="page-title">My Orders</div>
         <div class="page-sub">Purchase history & tracking</div>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div class="head-r" style="display:flex;align-items:center;gap:10px;">
+        <app-nexus-theme-toggle></app-nexus-theme-toggle>
         <button class="ripple-btn ghost" style="font-size:11px;padding:6px 16px;" (click)="exportOrders()">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v8M3 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
           Export CSV

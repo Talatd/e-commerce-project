@@ -375,7 +375,7 @@ export class LoginComponent {
 .npill{padding:6px 14px;border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all 0.15s;}
 .npill.active{background:var(--teal-dim);color:var(--teal2);border:1px solid rgba(62,207,178,0.18);}
 .nav-r{display:flex;align-items:center;gap:8px;}
-.nav-icon{width:34px;height:34px;border-radius:50%;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:border-color 0.15s;}
+.nav-icon{width:34px;height:34px;border-radius:50%;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:border-color 0.15s;text-decoration:none;color:inherit;box-sizing:border-box;}
 .nav-icon:hover{border-color:var(--border2);}
 .nb{position:absolute;top:-2px;right:-2px;width:15px;height:15px;border-radius:50%;background:var(--teal);color:#080808;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);}
 .user-pill{display:flex;align-items:center;gap:7px;padding:4px 12px 4px 4px;border-radius:20px;background:var(--glass);border:1px solid var(--border2);cursor:pointer;}
@@ -642,6 +642,22 @@ export class LoginComponent {
 .oa-teal{background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);color:var(--teal2);}
 .oa-teal:hover{background:var(--teal);color:#080808;border-color:var(--teal);}
 
+/* CURATED BADGES */
+.pc-badge.tag-aesthetic { background:rgba(167,139,204,0.1); color:var(--purple); border:1px solid rgba(167,139,204,0.2); }
+.pc-badge.tag-productivity { background:rgba(107,168,200,0.1); color:var(--blue); border:1px solid rgba(107,168,200,0.2); }
+.pc-badge.tag-gaming { background:rgba(224,112,112,0.1); color:var(--red); border:1px solid rgba(224,112,112,0.18); }
+.pc-badge.tag-minimal { background:rgba(62,207,178,0.1); color:var(--teal2); border:1px solid rgba(62,207,178,0.2); }
+.pc-badge.tag-audio { background:rgba(232,169,74,0.1); color:var(--amber); border:1px solid rgba(232,169,74,0.18); }
+
+/* SETUP GRID */
+.setup-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; padding:20px 24px; }
+.setup-card { position:relative; height:180px; border-radius:16px; overflow:hidden; cursor:pointer; transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); border:1px solid var(--border); }
+.setup-card:hover { transform:translateY(-4px); }
+.setup-img-overlay { position:absolute; inset:0; background:linear-gradient(0deg, rgba(8,8,8,0.9) 0%, transparent 65%); z-index:1; }
+.setup-content { position:absolute; bottom:16px; left:16px; z-index:2; }
+.setup-tag { font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--teal); font-weight:700; margin-bottom:4px; }
+.setup-name { font-family:'Playfair Display',serif; font-size:18px; color:var(--text); font-style:italic; }
+
 /* === PRODUCT DETAIL === */
 .product-section{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);}
 .img-col{padding:24px;border-right:1px solid var(--border);}
@@ -891,10 +907,10 @@ export class LoginComponent {
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12S1.5 8 1.5 4.5a3 3 0 0 1 5.5-1.6A3 3 0 0 1 12.5 4.5C12.5 8 7 12 7 12Z" stroke="#6A8A84" stroke-width="1.2"/></svg>
         <div class="nb">{{wishlist.length}}</div>
       </div>
-      <div class="nav-icon" routerLink="/cart">
+      <a class="nav-icon" routerLink="/cart" aria-label="Sepet">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="#6A8A84"/><circle cx="10" cy="11" r="1.2" fill="#6A8A84"/></svg>
         <div class="nb" *ngIf="cartCount > 0">{{cartCount}}</div>
-      </div>
+      </a>
       <app-nexus-theme-toggle></app-nexus-theme-toggle>
       <div class="user-pill" (click)="activeTab='settings'">
         <div class="uav">{{auth.currentUserValue?.fullName?.substring(0,2)?.toUpperCase()}}</div>
@@ -937,7 +953,7 @@ export class LoginComponent {
 
       <!-- QUICK LINKS -->
       <div class="quick-section">
-        <div class="qlink" (click)="activeTab='shop'"><div class="ql-icon" style="background:var(--teal-dim);border:1px solid rgba(62,207,178,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 3h12l-1.5 9H4.5L3 3Z" stroke="#3ECFB2" stroke-width="1.2" stroke-linejoin="round"/><circle cx="7" cy="15" r="1.3" fill="#3ECFB2"/><circle cx="11" cy="15" r="1.3" fill="#3ECFB2"/></svg></div><div class="ql-label">Cart</div></div>
+        <a class="qlink" routerLink="/cart" style="text-decoration:none;color:inherit;"><div class="ql-icon" style="background:var(--teal-dim);border:1px solid rgba(62,207,178,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 3h12l-1.5 9H4.5L3 3Z" stroke="#3ECFB2" stroke-width="1.2" stroke-linejoin="round"/><circle cx="7" cy="15" r="1.3" fill="#3ECFB2"/><circle cx="11" cy="15" r="1.3" fill="#3ECFB2"/></svg></div><div class="ql-label">Cart</div></a>
         <div class="qlink" (click)="activeTab='wishlist'"><div class="ql-icon" style="background:rgba(224,112,112,0.08);border:1px solid rgba(224,112,112,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 15S2 10.5 2 6a4 4 0 0 1 7-2.6A4 4 0 0 1 16 6c0 4.5-7 9-7 9Z" stroke="#E07070" stroke-width="1.2"/></svg></div><div class="ql-label">Wishlist</div></div>
         <div class="qlink" (click)="activeTab='orders'"><div class="ql-icon" style="background:rgba(107,168,200,0.08);border:1px solid rgba(107,168,200,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5.5h14M5 9h8M7.5 12.5h3" stroke="#6BA8C8" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="ql-label">Orders</div></div>
         <div class="qlink" (click)="activeTab='assistant'"><div class="ql-icon" style="background:rgba(62,201,138,0.08);border:1px solid rgba(62,201,138,0.18);"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 6v6l7 4 7-4V6L9 2Z" stroke="#3EC98A" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 2v7M2 6l7 3.5 7-3.5" stroke="#3EC98A" stroke-width="1.2"/></svg></div><div class="ql-label">AI Assistant</div></div>
@@ -1004,6 +1020,39 @@ export class LoginComponent {
               <div class="pc-name">{{p.name}}</div>
               <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;"><span class="pc-star">★★★★★</span><span class="pc-rcount">4.8</span></div>
               <div class="pc-bottom"><div><span class="pc-price">{{p.basePrice | currency}}</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CURATED SETUPS -->
+      <div class="categories-section">
+        <div class="sec-header">
+          <div><div class="sec-title">Shop by Personality</div><div class="sec-sub">Curated tech setups for your lifestyle</div></div>
+        </div>
+        <div class="setup-grid">
+          <div class="setup-card" (click)="activeTab='shop'; searchQuery='minimal';">
+            <div class="setup-img-overlay"></div>
+            <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(62,207,178,0.1), transparent);z-index:0;"></div>
+            <div class="setup-content">
+              <div class="setup-tag">Minimalist</div>
+              <div class="setup-name">The Clean Slate</div>
+            </div>
+          </div>
+          <div class="setup-card" (click)="activeTab='shop'; searchQuery='gaming';">
+            <div class="setup-img-overlay"></div>
+            <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(224,112,112,0.1), transparent);z-index:0;"></div>
+            <div class="setup-content">
+              <div class="setup-tag">High Perf</div>
+              <div class="setup-name">Gamer Beast</div>
+            </div>
+          </div>
+          <div class="setup-card" (click)="activeTab='shop'; searchQuery='aesthetic';">
+            <div class="setup-img-overlay"></div>
+            <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(167,139,204,0.1), transparent);z-index:0;"></div>
+            <div class="setup-content">
+              <div class="setup-tag">Design First</div>
+              <div class="setup-name">Creator Studio</div>
             </div>
           </div>
         </div>
@@ -1106,7 +1155,10 @@ export class LoginComponent {
                 <div class="pc-img-glow" style="background:radial-gradient(circle,rgba(62,207,178,0.09),transparent 70%)"></div>
                 <img *ngIf="p.imageUrl" [src]="p.imageUrl" style="max-width:80%;max-height:80%;object-fit:contain;position:relative;z-index:1;"/>
                 <svg *ngIf="!p.imageUrl" width="80" height="80" viewBox="0 0 80 80" fill="none"><rect x="8" y="18" width="64" height="40" rx="5" stroke="#3ECFB2" stroke-width="1.3" opacity="0.4"/><rect x="32" y="58" width="16" height="4" rx="2" fill="rgba(62,207,178,0.2)"/></svg>
-                <div class="pc-badges"><div *ngIf="p.stockQuantity > 50" class="pc-badge b-new">New</div></div>
+                <div class="pc-badges">
+                  <div *ngFor="let tag of getTags(p.tags)" class="pc-badge" [ngClass]="getTagClass(tag)">{{tag}}</div>
+                  <div *ngIf="p.stockQuantity > 50" class="pc-badge b-new">New</div>
+                </div>
                 <div class="pc-wish" (click)="$event.stopPropagation(); toggleWishlist(p)">♡</div>
                 <div class="pc-quick"><button class="pc-quick-btn" (click)="$event.stopPropagation(); addToCart(p)">Add to Cart</button></div>
               </div>
@@ -1661,6 +1713,20 @@ export class ConsumerComponent implements OnInit {
     });
   }
 
+  getTags(tagsStr: string): string[] {
+    if (!tagsStr) return [];
+    return tagsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  getTagClass(tag: string): string {
+    const t = tag.toLowerCase();
+    if (t.includes('minimal') || t.includes('aesthetic') || t.includes('design')) return 'tag-aesthetic';
+    if (t.includes('prod') || t.includes('silent') || t.includes('work')) return 'tag-productivity';
+    if (t.includes('gaming') || t.includes('perf')) return 'tag-gaming';
+    if (t.includes('audio') || t.includes('listen')) return 'tag-audio';
+    return 'tag-minimal';
+  }
+
   get activeFilters() {
     const brandFilters = this.brands.filter(b => b.checked).map(b => b.name);
     const catFilters = this.categories.filter(c => c.checked).map(c => c.name);
@@ -1671,7 +1737,12 @@ export class ConsumerComponent implements OnInit {
     let list = this.products || [];
     if (this.searchQuery) {
       const q = this.searchQuery.toLowerCase();
-      list = list.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || (p.brand && p.brand.toLowerCase().includes(q)));
+      list = list.filter(p => 
+        p.name.toLowerCase().includes(q) || 
+        p.category.toLowerCase().includes(q) || 
+        (p.brand && p.brand.toLowerCase().includes(q)) ||
+        (p.tags && p.tags.toLowerCase().includes(q))
+      );
     }
     if (this.selectedCat !== 'All') {
       list = list.filter(p => p.category === this.selectedCat);
