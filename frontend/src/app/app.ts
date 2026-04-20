@@ -44,6 +44,19 @@ export class AppComponent implements OnInit {
     return !hidden.some(r => path.startsWith(r));
   }
 
+  /** Navbar logo target — role-aware home. */
+  logoLinkFor(role: string | undefined): string {
+    if (role === 'ADMIN') return '/admin';
+    if (role === 'MANAGER') return '/manager';
+    if (role === 'CONSUMER') return CONSUMER_NAV.shop;
+    return '/';
+  }
+
+  logoQueryParamsFor(role: string | undefined): Record<string, string> | undefined {
+    if (role === 'CONSUMER') return { tab: 'shop' };
+    return undefined;
+  }
+
   ngOnInit() {
     this.theme.initFromStorage();
 
@@ -67,7 +80,7 @@ export class AppComponent implements OnInit {
       my = e.clientY;
       
       const target = e.target as HTMLElement;
-      const isPointer = target.closest('button, .mag-pill, .npill, .nx-npill, a.nx-npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link');
+      const isPointer = target.closest('button, .mag-pill, .npill, .nx-npill, a.nx-npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link, .res-cat');
       const computedPointer = getComputedStyle(target).cursor === 'pointer' || (target.parentElement && getComputedStyle(target.parentElement).cursor === 'pointer');
       
       if (isPointer || computedPointer) {

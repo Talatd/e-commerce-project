@@ -44,8 +44,6 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .nav-icon{width:34px;height:34px;border-radius:50%;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:border-color 0.15s;text-decoration:none;color:inherit;box-sizing:border-box;}
 .nav-icon:hover{border-color:var(--border2);}
 .nb{position:absolute;top:-2px;right:-2px;width:15px;height:15px;border-radius:50%;background:var(--teal);color:#080808;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);}
-.user-pill{display:flex;align-items:center;gap:7px;padding:4px 12px 4px 4px;border-radius:20px;background:var(--glass);border:1px solid var(--border2);cursor:pointer;}
-.uav{width:26px;height:26px;border-radius:50%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--teal);}
 
 /* MAIN SCROLL */
 .main-scroll{flex:1;overflow-y:auto;}
@@ -182,7 +180,14 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .rb-count span{color:var(--text);font-weight:500;}
 .rb-sort{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text2);background:var(--glass);border:1px solid var(--border);border-radius:20px;padding:5px 13px;cursor:pointer;}
 
-.prod-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.prod-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+.products-area .prod-grid .pc-body{padding:9px 10px;}
+.products-area .prod-grid .pc-name{font-size:12px;margin-bottom:3px;}
+.products-area .prod-grid .pc-price{font-size:14px;}
+.products-area .prod-grid .pc-stars{margin-bottom:5px;}
+.products-area .prod-grid .pc-img-photo{inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);border-radius:12px;}
+.products-area .prod-grid .pcard{border-radius:10px;}
+.products-area .prod-grid .pcard:hover{transform:translateY(-2px);}
 .pcard{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.2s,transform 0.2s;position:relative;}
 .pcard:hover{border-color:rgba(62,207,178,0.2);transform:translateY(-3px);}
 .pcard:hover .pc-quick{opacity:1;}
@@ -523,6 +528,19 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .wcard:nth-child(6){animation:fadein 0.35s ease 0.24s both;}
 .hero-left{animation:fadein 0.5s ease 0.05s both;}
 .hero-right{animation:fadein 0.5s ease 0.15s both;}
+
+@media (min-width:1500px){
+  .prod-grid{grid-template-columns:repeat(5,minmax(0,1fr));}
+}
+@media (max-width:1200px){
+  .prod-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media (max-width:900px){
+  .prod-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width:480px){
+  .prod-grid{grid-template-columns:1fr;}
+}
 </style>
 
 <div class="page">
@@ -535,11 +553,6 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
     <a class="nav-icon nx-icon-btn" [routerLink]="consumerNav.cart" aria-label="Cart">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="#6A8A84"/><circle cx="10" cy="11" r="1.2" fill="#6A8A84"/></svg>
       <div class="nb" *ngIf="cartCount > 0">{{cartCount}}</div>
-    </a>
-    <a class="user-pill" [routerLink]="consumerNav.settings" style="text-decoration:none;color:inherit;">
-      <div class="uav">{{auth.currentUserValue?.fullName?.substring(0,2)?.toUpperCase()}}</div>
-      <span style="font-size:12px;color:var(--text);font-weight:500;">{{auth.currentUserValue?.fullName}}</span>
-      <span style="font-size:9px;color:var(--text3);">▾</span>
     </a>
   </app-consumer-standalone-top-nav>
 

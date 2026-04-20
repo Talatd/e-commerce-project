@@ -30,6 +30,9 @@ export function pathWithoutQuery(url: string): string {
   return url.slice(0, end);
 }
 
+/** Product detail uses the same standalone chrome as cart/orders (see shop-pages). */
 export function isFullpageStandalonePath(url: string): boolean {
-  return FULLPAGE_STANDALONE_PATHS.includes(pathWithoutQuery(url));
+  const p = pathWithoutQuery(url);
+  if (FULLPAGE_STANDALONE_PATHS.includes(p)) return true;
+  return p.startsWith('/product/');
 }

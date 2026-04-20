@@ -11,5 +11,6 @@ export const routes: Routes = [
   { path: 'cart', loadComponent: () => import('./shop-pages').then(m => m.CartComponent), canActivate: [authGuard] },
   { path: 'product/:id', loadComponent: () => import('./shop-pages').then(m => m.ProductDetailComponent), canActivate: [authGuard] },
   { path: 'orders', loadComponent: () => import('./shop-pages').then(m => m.OrdersComponent), canActivate: [authGuard] },
-  { path: '**', redirectTo: '' }
+  { path: '404', loadComponent: () => import('./pages/not-found.component').then(m => m.NotFoundComponent) },
+  { path: '**', redirectTo: '/404', pathMatch: 'full' }
 ];

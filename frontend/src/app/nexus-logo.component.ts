@@ -41,18 +41,29 @@ import { Component, Input } from '@angular/core';
     .nexus-brand-sm .nexus-svg { width: 22px; height: 22px; }
     .nexus-brand-md .nexus-svg { width: 28px; height: 28px; }
     .nexus-brand-lg .nexus-svg { width: 36px; height: 36px; }
+    /* Explicit colors — color-mix() can fail in some browsers / contexts → invisible logo */
     .nexus-ring {
-      stroke: color-mix(in srgb, var(--teal) 12%, transparent);
+      stroke: rgba(62, 207, 178, 0.15);
+    }
+    html.light-mode .nexus-ring {
+      stroke: rgba(43, 168, 152, 0.22);
     }
     .nexus-hex {
-      stroke: var(--teal);
-      fill: color-mix(in srgb, var(--teal) 6%, transparent);
+      stroke: var(--teal, #3ecfb2);
+      fill: rgba(62, 207, 178, 0.1);
+    }
+    html.light-mode .nexus-hex {
+      stroke: var(--teal, #2ba898);
+      fill: rgba(43, 168, 152, 0.12);
     }
     .nexus-line {
-      stroke: var(--teal);
+      stroke: var(--teal, #3ecfb2);
+    }
+    html.light-mode .nexus-line {
+      stroke: var(--teal, #2ba898);
     }
     .nexus-fill {
-      fill: var(--teal);
+      fill: var(--teal, #3ecfb2);
     }
     .nexus-divider {
       width: 1px;
@@ -66,6 +77,9 @@ import { Component, Input } from '@angular/core';
       font-size: 1.05em;
       letter-spacing: 0.02em;
       color: var(--text, #e6f0ee);
+    }
+    html.light-mode .nexus-wordmark {
+      color: var(--text, #1a1916);
     }
   `,
 })

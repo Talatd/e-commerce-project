@@ -755,18 +755,27 @@ export class CartComponent implements OnInit, OnDestroy {
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, NexusThemeToggleComponent],
+  imports: [CommonModule, RouterModule, NexusThemeToggleComponent, ConsumerStandaloneTopNavComponent],
   template: `
+    <div class="nx-page nx-checkout-clean">
+      <app-consumer-standalone-top-nav>
+        <app-nexus-theme-toggle></app-nexus-theme-toggle>
+        <a class="nx-icon-btn" [routerLink]="consumerNav.cart" aria-label="Cart">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="#6A8A84"/><circle cx="10" cy="11" r="1.2" fill="#6A8A84"/></svg>
+        </a>
+        <a class="nx-nbtn" [routerLink]="consumerNav.shop" [queryParams]="{ tab: 'shop' }">← Shop</a>
+      </app-consumer-standalone-top-nav>
+
     <div class="app-content" *ngIf="!detailReady" style="padding:48px 24px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>
 
     <div class="app-content" *ngIf="detailReady && loadError" style="padding:48px 24px;text-align:center;color:var(--text3);">
       <p style="margin-bottom:16px;">Product not found.</p>
-      <a class="ripple-btn ghost" [routerLink]="consumerNav.shop" style="display:inline-flex;text-decoration:none;">← Back to shop</a>
+      <a class="ripple-btn ghost" [routerLink]="consumerNav.shop" [queryParams]="{ tab: 'shop' }" style="display:inline-flex;text-decoration:none;">← Back to shop</a>
     </div>
 
     <ng-container *ngIf="product">
       <nav class="nx-breadcrumb" aria-label="Breadcrumb">
-        <a [routerLink]="consumerNav.shop" class="nx-bc-link">Shop</a>
+        <a [routerLink]="consumerNav.shop" [queryParams]="{ tab: 'shop' }" class="nx-bc-link">Shop</a>
         <span class="nx-bc-sep">/</span>
         <span class="nx-bc-muted">{{ product.category }}</span>
         <span class="nx-bc-sep">/</span>
@@ -777,10 +786,6 @@ export class CartComponent implements OnInit, OnDestroy {
         <div>
           <div class="page-title">{{ product.name }}</div>
           <div class="page-sub">{{ product.category }}</div>
-        </div>
-        <div class="head-r" style="align-self:center;display:flex;align-items:center;gap:10px;">
-          <a class="ripple-btn ghost" style="font-size:11px;padding:6px 14px;text-decoration:none;" [routerLink]="consumerNav.cart">View cart</a>
-          <app-nexus-theme-toggle></app-nexus-theme-toggle>
         </div>
       </div>
 
@@ -872,6 +877,7 @@ export class CartComponent implements OnInit, OnDestroy {
         </div>
       </div>
     </ng-container>
+    </div>
   `,
   styles: [`
     .nx-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:11px; color:var(--text3); margin-bottom:14px; padding:0 2px; }

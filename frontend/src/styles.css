@@ -133,6 +133,9 @@ body {
 }
 :root.light-mode .toggle-thumb{left:21px;background:#2C2C2A;}
 .thumb-icon{width:10px;height:10px;fill:none;}
+/* Sun on dark thumb (:root.light-mode .toggle-thumb #2C2C2A) — was #2C2C2A on #2C2C2A (invisible) */
+.thumb-icon.thumb-icon-sun circle{fill:#F5F2ED;}
+.thumb-icon.thumb-icon-sun line{stroke:#F5F2ED;}
 
 /* BODY */
 .app-body{display:flex;flex:1;overflow:hidden;position:relative;z-index:1;height: calc(100vh - 65px);}
@@ -169,6 +172,13 @@ body {
   border:1px solid var(--teal-glow);
 }
 .nitem:not(.active):hover{background:var(--glass2);color:var(--text);}
+
+.nitem.nitem-soon{
+  opacity:0.45;
+  cursor:default;
+  pointer-events:none;
+}
+.nitem.nitem-soon:hover{background:transparent;color:var(--text2);}
 
 .nbadge{
   background:var(--teal-dim);color:var(--teal);
@@ -845,6 +855,9 @@ body {
   grid-template-columns:minmax(100px,1fr) auto minmax(100px,1fr);
   align-items:center;gap:12px 16px;
   padding:14px 32px;border-bottom:1px solid var(--border);background:rgba(8,8,8,0.92);backdrop-filter:blur(20px);
+  position:relative;
+  z-index:300;
+  flex-shrink:0;
 }
 .nx-navbar .nx-logo{justify-self:start;}
 .nx-navbar > nav.nx-nav-pills{justify-self:center;}

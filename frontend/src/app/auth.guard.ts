@@ -25,8 +25,14 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
     }
     if (!user) {
       router.navigate(['/login']);
+      return false;
+    }
+    if (user.role === 'ADMIN') {
+      router.navigate(['/admin'], { replaceUrl: true });
+    } else if (user.role === 'MANAGER') {
+      router.navigate(['/manager'], { replaceUrl: true });
     } else {
-      router.navigate([CONSUMER_NAV.shop]);
+      router.navigate([CONSUMER_NAV.shop], { replaceUrl: true });
     }
     return false;
   };
