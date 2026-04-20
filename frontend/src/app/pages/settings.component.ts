@@ -15,13 +15,15 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
   template: `
     <div class="page-frame">
       <div class="navbar-nexus">
-        <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;">
+        <div class="nx-settings-nav-left">
           <div class="logo-admin" [routerLink]="consumerNav.shop"><app-nexus-logo size="sm" wordmark="Nexus Settings"></app-nexus-logo></div>
-          <app-consumer-nav-pills *ngIf="editUser?.role === 'CONSUMER'" style="display:flex;align-items:center;" />
         </div>
-        <div class="nav-r-nexus" style="display:flex;align-items:center;gap:10px;">
+        <div class="navbar-center">
+          <app-consumer-nav-pills *ngIf="editUser?.role === 'CONSUMER'" />
+        </div>
+        <div class="nx-settings-nav-right">
           <app-nexus-theme-toggle></app-nexus-theme-toggle>
-          <div class="mag-pill" style="font-size:11px; padding:6px 14px; border-radius:12px;" (click)="goBack()">← Exit Settings</div>
+          <button type="button" class="nx-npill" style="font-size:11px;padding:6px 14px;" (click)="goBack()">← Exit Settings</button>
         </div>
       </div>
 

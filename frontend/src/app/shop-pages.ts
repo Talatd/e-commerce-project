@@ -1021,16 +1021,17 @@ export class ProductDetailComponent implements OnInit {
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, NexusThemeToggleComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NexusThemeToggleComponent],
   template: `
-    <div class="page-head">
+    <div class="nx-orders-shell">
+    <div class="page-head nx-orders-page-head">
       <div>
         <div class="page-title">My Orders</div>
         <div class="page-sub">Purchase history & tracking</div>
       </div>
       <div class="head-r" style="display:flex;align-items:center;gap:10px;">
         <app-nexus-theme-toggle></app-nexus-theme-toggle>
-        <button class="ripple-btn ghost" style="font-size:11px;padding:6px 16px;" (click)="exportOrders()">
+        <button type="button" class="ripple-btn ghost" style="font-size:11px;padding:6px 16px;" (click)="exportOrders()">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v8M3 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
           Export CSV
         </button>
@@ -1069,9 +1070,11 @@ export class ProductDetailComponent implements OnInit {
         </div>
       </div>
 
-      <div *ngIf="myOrders.length === 0" class="gcard" style="padding:48px;text-align:center;color:var(--text3);">
-        <div style="font-size:36px;margin-bottom:12px;opacity:0.2;">📦</div>
-        <div style="font-size:13px;">No orders yet. Start shopping!</div>
+      <div *ngIf="myOrders.length === 0" class="nx-orders-empty">
+        <div class="nx-orders-empty-icon" aria-hidden="true">📦</div>
+        <h2 class="nx-orders-empty-title">No orders yet</h2>
+        <p class="nx-orders-empty-sub">When you place an order, your purchase history and live tracking will show up here.</p>
+        <a class="nx-orders-empty-cta" [routerLink]="consumerNav.shop">Browse the shop →</a>
       </div>
 
       <!-- SHIPMENT TRACKING (Dynamic per order) -->
@@ -1111,13 +1114,13 @@ export class ProductDetailComponent implements OnInit {
               <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('PREPARING')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5" [attr.stroke]="isStepDone('PREPARING') ? '#3ECFB2' : '#344844'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
               <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('PREPARING')">Preparing</div><div class="tl-desc">Items being packed at warehouse.</div></div>
             </div>
-            <div class="tl-item" [class.done]="isStepDone('IN_TRANSIT')" [class.idle]="!isStepDone('IN_TRANSIT')">
-              <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('IN_TRANSIT')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" [attr.stroke]="isStepDone('IN_TRANSIT') ? '#3ECFB2' : '#344844'" stroke-width="1.3" stroke-linecap="round"/></svg></div></div>
-              <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('IN_TRANSIT')">In transit</div><div class="tl-desc">On the way to you.</div></div>
-            </div>
             <div class="tl-item" [class.done]="isStepDone('SHIPPED')" [class.active]="selectedOrder.status === 'SHIPPED'" [class.idle]="!isStepDone('SHIPPED')">
               <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('SHIPPED')" [class.active]="selectedOrder.status === 'SHIPPED'"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" [attr.stroke]="isStepDone('SHIPPED') ? '#3ECFB2' : '#344844'" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
               <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('SHIPPED')" [class.active]="selectedOrder.status === 'SHIPPED'">Shipped</div><div class="tl-desc">{{shipmentData?.carrier || 'Carrier'}} — {{shipmentData?.trackingNumber || 'Pending'}}</div></div>
+            </div>
+            <div class="tl-item" [class.done]="isStepDone('IN_TRANSIT')" [class.idle]="!isStepDone('IN_TRANSIT')">
+              <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('IN_TRANSIT')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" [attr.stroke]="isStepDone('IN_TRANSIT') ? '#3ECFB2' : '#344844'" stroke-width="1.3" stroke-linecap="round"/></svg></div></div>
+              <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('IN_TRANSIT')">In transit</div><div class="tl-desc">On the way to you.</div></div>
             </div>
             <div class="tl-item" [class.done]="isStepDone('DELIVERED')" [class.idle]="!isStepDone('DELIVERED')">
               <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('DELIVERED')" [class.idle]="!isStepDone('DELIVERED')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" [attr.stroke]="isStepDone('DELIVERED') ? '#3ECFB2' : '#344844'" stroke-width="1.1"/></svg></div></div>
@@ -1235,9 +1238,11 @@ export class ProductDetailComponent implements OnInit {
       </div>
 
     </div>
+    </div>
   `
 })
 export class OrdersComponent implements OnInit {
+  readonly consumerNav = CONSUMER_NAV;
   isModalOpen = false;
   isSuccess = false;
   isSubmitting = false;

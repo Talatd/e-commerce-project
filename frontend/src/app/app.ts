@@ -5,11 +5,12 @@ import { AuthService, ProductService, ToastService } from './services';
 import { NexusLogoComponent } from './nexus-logo.component';
 import { ThemeService } from './theme.service';
 import { CONSUMER_NAV, isFullpageStandalonePath } from './consumer-nav.paths';
+import { ConsumerNavPillsComponent } from './consumer-nav-pills.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterModule, CommonModule, NexusLogoComponent],
+  imports: [RouterOutlet, RouterModule, CommonModule, NexusLogoComponent, ConsumerNavPillsComponent],
   templateUrl: './app.html'
 })
 export class AppComponent implements OnInit {
@@ -30,7 +31,16 @@ export class AppComponent implements OnInit {
   get shouldShowGlobalSidebar(): boolean {
     const path = this.router.url.split('?')[0];
     if (path === '/' || path === '/login') return false;
-    const hidden = ['/login', '/admin', '/manager', CONSUMER_NAV.shop, CONSUMER_NAV.settings];
+    const hidden = [
+      '/login',
+      '/admin',
+      '/manager',
+      CONSUMER_NAV.shop,
+      CONSUMER_NAV.settings,
+      CONSUMER_NAV.orders,
+      CONSUMER_NAV.cart,
+      '/product',
+    ];
     return !hidden.some(r => path.startsWith(r));
   }
 
@@ -57,7 +67,7 @@ export class AppComponent implements OnInit {
       my = e.clientY;
       
       const target = e.target as HTMLElement;
-      const isPointer = target.closest('button, .mag-pill, .npill, .nx-npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link');
+      const isPointer = target.closest('button, .mag-pill, .npill, .nx-npill, a.nx-npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link');
       const computedPointer = getComputedStyle(target).cursor === 'pointer' || (target.parentElement && getComputedStyle(target.parentElement).cursor === 'pointer');
       
       if (isPointer || computedPointer) {

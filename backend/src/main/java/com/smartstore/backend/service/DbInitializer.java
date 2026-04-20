@@ -1,20 +1,12 @@
 package com.smartstore.backend.service;
 
-import com.smartstore.backend.model.Product;
-import com.smartstore.backend.model.RegionalInventory;
-import com.smartstore.backend.repository.ProductRepository;
-import com.smartstore.backend.repository.RegionalInventoryRepository;
-import com.smartstore.backend.repository.StoreRepository;
-import com.smartstore.backend.repository.UserRepository;
-import com.smartstore.backend.model.Store;
-import com.smartstore.backend.model.User;
-import com.smartstore.backend.model.Role;
+import com.smartstore.backend.repository.*;
+import com.smartstore.backend.model.*;
+import com.smartstore.backend.model.Order.OrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +16,10 @@ public class DbInitializer {
     private final RegionalInventoryRepository inventoryRepository;
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
+    private final ProductReviewRepository reviewRepository;
+    private final AuditLogRepository auditLogRepository;
+    private final CustomerProfileRepository profileRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @jakarta.annotation.PostConstruct
@@ -36,7 +32,95 @@ public class DbInitializer {
         if (productRepository.count() == 0) {
             seedCuratedProducts();
         }
+
+        if (orderRepository.count() == 0) {
+            seedHistoricalData();
+        }
         System.out.println("SEED: Initialization complete.");
+    }
+
+    @SuppressWarnings("null")
+    private void seedHistoricalData() {
+        System.out.println("SEED: Generating historical analytics data...");
+        seedAuditLogs();
+        seedCustomerReviews();
+        seedHistoricalOrders();
+    }
+
+    @SuppressWarnings("null")
+    private void seedAuditLogs() {
+        auditLogRepository.save(AuditLog.builder().username("system").action("MARKETPLACE_INITIALIZED").type("SYSTEM").detail("Marketplace core services started").build());
+        auditLogRepository.save(AuditLog.builder().username("marcus@techhub.pro").action("STORE_OPENED").type("STORE").detail("TechHub Performance store is now live").build());
+        auditLogRepository.save(AuditLog.builder().username("elena@gadgetpro.co").action("STORE_OPENED").type("STORE").detail("GadgetPro Lifestyle store is now live").build());
+        auditLogRepository.save(AuditLog.builder().username("marcus@techhub.pro").action("PRODUCT_ADDED").type("INVENTORY").detail("VANGUARD Stealth-Key added to catalog").build());
+    }
+
+    private void seedCustomerReviews() {
+        List<Product> products = productRepository.findAll();
+        List<User> users = userRepository.findByRole(Role.CONSUMER);
+        if (products.isEmpty() || users.isEmpty()) return;
+
+        String[] comments = {
+            "This setup literally changed my workflow. The build quality of VANGUARD is unmatched.",
+            "Absolutely stunning aesthetic. It perfectly fits my Organic Creator vibe.",
+            "A bit expensive, but the AURA kinetic pen is a masterpiece of engineering. Worth every penny.",
+            "Minimalist perfection. Fast shipping and the packaging was premium too.",
+            "The noise canceling is insane. I can finally code in peace at the coffee shop.",
+            "Great connectivity on the NOVA hub. Solid build, feels very premium in hand.",
+            "The walnut finish is so warm. My desk feels alive now.",
+            "I'm obsessed with the floating desk lamp. Everyone who visits asks about it!"
+        };
+
+        for (int i = 0; i < 40; i++) {
+            ProductReview review = new ProductReview();
+            review.setProduct(products.get(i % products.size()));
+            review.setUser(users.get(i % users.size()));
+            review.setRating(4 + (i % 2)); // 4 or 5 stars
+            review.setComment(comments[i % comments.length]);
+            review.setSentimentScore(java.math.BigDecimal.valueOf(0.85 + (i * 0.003) % 0.15));
+            review.setCreatedAt(java.time.LocalDateTime.now().minusDays(i * 3));
+            reviewRepository.save(review);
+        }
+    }
+
+    private void seedHistoricalOrders() {
+        List<Product> products = productRepository.findAll();
+        List<User> users = userRepository.findByRole(Role.CONSUMER);
+        if (products.isEmpty() || users.isEmpty()) return;
+
+        Random random = new Random();
+        
+        for (int i = 0; i < 60; i++) {
+            Order order = new Order();
+            order.setUser(users.get(random.nextInt(users.size())));
+            order.setShippingAddress("123 Tech Lane, San Francisco, CA");
+            order.setOrderDate(java.time.LocalDateTime.now().minusDays(random.nextInt(180)));
+            
+            // Randomly set status based on age
+            if (i < 50) order.setStatus(OrderStatus.DELIVERED);
+            else if (i < 55) order.setStatus(OrderStatus.SHIPPED);
+            else order.setStatus(OrderStatus.PROCESSING);
+
+            List<OrderItem> items = new java.util.ArrayList<>();
+            java.math.BigDecimal total = java.math.BigDecimal.ZERO;
+
+            // 1-3 items per order
+            int itemCount = 1 + random.nextInt(3);
+            for (int j = 0; j < itemCount; j++) {
+                Product p = products.get(random.nextInt(products.size()));
+                OrderItem item = new OrderItem();
+                item.setOrder(order);
+                item.setProduct(p);
+                item.setQuantity(1);
+                item.setPriceAtPurchase(p.getBasePrice());
+                items.add(item);
+                total = total.add(p.getBasePrice());
+            }
+
+            order.setItems(items);
+            order.setTotalAmount(total);
+            orderRepository.save(order);
+        }
     }
 
     private void seedCuratedProducts() {
@@ -295,7 +379,10 @@ public class DbInitializer {
 
     @SuppressWarnings("null")
     private void seedUsersAndStores() {
-        System.out.println("SEED: Performing clean sweep (Products, Stores, Users)...");
+        System.out.println("SEED: Performing clean sweep (Orders, Reviews, Profiles, Products, Stores, Users)...");
+        orderRepository.deleteAll();
+        reviewRepository.deleteAll();
+        profileRepository.deleteAll();
         productRepository.deleteAll();
         inventoryRepository.deleteAll();
         storeRepository.deleteAll();
@@ -309,8 +396,20 @@ public class DbInitializer {
         updateOrSaveUser("Elena Rodriguez", "elena@gadgetpro.co", "manager123", Role.MANAGER);
         
         // Customer
-        updateOrSaveUser("Daniel Smith", "daniel@nexus.io", "user123", Role.CONSUMER);
-        updateOrSaveUser("Test User", "daniel@test.com", "password", Role.CONSUMER);
+        User daniel = updateOrSaveUser("Daniel Smith", "daniel@nexus.io", "user123", Role.CONSUMER);
+        createProfile(daniel, "Shadow Coder", "Dark, matte setups with high-performance mechanics.");
+
+        User sophia = updateOrSaveUser("Sophia Chen", "sophia@nexus.io", "user123", Role.CONSUMER);
+        createProfile(sophia, "Organic Creator", "Natural textures, warm lighting, and acoustic perfection.");
+
+        User liam = updateOrSaveUser("Liam Wright", "liam@nexus.io", "user123", Role.CONSUMER);
+        createProfile(liam, "Global Nomad", "High-efficiency gadgets that fit in a single tech pouch.");
+
+        User maya = updateOrSaveUser("Maya Rossi", "maya@nexus.io", "user123", Role.CONSUMER);
+        createProfile(maya, "The Discovery", "Unique, experimental gadgets that defy common physics.");
+
+        User test = updateOrSaveUser("Test User", "daniel@test.com", "password", Role.CONSUMER);
+        createProfile(test, "All-Rounder", "A bit of everything for the ultimate workspace.");
 
         // Stores
         storeRepository.save(Store.builder().name("Nexus Central").ownerName("Nexus Admin").totalRevenue(500000.0).orderCount(12000).rating(5.0).status("OPEN").build());
@@ -337,12 +436,27 @@ public class DbInitializer {
         return userRepository.save(user);
     }
 
+    @SuppressWarnings("null")
+    private void createProfile(User user, String persona, String bio) {
+        CustomerProfile profile = CustomerProfile.builder()
+            .user(user)
+            .personaType(persona)
+            .bio(bio)
+            .totalSpend(java.math.BigDecimal.ZERO)
+            .itemsPurchased(0)
+            .preferredStyle("Minimalist")
+            .satisfactionLevel("Satisfied")
+            .membershipType("Bronze")
+            .build();
+        profileRepository.save(profile);
+    }
+
     private Product createProduct(String name, String cat, String brand, double price, String desc, String img, String tags, Store store) {
         Product p = new Product();
         p.setName(name);
         p.setCategory(cat);
         p.setBrand(brand);
-        p.setBasePrice(BigDecimal.valueOf(price));
+        p.setBasePrice(java.math.BigDecimal.valueOf(price));
         p.setDescription(desc);
         p.setImageUrl(img);
         p.setTags(tags);

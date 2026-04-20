@@ -41,12 +41,12 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .page{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);overflow:hidden;display:flex;flex-direction:column;height:100vh;}
 
 /* NAVBAR */
-.navbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);background:rgba(8,8,8,0.93);backdrop-filter:blur(20px);flex-shrink:0;z-index:50;}
+.navbar{display:grid;grid-template-columns:minmax(100px,1fr) auto minmax(100px,1fr);align-items:center;gap:12px 16px;padding:12px 24px;border-bottom:1px solid var(--border);background:rgba(8,8,8,0.93);backdrop-filter:blur(20px);flex-shrink:0;z-index:50;}
+.navbar-brand{justify-self:start;}
+.navbar-center{justify-self:center;}
+.navbar-end{justify-self:end;}
 .logo{font-family:'Playfair Display',serif;font-style:italic;font-size:19px;color:var(--text);display:flex;align-items:center;gap:7px;cursor:pointer;}
 .logo-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal-glow);}
-.nav-pills{display:flex;gap:2px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:28px;padding:3px;}
-.npill{padding:6px 14px;border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all 0.15s;}
-.npill.active{background:var(--teal-dim);color:var(--teal2);border:1px solid rgba(62,207,178,0.18);}
 .nav-r{display:flex;align-items:center;gap:8px;}
 .nav-icon{width:34px;height:34px;border-radius:50%;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:border-color 0.15s;text-decoration:none;color:inherit;box-sizing:border-box;}
 .nav-icon:hover{border-color:var(--border2);}
@@ -535,15 +535,19 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 <div class="page">
   <!-- NAVBAR -->
   <div class="navbar">
-    <div class="logo" (click)="activeTab='home'; selectedProduct=null;"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
-    <div class="nav-pills">
-      <div class="npill" [class.active]="activeTab === 'home'" (click)="activeTab='home'; selectedProduct=null;">Home</div>
-      <div class="npill" [class.active]="activeTab === 'shop' && !selectedProduct" (click)="activeTab='shop'; selectedProduct=null;">Shop</div>
-      <div class="npill" [class.active]="activeTab === 'assistant'" (click)="activeTab='assistant'">AI Assistant</div>
-      <div class="npill" [routerLink]="consumerNav.orders" routerLinkActive="active">Orders</div>
-      <div class="npill" [class.active]="activeTab === 'wishlist'" (click)="activeTab='wishlist'">Wishlist</div>
+    <div class="navbar-brand">
+      <div class="logo" (click)="activeTab='home'; selectedProduct=null;"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
     </div>
-    <div class="nav-r">
+    <div class="navbar-center">
+      <nav class="nx-nav-pills" aria-label="Store">
+        <button type="button" class="nx-npill" [class.active]="activeTab === 'home'" (click)="activeTab='home'; selectedProduct=null;">Home</button>
+        <button type="button" class="nx-npill" [class.active]="activeTab === 'shop'" (click)="activeTab='shop'; selectedProduct=null;">Shop</button>
+        <button type="button" class="nx-npill" [class.active]="activeTab === 'assistant'" (click)="activeTab='assistant'">AI Assistant</button>
+        <a class="nx-npill" [routerLink]="consumerNav.orders" routerLinkActive="active">Orders</a>
+        <button type="button" class="nx-npill" [class.active]="activeTab === 'wishlist'" (click)="activeTab='wishlist'">Wishlist</button>
+      </nav>
+    </div>
+    <div class="nav-r navbar-end">
       <div class="nav-icon" (click)="activeTab='wishlist'">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12S1.5 8 1.5 4.5a3 3 0 0 1 5.5-1.6A3 3 0 0 1 12.5 4.5C12.5 8 7 12 7 12Z" stroke="#6A8A84" stroke-width="1.2"/></svg>
         <div class="nb">{{wishlist.length}}</div>

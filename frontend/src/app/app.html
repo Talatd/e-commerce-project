@@ -7,19 +7,22 @@
     <div class="glow-br"></div>
 
     <div class="navbar">
-      <div class="logo app-logo-lockup">
+      <div class="logo app-logo-lockup navbar-brand">
         <app-nexus-logo size="md" wordmark="Nexus"></app-nexus-logo>
       </div>
-      <div class="nav-pills" style="padding:0; border:none; background:transparent; gap:8px;">
-        <div class="mag-pill" routerLink="/admin" routerLinkActive="active-pill" *ngIf="auth.role === 'ADMIN'">Admin<div class="pill-bg"></div></div>
-        <div class="mag-pill" routerLink="/manager" routerLinkActive="active-pill" *ngIf="auth.role === 'MANAGER'">Manager<div class="pill-bg"></div></div>
-        <div class="mag-pill" [routerLink]="consumerNav.shop" routerLinkActive="active-pill" *ngIf="auth.role === 'CONSUMER'">Shop<div class="pill-bg"></div></div>
-        <div class="mag-pill" [routerLink]="consumerNav.cart" routerLinkActive="active-pill" *ngIf="auth.role === 'CONSUMER'">Cart<div class="pill-bg"></div></div>
-        <div class="mag-pill" [routerLink]="consumerNav.orders" routerLinkActive="active-pill" *ngIf="auth.role === 'CONSUMER'">Orders<div class="pill-bg"></div></div>
-        <div class="mag-pill" [routerLink]="consumerNav.settings" routerLinkActive="active-pill">Settings<div class="pill-bg"></div></div>
+      <div class="navbar-center">
+        <app-consumer-nav-pills *ngIf="auth.role === 'CONSUMER'" />
+        <nav class="nx-nav-pills" *ngIf="auth.role === 'ADMIN'" aria-label="Admin">
+          <a class="nx-npill" routerLink="/admin" routerLinkActive="active">Admin</a>
+          <a class="nx-npill" [routerLink]="consumerNav.settings" routerLinkActive="active">Settings</a>
+        </nav>
+        <nav class="nx-nav-pills" *ngIf="auth.role === 'MANAGER'" aria-label="Manager">
+          <a class="nx-npill" routerLink="/manager" routerLinkActive="active">Manager</a>
+          <a class="nx-npill" [routerLink]="consumerNav.settings" routerLinkActive="active">Settings</a>
+        </nav>
       </div>
-      
-      <div class="head-r">
+
+      <div class="head-r navbar-end">
         <div class="search-trigger" (click)="toggleSearch()">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="#6A8A84" stroke-width="1.2"/><path d="M9 9l2.5 2.5" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round"/></svg>
           Search products...

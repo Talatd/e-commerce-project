@@ -2,6 +2,7 @@ package com.smartstore.backend.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
@@ -15,6 +16,7 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class CustomerProfile {
 
     @Id
@@ -31,16 +33,25 @@ public class CustomerProfile {
     private String country;
 
     @Column(nullable = false)
+    @Builder.Default
     private String membershipType = "Bronze"; // Bronze, Silver, Gold, Premium
 
+    @Builder.Default
     private BigDecimal totalSpend = BigDecimal.ZERO;
+    @Builder.Default
     private Integer itemsPurchased = 0;
     private Double avgRating;
+    @Builder.Default
     private Boolean discountApplied = false;
 
     @Column(nullable = false)
+    @Builder.Default
     private String satisfactionLevel = "Neutral"; // Unsatisfied, Neutral, Satisfied
 
     private String preferredPaymentMethod;
+    private String preferredStyle;
+    private String personaType;
+    private String bio;
+    @Builder.Default
     private Integer daysOnPlatform = 0;
 }
