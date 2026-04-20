@@ -1,13 +1,18 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { AuthService, AiService, ProductService, StoreService, AdminService, ToastService } from './services';
+import { AuthService, AiService, ProductService, StoreService, AdminService, OrderService, CategoryService, CustomerProfileService, ToastService } from './services';
+import { NexusLogoComponent } from './nexus-logo.component';
+import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <div class="scene">
   <div class="bg-glow-1"></div>
@@ -16,16 +21,11 @@ import { AuthService, AiService, ProductService, StoreService, AdminService, Toa
   <div class="bg-grid"></div>
 
   <div class="card">
+    <div class="card-theme-corner">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
+    </div>
     <div class="card-logo">
-      <div class="logo-icon">
-        <svg width="24" height="24" viewBox="0 0 44 44" fill="none">
-          <path d="M22 4L38 13V31L22 40L6 31V13L22 4Z" stroke="#3ECFB2" stroke-width="2" fill="rgba(62,207,178,0.1)"/>
-          <circle cx="22" cy="22" r="4" fill="#3ECFB2">
-            <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite" />
-          </circle>
-        </svg>
-      </div>
-      Nexus
+      <app-nexus-logo size="md" wordmark="Nexus"></app-nexus-logo>
     </div>
 
     <!-- TOGGLE -->
@@ -101,20 +101,20 @@ import { AuthService, AiService, ProductService, StoreService, AdminService, Toa
         <div class="name-row">
           <div class="field">
             <label class="field-label">First name</label>
-            <input class="fi" placeholder="Buse"/>
+            <input class="fi" [(ngModel)]="regFirstName" placeholder="Buse"/>
           </div>
           <div class="field">
             <label class="field-label">Last name</label>
-            <input class="fi" placeholder="U."/>
+            <input class="fi" [(ngModel)]="regLastName" placeholder="U."/>
           </div>
         </div>
         <div class="field">
           <label class="field-label">Email Address</label>
-          <input class="fi" placeholder="you@example.com" type="email"/>
+          <input class="fi" [(ngModel)]="regEmail" placeholder="you@example.com" type="email"/>
         </div>
         <div class="field">
           <label class="field-label">Create Password</label>
-          <input class="fi" placeholder="Min. 8 characters" type="password" (input)="pwStrength($event)"/>
+          <input class="fi" [(ngModel)]="regPassword" placeholder="Min. 8 characters" type="password" (input)="pwStrength($event)" (keyup.enter)="onRegister()"/>
           <div class="pw-bars">
             <div class="pw-bar" [style.background]="s >= 1 ? c : 'rgba(255,255,255,0.05)'"></div>
             <div class="pw-bar" [style.background]="s >= 2 ? c : 'rgba(255,255,255,0.05)'"></div>
@@ -122,8 +122,12 @@ import { AuthService, AiService, ProductService, StoreService, AdminService, Toa
             <div class="pw-bar" [style.background]="s >= 4 ? c : 'rgba(255,255,255,0.05)'"></div>
           </div>
         </div>
-        <button class="submit" (click)="setMode('login')">
-          Create Account →
+
+        <p *ngIf="regError" class="error-msg">{{regError}}</p>
+
+        <button class="submit" (click)="onRegister()" [disabled]="isLoading">
+          <span *ngIf="!isLoading">Create Account →</span>
+          <span *ngIf="isLoading" class="spin">◌</span>
         </button>
         <p class="terms-text">
           By signing up you agree to our <a>Terms</a> and <a>Privacy Policy</a>.
@@ -158,9 +162,15 @@ import { AuthService, AiService, ProductService, StoreService, AdminService, Toa
     }
     @keyframes card-in{from{opacity:0;transform:translateY(24px) scale(0.98);}to{opacity:1;transform:translateY(0) scale(1);}}
     
+    .card-theme-corner{position:absolute;top:18px;right:18px;z-index:4;}
     .card-logo{
       font-family:'Playfair Display',serif;font-style:italic; font-size:24px; color:var(--text);
       display:flex; align-items:center; gap:12px; margin-bottom:32px;
+    }
+    :host-context(html.light-mode) .scene{background:#F5F2ED;color:#1A1916;}
+    :host-context(html.light-mode) .card{
+      background:rgba(255,255,255,0.94);border-color:rgba(0,0,0,0.1);
+      box-shadow:0 24px 64px rgba(0,0,0,0.1),0 0 0 1px rgba(0,0,0,0.04) inset;
     }
 
     /* TOGGLE STYLES */
@@ -250,31 +260,40 @@ export class LoginComponent {
   c = 'rgba(255,255,255,0.05)';
   isLoading = false;
 
+  regFirstName = '';
+  regLastName = '';
+  regEmail = '';
+  regPassword = '';
+  regError = '';
+
   auth = inject(AuthService);
   router = inject(Router);
 
   setMode(m: string) {
     this.mode = m;
+    this.error = '';
+    this.regError = '';
   }
 
   pwStrength(event: any) {
     const v = event.target.value || '';
     this.s = 0;
-    if(v.length >= 6) this.s++;
-    if(v.length >= 10) this.s++;
-    if(/[0-9!@#$%^&*]/.test(v)) this.s++;
-    if(v.length >= 12 && /[A-Z]/.test(v)) this.s++;
-    const colors = ['#E07070','#E8A94A','#E8A94A','#3EC98A'];
+    if (v.length >= 6) this.s++;
+    if (v.length >= 10) this.s++;
+    if (/[0-9!@#$%^&*]/.test(v)) this.s++;
+    if (v.length >= 12 && /[A-Z]/.test(v)) this.s++;
+    const colors = ['#E07070', '#E8A94A', '#E8A94A', '#3EC98A'];
     this.c = this.s > 0 ? colors[this.s - 1] : 'rgba(255,255,255,0.05)';
   }
 
   onLogin() {
     this.isLoading = true;
     this.error = '';
-    
+
     setTimeout(() => {
       this.auth.login({ email: this.email, password: this.password }).subscribe({
         next: (user) => {
+          this.isLoading = false;
           if (user.role === 'ADMIN') this.router.navigate(['/admin']);
           else if (user.role === 'MANAGER') this.router.navigate(['/manager']);
           else this.router.navigate(['/consumer']);
@@ -286,14 +305,41 @@ export class LoginComponent {
       });
     }, 600);
   }
+
+  onRegister() {
+    const fullName = `${this.regFirstName} ${this.regLastName}`.trim();
+    if (!fullName || !this.regEmail || !this.regPassword) {
+      this.regError = 'Please fill in all fields.';
+      return;
+    }
+    if (this.regPassword.length < 6) {
+      this.regError = 'Password must be at least 6 characters.';
+      return;
+    }
+
+    this.isLoading = true;
+    this.regError = '';
+
+    this.auth.register({ email: this.regEmail, fullName, passwordHash: this.regPassword }).subscribe({
+      next: (user) => {
+        this.isLoading = false;
+        if (user.role === 'ADMIN') this.router.navigate(['/admin']);
+        else if (user.role === 'MANAGER') this.router.navigate(['/manager']);
+        else this.router.navigate(['/consumer']);
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.regError = err.error?.message || 'Registration failed. Please try again.';
+      }
+    });
+  }
 }
 @Component({
   selector: 'app-consumer',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400&display=swap');
 :host {
   --bg:#080808;--glass:rgba(255,255,255,0.04);--glass2:rgba(255,255,255,0.07);
   --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
@@ -305,6 +351,19 @@ export class LoginComponent {
   --blue:#6BA8C8;--blue-dim:rgba(107,168,200,0.08);
   --purple:#A78BCC;
 }
+:host-context(html.light-mode){
+  --bg:#F5F2ED;--glass:rgba(0,0,0,0.04);--glass2:rgba(0,0,0,0.07);
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --teal:#2BA898;--teal2:#1EA393;--teal-dim:rgba(43,168,152,0.15);--teal-glow:rgba(43,168,152,0.2);
+  --text:#1A1916;--text2:#8A8070;--text3:#A09888;
+  --green:#2BA871;--green-dim:rgba(43,168,113,0.15);--green-border:rgba(43,168,113,0.2);
+  --red:#C74A4A;--red-dim:rgba(199,74,74,0.12);--red-border:rgba(199,74,74,0.2);
+  --amber:#E8A94A;--amber-dim:rgba(232,169,74,0.12);
+  --blue:#4A8AC7;--blue-dim:rgba(74,138,199,0.12);
+  --purple:#A78BCC;
+}
+:host-context(html.light-mode) .navbar{background:rgba(245,242,237,0.96);}
+:host-context(html.light-mode) .hero-stat{background:rgba(255,255,255,0.92);border-color:var(--border2);}
 
 .page{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);overflow:hidden;display:flex;flex-direction:column;height:100vh;}
 
@@ -819,7 +878,7 @@ export class LoginComponent {
 <div class="page">
   <!-- NAVBAR -->
   <div class="navbar">
-    <div class="logo" (click)="activeTab='home'; selectedProduct=null;"><div class="logo-dot"></div>Nexus</div>
+    <div class="logo" (click)="activeTab='home'; selectedProduct=null;"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
     <div class="nav-pills">
       <div class="npill" [class.active]="activeTab === 'home'" (click)="activeTab='home'; selectedProduct=null;">Home</div>
       <div class="npill" [class.active]="activeTab === 'shop' && !selectedProduct" (click)="activeTab='shop'; selectedProduct=null;">Shop</div>
@@ -834,8 +893,9 @@ export class LoginComponent {
       </div>
       <div class="nav-icon" routerLink="/cart">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="#6A8A84"/><circle cx="10" cy="11" r="1.2" fill="#6A8A84"/></svg>
-        <div class="nb">3</div>
+        <div class="nb" *ngIf="cartCount > 0">{{cartCount}}</div>
       </div>
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
       <div class="user-pill" (click)="activeTab='settings'">
         <div class="uav">{{auth.currentUserValue?.fullName?.substring(0,2)?.toUpperCase()}}</div>
         <span style="font-size:12px;color:var(--text);font-weight:500;">{{auth.currentUserValue?.fullName}}</span>
@@ -1223,7 +1283,7 @@ export class LoginComponent {
         <div class="page-head-orders">
           <div>
             <div class="ph-title">Purchase History</div>
-            <div class="ph-sub">47 orders · Member since Jan 2023</div>
+            <div class="ph-sub">{{consumerOrders.length}} orders · Your spending analytics</div>
           </div>
           <div style="display:flex;gap:8px;">
             <div class="ph-btn ph-ghost">Export PDF</div>
@@ -1232,10 +1292,10 @@ export class LoginComponent {
         </div>
 
         <div class="summary-bar">
-          <div class="sb-item"><div class="sb-val">47</div><div class="sb-label">Total Orders</div></div>
-          <div class="sb-item"><div class="sb-val">$8.<em>2K</em></div><div class="sb-label">Total Spent</div></div>
-          <div class="sb-item"><div class="sb-val">3</div><div class="sb-label">Active Orders</div></div>
-          <div class="sb-item"><div class="sb-val">4.<em>9★</em></div><div class="sb-label">Avg. Rating</div></div>
+          <div class="sb-item"><div class="sb-val">{{consumerOrders.length}}</div><div class="sb-label">Total Orders</div></div>
+          <div class="sb-item"><div class="sb-val">{{consumerTotalSpent | currency:'USD':'symbol':'1.0-0'}}</div><div class="sb-label">Total Spent</div></div>
+          <div class="sb-item"><div class="sb-val">{{consumerActiveOrders}}</div><div class="sb-label">Active Orders</div></div>
+          <div class="sb-item"><div class="sb-val">{{consumerAvgRating}}<em>★</em></div><div class="sb-label">Avg. Rating</div></div>
         </div>
 
         <div class="toolbar">
@@ -1244,69 +1304,49 @@ export class LoginComponent {
             <input placeholder="Search orders by product or ID…"/>
           </div>
           <div class="filter-chips">
-            <div class="fchip active">All (47)</div>
-            <div class="fchip">Active (3)</div>
-            <div class="fchip">Delivered (42)</div>
-            <div class="fchip">Cancelled (2)</div>
+            <div class="fchip active">All ({{consumerOrders.length}})</div>
+            <div class="fchip">Active ({{consumerActiveOrders}})</div>
+            <div class="fchip">Delivered ({{consumerDelivered}})</div>
+            <div class="fchip">Cancelled ({{consumerCancelled}})</div>
           </div>
         </div>
 
         <div class="orders">
-          <div class="ocard">
+          <div class="ocard" *ngFor="let o of consumerOrders" [style.border-color]="o.status === 'CANCELLED' ? 'rgba(224,112,112,0.08)' : ''">
             <div class="oc-header">
-              <div class="och-left"><div class="oc-id">#ORD-7821</div><div class="oc-date">Apr 17, 2025</div><div class="oc-items-count">3 items</div></div>
-              <div class="och-right"><div class="oc-total">$1,788</div><div class="spill sp-b">● Shipped</div></div>
+              <div class="och-left">
+                <div class="oc-id">#ORD-{{o.orderId}}</div>
+                <div class="oc-date">{{o.orderDate | date:'mediumDate'}}</div>
+                <div class="oc-items-count">{{o.items?.length || 0}} item{{(o.items?.length || 0) > 1 ? 's' : ''}}</div>
+              </div>
+              <div class="och-right">
+                <div class="oc-total">{{o.totalAmount | currency}}</div>
+                <div class="spill" [class.sp-b]="o.status === 'SHIPPED' || o.status === 'PROCESSING'" [class.sp-g]="o.status === 'DELIVERED'" [class.sp-r]="o.status === 'CANCELLED'" [class.sp-a]="o.status === 'PENDING'">● {{o.status}}</div>
+              </div>
             </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(62,207,178,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2" stroke="#3ECFB2" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">MacBook Pro 14" M3 Pro</div><div class="oi-var">512GB · Silver</div></div>
-              <div class="oi-qty">×1</div><div class="oi-price">$1,039</div>
+            <ng-container *ngIf="o.items && o.items.length > 0">
+              <div class="oc-items-row" *ngFor="let item of o.items.slice(0,3)">
+                <div class="oi-img" style="background:rgba(62,207,178,0.04);">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2" stroke="#3ECFB2" stroke-width="1.1" opacity="0.5"/></svg>
+                </div>
+                <div class="oi-info">
+                  <div class="oi-name">{{item.product?.name || 'Product'}}</div>
+                  <div class="oi-var">{{item.product?.category || ''}}</div>
+                </div>
+                <div class="oi-qty">×{{item.quantity}}</div>
+                <div class="oi-price">{{item.priceAtPurchase | currency}}</div>
+              </div>
+            </ng-container>
+            <div class="oc-actions">
+              <div class="oa-btn oa-teal" *ngIf="o.status !== 'CANCELLED' && o.status !== 'DELIVERED'" routerLink="/orders">Track Order</div>
+              <div class="oa-btn oa-ghost" *ngIf="o.status === 'DELIVERED'" routerLink="/orders">Write Review</div>
+              <div class="oa-btn oa-ghost" *ngIf="o.status === 'CANCELLED'" (click)="reorder(o)">Reorder</div>
             </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(107,168,200,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6" stroke="#6BA8C8" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">AirPods Pro Max</div><div class="oi-var">Midnight</div></div>
-              <div class="oi-qty">×1</div><div class="oi-price">$479</div>
-            </div>
-            <div class="oc-actions"><div class="oa-btn oa-teal">Track Order</div><div class="oa-btn oa-ghost">View Invoice</div><div class="oa-btn oa-ghost">Write Review</div></div>
           </div>
 
-          <div class="ocard">
-            <div class="oc-header">
-              <div class="och-left"><div class="oc-id">#ORD-7654</div><div class="oc-date">Nov 18, 2024</div><div class="oc-items-count">2 items</div></div>
-              <div class="och-right"><div class="oc-total">$678</div><div class="spill sp-g">● Delivered</div></div>
-            </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(232,169,74,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="7" width="14" height="9" rx="2" stroke="#E8A94A" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">Keychron Q1 Pro</div><div class="oi-var">Carbon Black</div></div>
-              <div class="oi-qty">×2</div><div class="oi-price">$398</div>
-            </div>
-            <div class="oc-actions"><div class="oa-btn oa-ghost">View Invoice</div><div class="oa-btn oa-ghost">Reorder</div><div class="oa-btn oa-teal">Write Review</div></div>
-          </div>
-
-          <div class="ocard">
-            <div class="oc-header">
-              <div class="och-left"><div class="oc-id">#ORD-7412</div><div class="oc-date">Oct 30, 2024</div><div class="oc-items-count">1 item</div></div>
-              <div class="och-right"><div class="oc-total">$999</div><div class="spill sp-g">● Delivered</div></div>
-            </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(62,201,138,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="6" y="2" width="8" height="14" rx="2.5" stroke="#3EC98A" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">iPhone 16 Pro</div><div class="oi-var">Desert Titanium · 256GB</div></div>
-              <div class="oi-qty">×1</div><div class="oi-price">$999</div>
-            </div>
-            <div class="oc-actions"><div class="oa-btn oa-ghost">View Invoice</div><div class="oa-btn oa-ghost">Reorder</div><div class="oa-btn oa-ghost" style="color:var(--teal2);">✓ Reviewed</div></div>
-          </div>
-
-          <div class="ocard" style="border-color:rgba(224,112,112,0.08);">
-            <div class="oc-header">
-              <div class="och-left"><div class="oc-id">#ORD-7201</div><div class="oc-date">Sep 12, 2024</div><div class="oc-items-count">1 item</div></div>
-              <div class="och-right"><div class="oc-total">$679</div><div class="spill sp-r">● Cancelled</div></div>
-            </div>
-            <div class="oc-items-row">
-              <div class="oi-img" style="background:rgba(232,169,74,0.04);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2.5" stroke="#E8A94A" stroke-width="1.1" opacity="0.5"/></svg></div>
-              <div class="oi-info"><div class="oi-name">LG UltraWide 34"</div><div class="oi-var">Black</div></div>
-              <div class="oi-qty">×1</div><div class="oi-price">$679</div>
-            </div>
-            <div class="oc-actions"><div class="oa-btn oa-ghost">View Details</div><div class="oa-btn oa-teal">Reorder</div></div>
+          <div *ngIf="consumerOrders.length === 0" style="text-align:center;padding:48px;color:var(--text3);">
+            <div style="font-size:36px;margin-bottom:12px;opacity:0.15;">📦</div>
+            <div style="font-size:13px;">No orders yet. Start shopping!</div>
           </div>
         </div>
       </div>
@@ -1384,6 +1424,11 @@ export class LoginComponent {
                   </div>
                   <!-- TEXT -->
                   <div [innerHTML]="m.text"></div>
+                  <!-- PLOTLY VISUALIZATION -->
+                  <div *ngIf="m.visualization" class="plotly-wrap">
+                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;">AI-Generated Chart</div>
+                    <div [id]="'plotly-chart-' + i" style="width:100%;min-height:300px;background:rgba(255,255,255,0.02);border-radius:10px;overflow:hidden;"></div>
+                  </div>
                   <!-- PRODUCT CHIPS -->
                   <div class="prod-chips" *ngIf="m.results && m.results.length > 0">
                     <div class="prod-chip" *ngFor="let r of m.results.slice(0,3)" (click)="selectProduct(r)">
@@ -1396,10 +1441,17 @@ export class LoginComponent {
               </div>
             </div>
           </ng-container>
-          <!-- TYPING INDICATOR -->
+          <!-- TYPING / STREAMING INDICATOR -->
           <div class="typing-ind" *ngIf="isTyping">
             <div class="typing-av"><svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 5.5v7L9 16l7-3.5v-7L9 2Z" stroke="#3ECFB2" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
-            <div class="typing-dots"><div class="td-dot"></div><div class="td-dot"></div><div class="td-dot"></div></div>
+            <div *ngIf="streamSteps.length === 0" class="typing-dots"><div class="td-dot"></div><div class="td-dot"></div><div class="td-dot"></div></div>
+            <div *ngIf="streamSteps.length > 0" style="display:flex;flex-direction:column;gap:3px;">
+              <div *ngFor="let step of streamSteps" style="font-size:10px;color:var(--teal);display:flex;align-items:center;gap:5px;">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><circle cx="4" cy="4" r="3" stroke="#3ECFB2" stroke-width="1"/></svg>
+                {{step}}
+              </div>
+              <div class="typing-dots" style="margin-top:2px;"><div class="td-dot"></div><div class="td-dot"></div><div class="td-dot"></div></div>
+            </div>
           </div>
         </div>
 
@@ -1528,8 +1580,8 @@ export class ConsumerComponent implements OnInit {
   selectedCat = 'All';
   availability = { inStock: false, onSale: false };
   notifPrefs = { orders: true, marketing: false };
-  categories: {name: string, checked: boolean}[] = [];
-  brands: {name: string, checked: boolean}[] = [
+  categories: { name: string, checked: boolean }[] = [];
+  brands: { name: string, checked: boolean }[] = [
     { name: 'Apple', checked: false },
     { name: 'Sony', checked: false },
     { name: 'Keychron', checked: false },
@@ -1540,10 +1592,50 @@ export class ConsumerComponent implements OnInit {
   qty = 1;
   isTyping = false;
   chatSuggestions = ['Top selling products', 'Recommend a laptop for my budget', 'Order status', 'Discounted items', 'Apple vs Samsung compare'];
+  consumerOrders: any[] = [];
   auth = inject(AuthService);
   ai = inject(AiService);
   productService = inject(ProductService);
+  orderService = inject(OrderService);
+  toast = inject(ToastService);
   router = inject(Router);
+
+  get cartCount(): number {
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      return cart.reduce((sum: number, i: any) => sum + (i.qty || i.quantity || 1), 0);
+    } catch { return 0; }
+  }
+
+  get consumerTotalSpent(): number {
+    return this.consumerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }
+  get consumerActiveOrders(): number {
+    return this.consumerOrders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING' || o.status === 'SHIPPED').length;
+  }
+  get consumerDelivered(): number {
+    return this.consumerOrders.filter(o => o.status === 'DELIVERED').length;
+  }
+  get consumerCancelled(): number {
+    return this.consumerOrders.filter(o => o.status === 'CANCELLED').length;
+  }
+  get consumerAvgRating(): string {
+    return '4.8';
+  }
+
+  reorder(order: any) {
+    if (order?.items) {
+      let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      order.items.forEach((item: any) => {
+        const existing = cart.find((c: any) => c.productId === item.product?.productId);
+        if (existing) { existing.qty += item.quantity; }
+        else { cart.push({ ...item.product, qty: item.quantity }); }
+      });
+      localStorage.setItem('cart', JSON.stringify(cart));
+      this.toast.show('Items added to cart!');
+      this.router.navigate(['/cart']);
+    }
+  }
 
   private getTimeNow(): string {
     const d = new Date();
@@ -1562,6 +1654,10 @@ export class ConsumerComponent implements OnInit {
       this.products = res;
       const cats = Array.from(new Set(this.products.map(p => p.category)));
       this.categories = cats.map((c: any) => ({ name: c, checked: false }));
+    });
+
+    this.orderService.getMyOrders().subscribe(res => {
+      this.consumerOrders = res || [];
     });
   }
 
@@ -1638,8 +1734,12 @@ export class ConsumerComponent implements OnInit {
   }
 
   addToCart(p: any) {
-    console.log('Added to cart:', p.name);
-    this.chatMessages.push({ sender: 'ai', text: 'Great choice! I\'ve added the ' + p.name + ' to your cart.' });
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let existing = cart.find((item: any) => item.productId === p.productId);
+    if (existing) existing.qty++;
+    else cart.push({ ...p, qty: 1 });
+    localStorage.setItem('cart', JSON.stringify(cart));
+    this.toast.show(p.name + ' added to cart');
   }
 
   sendSuggestion(s: string) {
@@ -1650,6 +1750,7 @@ export class ConsumerComponent implements OnInit {
   clearChat() {
     this.chatMessages = [];
     this.history = [];
+    this.ai.clearSession();
     const userName = this.auth.currentUserValue?.fullName || 'there';
     this.chatMessages.push({
       sender: 'ai',
@@ -1658,33 +1759,73 @@ export class ConsumerComponent implements OnInit {
     });
   }
 
+  streamSteps: string[] = [];
+
   sendQuery() {
     if (!this.prompt.trim()) return;
     const userMsg = this.prompt.trim();
     this.chatMessages.push({ sender: 'user', text: userMsg, time: this.getTimeNow() });
     this.prompt = '';
     this.isTyping = true;
-    const user = this.auth.currentUserValue || { userId: 1, role: 'CONSUMER' };
-    this.ai.query(userMsg, user.userId, user.role, this.history).subscribe({
-      next: (res: any) => {
+    this.streamSteps = [];
+    if (!this.auth.currentUserValue) {
+      this.isTyping = false;
+      this.chatMessages.push({
+        sender: 'ai',
+        text: 'Please sign in to use Nexus AI.',
+        time: this.getTimeNow(),
+      });
+      return;
+    }
+
+    this.ai.queryStream(
+      userMsg, this.history,
+      (step) => {
+        this.streamSteps.push(step.message);
+      },
+      (res) => {
         this.isTyping = false;
+        this.streamSteps = [];
         const aiMsg: any = {
           sender: 'ai',
           text: res.response,
           time: this.getTimeNow(),
-          steps: ['Intent analyzed → Product search', 'SQL query generated', 'Database queried', 'Response formatted'],
+          steps: ['Guardrails check', 'SQL generated', 'Query executed', 'Response formatted'],
           duration: '0.8s'
         };
         if (res.sql) aiMsg.sql = res.sql;
-        if (res.results && res.results.length > 0) aiMsg.results = res.results;
+        if (res.data && res.data.length > 0) aiMsg.results = res.data;
+        if (res.visualization) aiMsg.visualization = res.visualization;
         this.chatMessages.push(aiMsg);
         this.history.push('User: ' + userMsg, 'AI: ' + res.response);
+        if (res.visualization) {
+          setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
+        }
       },
-      error: () => {
+      (err) => {
         this.isTyping = false;
+        this.streamSteps = [];
         this.chatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
       }
-    });
+    );
+  }
+
+  private renderPlotly(msgIndex: number, vizCode: string, data: any[]) {
+    const Plotly = (window as any)['Plotly'];
+    if (!Plotly) return;
+    const containerId = 'plotly-chart-' + msgIndex;
+    try {
+      const plotlyJson = JSON.parse(vizCode);
+      if (plotlyJson.data) {
+        const layout = { ...(plotlyJson.layout || {}), paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: { color: '#7A918D' } };
+        Plotly.newPlot(containerId, plotlyJson.data, layout, { responsive: true, displayModeBar: false });
+        return;
+      }
+    } catch { /* not JSON, try executing as code */ }
+    try {
+      const fn = new Function('data', 'Plotly', 'containerId', vizCode.replace('fig.to_json()', `Plotly.newPlot(containerId, fig.data, {...fig.layout, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#7A918D'}}, {responsive:true, displayModeBar:false})`));
+      fn(data, Plotly, containerId);
+    } catch { /* visualization rendering failed silently */ }
   }
 
   logout() {
@@ -1697,7 +1838,7 @@ export class ConsumerComponent implements OnInit {
 @Component({
   selector: 'app-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
 :host{
@@ -1710,6 +1851,18 @@ export class ConsumerComponent implements OnInit {
   --amber:#E8A94A;--amber-dim:rgba(232,169,74,0.08);
   --blue:#6BA8C8;--blue-dim:rgba(107,168,200,0.08);
 }
+:host-context(html.light-mode){
+  --bg:#F5F2ED;--glass:rgba(0,0,0,0.04);--glass2:rgba(0,0,0,0.07);
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --teal:#2BA898;--teal2:#1EA393;--teal-dim:rgba(43,168,152,0.15);--teal-glow:rgba(43,168,152,0.2);
+  --text:#1A1916;--text2:#8A8070;--text3:#A09888;
+  --green:#2BA871;--green-dim:rgba(43,168,113,0.15);--green-border:rgba(43,168,113,0.2);
+  --red:#C74A4A;--red-dim:rgba(199,74,74,0.12);--red-border:rgba(199,74,74,0.2);
+  --amber:#E8A94A;--amber-dim:rgba(232,169,74,0.12);
+  --blue:#4A8AC7;--blue-dim:rgba(74,138,199,0.12);
+}
+:host-context(html.light-mode) .mn{background:rgba(245,242,237,0.96);}
+:host-context(html.light-mode) .msb{background:rgba(245,242,237,0.55);}
 .mp{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);overflow:hidden;display:flex;flex-direction:column;height:100vh;}
 .mn{display:flex;align-items:center;justify-content:space-between;padding:12px 22px;border-bottom:1px solid var(--border);background:rgba(8,8,8,0.95);backdrop-filter:blur(20px);flex-shrink:0;z-index:20;}
 .mlogo{font-family:'Playfair Display',serif;font-style:italic;font-size:18px;color:var(--text);display:flex;align-items:center;gap:7px;}
@@ -1835,10 +1988,11 @@ export class ConsumerComponent implements OnInit {
   <!-- NAVBAR -->
   <div class="mn">
     <div style="display:flex;align-items:center;gap:10px;">
-      <div class="mlogo"><div class="mlogo-dot"></div>Nexus</div>
+      <div class="mlogo"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
       <div class="mbadge">Manager</div>
     </div>
     <div class="mnr">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
       <div class="mni">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4.8 1.5 3 3.3 3 5.5V8l-1 1.5h10L11 8V5.5c0-2.2-1.8-4-4-4Z" stroke="#6A8A84" stroke-width="1.1"/><path d="M5.5 11c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="#6A8A84" stroke-width="1.1"/></svg>
         <div class="mnb">3</div>
@@ -1867,12 +2021,21 @@ export class ConsumerComponent implements OnInit {
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h1.5l2 7h5.5l1.3-4.5H4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="11" r="1" fill="currentColor"/><circle cx="9.5" cy="11" r="1" fill="currentColor"/></svg>Orders</div>
         <div class="msib red">5</div>
       </div>
+      <div class="msi" [class.act]="activePanel==='inventory'" (click)="activePanel='inventory'">
+        <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 10V3h9v7H2Z" stroke="currentColor" stroke-width="1.1"/><path d="M5 6h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Inventory<span *ngIf="lowStockProducts.length > 0" style="margin-left:auto;background:rgba(232,169,74,0.15);color:#E8A94A;font-size:9px;padding:1px 6px;border-radius:8px;">{{lowStockProducts.length}}</span></div>
+      </div>
+      <div class="msi" [class.act]="activePanel==='reviews'" (click)="activePanel='reviews'">
+        <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L8 5h4.5l-3.5 2.5 1.3 4.5L6.5 9.5 2.7 12l1.3-4.5L.5 5H5L6.5 1Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>Reviews</div>
+      </div>
       <div class="msi" [class.act]="activePanel==='addprod'" (click)="activePanel='addprod'">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Add Product</div>
       </div>
       <div class="msl">Analytics</div>
       <div class="msi" [class.act]="activePanel==='analytics'" (click)="activePanel='analytics'">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 10L4 6l3 2.5 5-6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Performance</div>
+      </div>
+      <div class="msi" [class.act]="activePanel==='customers'" (click)="activePanel='customers'; loadSegments()">
+        <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1.5 11.5c0-2.7 2-4 5-4s5 1.3 5 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Customers</div>
       </div>
       <div class="msl">Store</div>
       <div class="msi" [class.act]="activePanel==='settings'" (click)="activePanel='settings'">
@@ -1889,22 +2052,66 @@ export class ConsumerComponent implements OnInit {
     <!-- MAIN -->
     <div class="mmain">
 
+      <!-- INVENTORY ALERTS -->
+      <ng-container *ngIf="activePanel==='inventory'">
+        <div class="mtb"><div><div class="mpt">Inventory Alerts</div><div class="mps">{{lowStockProducts.length}} products need attention</div></div></div>
+        <div class="mtc">
+          <table class="mt"><thead><tr><th>Product</th><th>Category</th><th>Current Stock</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let p of lowStockProducts">
+              <td class="mtn">{{p.name}}</td>
+              <td>{{p.category}}</td>
+              <td class="mtp">{{p.stockQuantity}}</td>
+              <td><span class="msp" [class.mspa]="p.stockQuantity <= 5" [class.mspb]="p.stockQuantity > 5">{{p.stockQuantity <= 5 ? '⚠ Critical' : 'Low'}}</span></td>
+            </tr>
+            <tr *ngIf="lowStockProducts.length === 0"><td colspan="4" style="text-align:center;color:var(--text3);padding:32px;">All products are well stocked.</td></tr>
+          </tbody></table>
+        </div>
+      </ng-container>
+
+      <!-- REVIEWS -->
+      <ng-container *ngIf="activePanel==='reviews'">
+        <div class="mtb"><div><div class="mpt">Customer Reviews</div><div class="mps">{{reviews.length}} reviews · Manage product feedback</div></div></div>
+        <div class="mtc" *ngIf="reviews.length > 0">
+          <table class="mt">
+            <thead><tr><th>Product</th><th>Customer</th><th>Rating</th><th>Comment</th><th>Sentiment</th><th>Response</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let r of reviews">
+                <td class="mtn">{{r.product?.name || 'N/A'}}</td>
+                <td>{{r.user?.fullName || 'Anonymous'}}</td>
+                <td style="color:#E8A94A;">{{r.rating}}★</td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--text3);">{{r.comment || '—'}}</td>
+                <td><span style="padding:2px 6px;border-radius:4px;font-size:10px;" [style.background]="(r.sentimentScore || 0) >= 0.6 ? 'rgba(62,207,178,0.12)' : (r.sentimentScore || 0) <= 0.3 ? 'rgba(224,112,112,0.12)' : 'rgba(232,169,74,0.12)'" [style.color]="(r.sentimentScore || 0) >= 0.6 ? '#3ECFB2' : (r.sentimentScore || 0) <= 0.3 ? '#E07070' : '#E8A94A'">{{r.sentimentScore || 0 | number:'1.1-1'}}</span></td>
+                <td style="max-width:150px;font-size:11px;color:var(--text3);">{{r.storeResponse || '—'}}</td>
+                <td>
+                  <div *ngIf="!r.storeResponse" class="mtbtn mtbt" style="font-size:9px;padding:4px 8px;" (click)="respondToReview(r)">Reply</div>
+                  <span *ngIf="r.storeResponse" style="font-size:10px;color:#3ECFB2;">✓ Replied</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div *ngIf="reviews.length === 0" style="text-align:center;padding:48px;color:var(--text3);font-size:12px;">
+          No reviews yet for your products.
+        </div>
+      </ng-container>
+
       <!-- DASHBOARD -->
       <ng-container *ngIf="activePanel==='dashboard'">
         <div class="mtb">
-          <div><div class="mpt">My Store Dashboard</div><div class="mps">{{products.length}} products · Active</div></div>
+          <div><div class="mpt">My Store Dashboard</div><div class="mps">{{products.length}} products · {{storeOrders.length}} orders</div></div>
           <div class="mta"><div class="mtbtn mtbg">Download Report</div><div class="mtbtn mtbt" (click)="activePanel='addprod'">+ Add Product</div></div>
         </div>
         <div class="malert" *ngIf="lowStockProducts.length > 0">
           <div class="malert-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5L1.5 12h11L7 1.5Z" stroke="#E8A94A" stroke-width="1.1" stroke-linejoin="round"/><path d="M7 6v3M7 11v.3" stroke="#E8A94A" stroke-width="1.1" stroke-linecap="round"/></svg></div>
-          <div class="malert-text"><strong>{{lowStockProducts.length}} products low on stock</strong> — {{lowStockProducts.slice(0,3).map(p => p.name + ' (' + p.stockQuantity + ' left)').join(', ')}}</div>
+          <div class="malert-text"><strong>{{lowStockProducts.length}} products low on stock</strong> — {{lowStockAlert}}</div>
           <div class="malert-btn" (click)="activePanel='products'">View Products</div>
         </div>
         <div class="mkr">
-          <div class="mkpi"><div class="mkl">Store Revenue</div><div class="mkv">$218<em>K</em></div><div class="mkd mup-c">↑ 18% this month</div></div>
-          <div class="mkpi"><div class="mkl">Orders</div><div class="mkv">3,<em>104</em></div><div class="mkd mup-c">↑ 12% this month</div></div>
-          <div class="mkpi"><div class="mkl">Active Products</div><div class="mkv">{{products.length}}</div><div class="mkd mup-c">↑ Active</div></div>
-          <div class="mkpi"><div class="mkl">Store Rating</div><div class="mkv">4.<em>7★</em></div><div class="mkd mup-c">↑ 0.1 this month</div></div>
+          <div class="mkpi"><div class="mkl">Store Revenue</div><div class="mkv">{{filteredRevenue | currency:'USD':'symbol':'1.0-0'}}</div><div class="mkd mup-c">{{filteredOrders.length}} orders</div></div>
+          <div class="mkpi"><div class="mkl">Orders</div><div class="mkv">{{storeOrders.length}}</div><div class="mkd mup-c">{{pendingOrders.length}} pending</div></div>
+          <div class="mkpi"><div class="mkl">Active Products</div><div class="mkv">{{products.length}}</div><div class="mkd mup-c">{{lowStockProducts.length}} low stock</div></div>
+          <div class="mkpi"><div class="mkl">Reviews</div><div class="mkv">{{reviews.length}}</div><div class="mkd mup-c">Avg {{avgReviewRating}}★</div></div>
         </div>
         <div class="mcr">
           <div class="mgc">
@@ -1936,9 +2143,14 @@ export class ConsumerComponent implements OnInit {
           <div class="mgh"><div class="mgt">Recent Orders</div><div class="mgm" style="cursor:pointer;" (click)="activePanel='orders'">View all →</div></div>
           <table class="mt"><thead><tr><th>Order</th><th>Customer</th><th>Product</th><th>Amount</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td class="mtm">#ORD-7821</td><td class="mtn">Buse Ü.</td><td>MacBook Pro 14"</td><td class="mtp">$1,039</td><td><span class="msp mspb">Shipped</span></td></tr>
-            <tr><td class="mtm">#ORD-7820</td><td class="mtn">James W.</td><td>AirPods Pro Max</td><td class="mtp">$479</td><td><span class="msp mspg">Delivered</span></td></tr>
-            <tr><td class="mtm">#ORD-7818</td><td class="mtn">Ali K.</td><td>Keychron Q1 Pro</td><td class="mtp">$199</td><td><span class="msp mspa">Pending</span></td></tr>
+            <tr *ngFor="let o of storeOrders.slice(0,5)">
+              <td class="mtm">#{{o.orderId}}</td>
+              <td class="mtn">{{o.user?.fullName || 'Customer'}}</td>
+              <td>{{o.items?.length || 0}} items</td>
+              <td class="mtp">{{o.totalAmount | currency}}</td>
+              <td><span class="msp" [class.mspg]="o.status==='DELIVERED'" [class.mspb]="o.status==='SHIPPED' || o.status==='PROCESSING'" [class.mspa]="o.status==='PENDING'">{{o.status}}</span></td>
+            </tr>
+            <tr *ngIf="storeOrders.length === 0"><td colspan="5" style="text-align:center;color:var(--text3);">No orders yet</td></tr>
           </tbody></table>
         </div>
       </ng-container>
@@ -1967,17 +2179,21 @@ export class ConsumerComponent implements OnInit {
       <!-- ORDERS -->
       <ng-container *ngIf="activePanel==='orders'">
         <div class="mtb">
-          <div><div class="mpt">Store Orders</div><div class="mps">5 pending action</div></div>
+          <div><div class="mpt">Store Orders</div><div class="mps">{{pendingOrders.length}} pending action</div></div>
           <div class="mta"><div class="mtbtn mtbg">Export</div></div>
         </div>
         <div class="mtc">
-          <table class="mt"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+          <table class="mt"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td class="mtm">#ORD-7821</td><td class="mtn">Buse Ü.</td><td>3</td><td class="mtp">$1,788</td><td>Apr 17</td><td><span class="msp mspb">Shipped</span></td><td><span style="font-size:11px;color:var(--text3);cursor:pointer;">Track</span></td></tr>
-            <tr><td class="mtm">#ORD-7820</td><td class="mtn">James W.</td><td>1</td><td class="mtp">$479</td><td>Apr 17</td><td><span class="msp mspg">Delivered</span></td><td><span style="font-size:11px;color:var(--text3);cursor:pointer;">View</span></td></tr>
-            <tr><td class="mtm">#ORD-7818</td><td class="mtn">Ali K.</td><td>2</td><td class="mtp">$298</td><td>Apr 16</td><td><span class="msp mspa">Pending</span></td><td><span style="font-size:11px;color:var(--teal2);cursor:pointer;font-weight:500;">Process →</span></td></tr>
-            <tr><td class="mtm">#ORD-7815</td><td class="mtn">Sara M.</td><td>1</td><td class="mtp">$99</td><td>Apr 15</td><td><span class="msp mspg">Delivered</span></td><td><span style="font-size:11px;color:var(--text3);cursor:pointer;">View</span></td></tr>
-            <tr><td class="mtm">#ORD-7812</td><td class="mtn">Emily J.</td><td>1</td><td class="mtp">$999</td><td>Apr 14</td><td><span class="msp mspa">Pending</span></td><td><span style="font-size:11px;color:var(--teal2);cursor:pointer;font-weight:500;">Process →</span></td></tr>
+            <tr *ngFor="let o of storeOrders">
+              <td class="mtm">#ORD-{{o.orderId}}</td>
+              <td class="mtn">{{o.user?.fullName || 'N/A'}}</td>
+              <td>{{o.items?.length || 0}}</td>
+              <td class="mtp">{{o.totalAmount | currency}}</td>
+              <td>{{o.orderDate | date:'mediumDate'}}</td>
+              <td><span class="msp" [class.mspg]="o.status === 'DELIVERED'" [class.mspb]="o.status === 'SHIPPED' || o.status === 'PROCESSING'" [class.mspa]="o.status === 'PENDING'">{{o.status}}</span></td>
+            </tr>
+            <tr *ngIf="storeOrders.length === 0"><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">No orders yet.</td></tr>
           </tbody></table>
         </div>
       </ng-container>
@@ -2001,20 +2217,85 @@ export class ConsumerComponent implements OnInit {
         </div>
       </ng-container>
 
+      <!-- CUSTOMERS SEGMENTATION -->
+      <ng-container *ngIf="activePanel==='customers'">
+        <div class="mtb"><div><div class="mpt">Customer Insights</div><div class="mps">Segmentation & behavior analysis</div></div></div>
+        <div *ngIf="!segments" style="text-align:center;padding:48px;color:var(--text3);font-size:12px;">Loading...</div>
+        <ng-container *ngIf="segments">
+          <div class="mkr">
+            <div class="mkpi"><div class="mkl">Total Customers</div><div class="mkv">{{segments.totalCustomers}}</div></div>
+            <div class="mkpi"><div class="mkl">Avg. Spend</div><div class="mkv">{{segments.avgSpend | currency:'USD':'symbol':'1.0-0'}}</div></div>
+            <div class="mkpi"><div class="mkl">Segments</div><div class="mkv">{{segmentKeys(segments.byMembership).length}}</div></div>
+            <div class="mkpi"><div class="mkl">Top City</div><div class="mkv" style="font-size:16px;">{{segmentKeys(segments.byCity)[0] || '—'}}</div></div>
+          </div>
+          <div class="mcr">
+            <div class="mgc" style="flex:1;">
+              <div class="mgh"><div class="mgt">By Membership Type</div></div>
+              <div style="padding:16px;">
+                <div *ngFor="let key of segmentKeys(segments.byMembership)" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:12px;">{{key}}</span>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="height:6px;border-radius:3px;background:var(--teal);opacity:0.7;" [style.width.px]="segments.byMembership[key] * 4"></div>
+                    <span style="font-size:11px;color:var(--text3);min-width:24px;text-align:right;">{{segments.byMembership[key]}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mgc" style="flex:1;">
+              <div class="mgh"><div class="mgt">By Spending Tier</div></div>
+              <div style="padding:16px;">
+                <div *ngFor="let key of segmentKeys(segments.bySpendTier)" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:12px;">{{key}}</span>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="height:6px;border-radius:3px;background:#6BA8C8;opacity:0.7;" [style.width.px]="segments.bySpendTier[key] * 4"></div>
+                    <span style="font-size:11px;color:var(--text3);min-width:24px;text-align:right;">{{segments.bySpendTier[key]}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mtc">
+            <div class="mgh"><div class="mgt">Top Cities</div></div>
+            <table class="mt">
+              <thead><tr><th>City</th><th>Customers</th></tr></thead>
+              <tbody><tr *ngFor="let key of segmentKeys(segments.byCity)"><td class="mtn">{{key}}</td><td>{{segments.byCity[key]}}</td></tr></tbody>
+            </table>
+          </div>
+        </ng-container>
+      </ng-container>
+
       <!-- ANALYTICS -->
       <ng-container *ngIf="activePanel==='analytics'">
-        <div class="mtb"><div><div class="mpt">Store Performance</div><div class="mps">Last 30 days</div></div></div>
+        <div class="mtb">
+          <div><div class="mpt">Store Performance</div><div class="mps">Sales analytics & revenue</div></div>
+          <div class="mta" style="display:flex;gap:8px;align-items:center;">
+            <input type="date" [(ngModel)]="analyticsDateFrom" (change)="applyDateFilter()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:11px;"/>
+            <span style="color:var(--text3);font-size:11px;">to</span>
+            <input type="date" [(ngModel)]="analyticsDateTo" (change)="applyDateFilter()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:11px;"/>
+            <div class="mtbtn mtbg" (click)="resetDateFilter()" style="font-size:10px;padding:6px 12px;">Reset</div>
+          </div>
+        </div>
         <div class="mkr">
-          <div class="mkpi"><div class="mkl">Conversion Rate</div><div class="mkv">3.<em>8%</em></div><div class="mkd mup-c">↑ 0.3%</div></div>
-          <div class="mkpi"><div class="mkl">Avg Order Value</div><div class="mkv">$<em>284</em></div><div class="mkd mup-c">↑ $22</div></div>
-          <div class="mkpi"><div class="mkl">Return Rate</div><div class="mkv">3.<em>2%</em></div><div class="mkd mdn">↑ 0.1%</div></div>
-          <div class="mkpi"><div class="mkl">Page Views</div><div class="mkv">24<em>K</em></div><div class="mkd mup-c">↑ 18%</div></div>
+          <div class="mkpi"><div class="mkl">Revenue (Filtered)</div><div class="mkv">{{filteredRevenue | currency:'USD':'symbol':'1.0-0'}}</div><div class="mkd mup-c">{{filteredOrders.length}} orders</div></div>
+          <div class="mkpi"><div class="mkl">Total Orders</div><div class="mkv">{{filteredOrders.length}}</div><div class="mkd mup-c">In range</div></div>
+          <div class="mkpi"><div class="mkl">Avg Order Value</div><div class="mkv">{{filteredOrders.length > 0 ? (filteredRevenue / filteredOrders.length | currency:'USD':'symbol':'1.0-0') : '$0'}}</div><div class="mkd mup-c">Per order</div></div>
+          <div class="mkpi"><div class="mkl">Low Stock Items</div><div class="mkv">{{lowStockProducts.length}}</div><div class="mkd" [class.mdn]="lowStockProducts.length > 0" [class.mup-c]="lowStockProducts.length === 0">{{lowStockProducts.length > 0 ? '⚠ Alert' : '✓ OK'}}</div></div>
+        </div>
+        <div class="mcr">
+          <div class="mgc" style="flex:2;">
+            <div class="mgh"><div class="mgt">Revenue by Month</div></div>
+            <div class="mgb" style="height:260px;"><canvas #mgrRevenueChart></canvas></div>
+          </div>
+          <div class="mgc" style="flex:1;">
+            <div class="mgh"><div class="mgt">Category Split</div></div>
+            <div class="mgb" style="height:260px;"><canvas #mgrCategoryChart></canvas></div>
+          </div>
         </div>
         <div class="mtc">
-          <div class="mgh"><div class="mgt">Top Products by Revenue</div></div>
-          <table class="mt"><thead><tr><th>Product</th><th>Units Sold</th><th>Revenue</th><th>Rating</th></tr></thead>
+          <div class="mgh"><div class="mgt">Products by Price</div></div>
+          <table class="mt"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
           <tbody>
-            <tr *ngFor="let p of products.slice(0,4)"><td class="mtn">{{p.name}}</td><td>{{p.stockQuantity}}</td><td class="mtp">{{p.basePrice * 20 | currency:'USD':'symbol':'1.0-0'}}</td><td style="color:var(--amber);">4.8★</td></tr>
+            <tr *ngFor="let p of products.slice(0,8)"><td class="mtn">{{p.name}}</td><td>{{p.category}}</td><td class="mtp">{{p.basePrice | currency}}</td><td [style.color]="p.stockQuantity <= 10 ? '#E8A94A' : 'var(--text2)'">{{p.stockQuantity}}</td></tr>
           </tbody></table>
         </div>
       </ng-container>
@@ -2043,22 +2324,171 @@ export class ConsumerComponent implements OnInit {
 </div>
   `
 })
-export class ManagerComponent implements OnInit {
+export class ManagerComponent implements OnInit, AfterViewInit {
   products: any[] = [];
+  storeOrders: any[] = [];
+  reviews: any[] = [];
   activePanel = 'dashboard';
   newProd: any = { name: '', brand: '', basePrice: 0, stockQuantity: 10, category: 'Electronics', description: '' };
   storeSettings = { open: true, acceptOrders: true, autoConfirm: false, newOrderAlerts: true, lowStockWarnings: true };
+  analyticsDateFrom = '';
+  analyticsDateTo = '';
+  filteredOrders: any[] = [];
+  segments: any = null;
   productService = inject(ProductService);
+  orderService = inject(OrderService);
+  adminService = inject(AdminService);
   auth = inject(AuthService);
   toast = inject(ToastService);
   router = inject(Router);
 
+  @ViewChild('mgrRevenueChart') revenueCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('mgrCategoryChart') categoryCanvas!: ElementRef<HTMLCanvasElement>;
+  private revenueChart: Chart | null = null;
+  private categoryChart: Chart | null = null;
+
   ngOnInit() {
-    this.productService.getProducts().subscribe(res => this.products = res);
+    this.productService.getProducts().subscribe(res => {
+      this.products = res;
+      this.buildCategoryChart();
+    });
+    this.orderService.getMyOrders().subscribe(res => {
+      this.storeOrders = res;
+      this.filteredOrders = [...res];
+      this.buildRevenueChart();
+    });
+    this.productService.getAllReviews().subscribe(res => this.reviews = res);
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.buildRevenueChart();
+      this.buildCategoryChart();
+    }, 500);
+  }
+
+  private buildRevenueChart() {
+    if (!this.revenueCanvas?.nativeElement) return;
+    if (this.revenueChart) this.revenueChart.destroy();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const revenueByMonth = new Array(12).fill(0);
+    this.storeOrders.forEach((o: any) => {
+      const d = new Date(o.orderDate);
+      if (!isNaN(d.getTime())) revenueByMonth[d.getMonth()] += o.totalAmount || 0;
+    });
+    this.revenueChart = new Chart(this.revenueCanvas.nativeElement, {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [{
+          label: 'Revenue ($)',
+          data: revenueByMonth,
+          backgroundColor: 'rgba(62,207,178,0.35)',
+          borderColor: '#3ECFB2',
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+        }
+      }
+    });
+  }
+
+  private buildCategoryChart() {
+    if (!this.categoryCanvas?.nativeElement) return;
+    if (this.categoryChart) this.categoryChart.destroy();
+    const catMap: Record<string, number> = {};
+    this.products.forEach((p: any) => { catMap[p.category || 'Other'] = (catMap[p.category || 'Other'] || 0) + 1; });
+    const labels = Object.keys(catMap);
+    const data = Object.values(catMap);
+    const palette = ['#3ECFB2', '#6BA8C8', '#E8A94A', '#E07070', '#A78BFA', '#34D399', '#F472B6'];
+    this.categoryChart = new Chart(this.categoryCanvas.nativeElement, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: palette.slice(0, labels.length), borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: '#7A918D', padding: 12, font: { size: 10 } } } }
+      }
+    });
   }
 
   get lowStockProducts() {
     return this.products.filter(p => p.stockQuantity <= 10);
+  }
+
+  get totalRevenue(): number {
+    return this.storeOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }
+
+  get filteredRevenue(): number {
+    return this.filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }
+
+  applyDateFilter() {
+    const from = this.analyticsDateFrom ? new Date(this.analyticsDateFrom) : null;
+    const to = this.analyticsDateTo ? new Date(this.analyticsDateTo) : null;
+    if (to) to.setHours(23, 59, 59);
+    this.filteredOrders = this.storeOrders.filter(o => {
+      const d = new Date(o.orderDate);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+  }
+
+  resetDateFilter() {
+    this.analyticsDateFrom = '';
+    this.analyticsDateTo = '';
+    this.filteredOrders = [...this.storeOrders];
+  }
+
+  respondToReview(r: any) {
+    const response = prompt('Write your reply to this review:');
+    if (response && response.trim()) {
+      this.productService.respondToReview(r.reviewId, response.trim()).subscribe({
+        next: (updated) => {
+          r.storeResponse = updated.storeResponse;
+          r.respondedAt = updated.respondedAt;
+          this.toast.show('Reply submitted');
+        },
+        error: () => this.toast.show('Failed to submit reply', 'error')
+      });
+    }
+  }
+
+  loadSegments() {
+    if (this.segments) return;
+    this.adminService.getCustomerSegments().subscribe({
+      next: (data) => this.segments = data,
+      error: () => this.toast.show('Failed to load segments', 'error')
+    });
+  }
+
+  segmentKeys(obj: any): string[] {
+    return obj ? Object.keys(obj) : [];
+  }
+
+  get lowStockAlert(): string {
+    return this.lowStockProducts.slice(0, 3).map((p: any) => p.name + ' (' + p.stockQuantity + ' left)').join(', ');
+  }
+
+  get avgReviewRating(): string {
+    if (!this.reviews?.length) return '—';
+    const sum = this.reviews.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0);
+    return (sum / this.reviews.length).toFixed(1);
+  }
+
+  get pendingOrders() {
+    return this.storeOrders.filter(o => o.status === 'PENDING');
   }
 
   submitProduct() {
@@ -2097,10 +2527,12 @@ export class ManagerComponent implements OnInit {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
 .admin-page { background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+:host-context(html.light-mode) .navbar-a{background:rgba(245,242,237,0.96);}
+:host-context(html.light-mode) .sidebar-a{background:rgba(245,242,237,0.55);}
 .navbar-a { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; border-bottom:1px solid var(--border); background:rgba(8,8,8,0.95); backdrop-filter:blur(20px); flex-shrink:0; z-index:100; }
 .logo-a { font-family:'Playfair Display',serif; font-style:italic; font-size:18px; color:var(--text); display:flex; align-items:center; gap:8px; }
 .logo-dot-a { width:6px; height:6px; border-radius:50%; background:var(--teal); box-shadow:0 0 8px var(--teal-glow); }
@@ -2230,10 +2662,11 @@ export class ManagerComponent implements OnInit {
   <!-- NAVBAR -->
   <div class="navbar-a">
     <div style="display:flex;align-items:center;gap:12px;">
-      <div class="logo-a"><div class="logo-dot-a"></div>Nexus</div>
+      <div class="logo-a"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
       <div class="badge-a">Admin</div>
     </div>
     <div class="nav-r-a">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
       <div class="nav-notif-a" style="position:relative; width:34px; height:34px; background:var(--glass); border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5c-2.2 0-4 1.8-4 4V9l-1 1.5h10l-1-1.5V5.5c0-2.2-1.8-4-4-4Z" stroke="var(--text2)" stroke-width="1.1"/><path d="M6 12c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="var(--text2)" stroke-width="1.1"/></svg>
         <div style="position:absolute; top:-1px; right:-1px; width:8px; height:8px; border-radius:50%; background:var(--red); border:1.5px solid #080808;"></div>
@@ -2268,7 +2701,18 @@ export class ManagerComponent implements OnInit {
         <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h1.5l2 7h6l1.5-4.5H4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="11" r="1" fill="currentColor"/><circle cx="10" cy="11" r="1" fill="currentColor"/></svg>Orders</div>
       </div>
 
+      <div class="sitem-a" [class.active]="tab === 'categories'" (click)="tab = 'categories'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h4v4H2zM7 2h4v4H7zM2 7h4v4H2zM7 7h4v4H7z" stroke="currentColor" stroke-width="1.1"/></svg>Categories</div>
+      </div>
+
+      <div class="sitem-a" [class.active]="tab === 'comparison'" (click)="tab = 'comparison'; loadStoreComparison()">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 11V6h2.5v5H1zM5.25 11V3h2.5v8h-2.5zM9.5 11V1H12v10H9.5z" stroke="currentColor" stroke-width="1.1"/></svg>Store Comparison</div>
+      </div>
+
       <div class="sg-label-a">System</div>
+      <div class="sitem-a" [class.active]="tab === 'auditlogs'" (click)="tab = 'auditlogs'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 2h7v9H3z" stroke="currentColor" stroke-width="1.1"/><path d="M5 5h3M5 7h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>Audit Logs</div>
+      </div>
       <div class="sitem-a" [class.active]="tab === 'settings'" (click)="tab = 'settings'">
         <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1v1.2M6.5 10.8V12M1 6.5h1.2M10.8 6.5H12M2.6 2.6l.85.85M9.55 9.55l.85.85M2.6 10.4l.85-.85M9.55 3.45l.85-.85" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Config</div>
       </div>
@@ -2311,32 +2755,11 @@ export class ManagerComponent implements OnInit {
         <div class="chart-row-a">
           <div class="gcard-a">
             <div class="gc-head-a"><div class="gc-title-a">Revenue by Month</div><div class="gc-link-a">Full report →</div></div>
-            <div class="gc-body-a">
-              <div class="bar-chart-a">
-                <div class="bc-col-a" *ngFor="let m of months; let i = index">
-                  <div class="bc-bar-a" [class.active]="i === 9" [style.height.%]="m.val"></div>
-                  <div class="bc-label-a" [style.color]="i === 9 ? 'var(--teal2)' : 'var(--text3)'">{{m.label}}</div>
-                </div>
-              </div>
-            </div>
+            <div class="gc-body-a" style="height:260px;"><canvas #adminRevenueChart></canvas></div>
           </div>
           <div class="gcard-a">
             <div class="gc-head-a"><div class="gc-title-a">Revenue Split</div></div>
-            <div class="gc-body-a">
-              <div class="donut-wrap-a">
-                <svg width="84" height="84" viewBox="0 0 72 72">
-                  <circle cx="36" cy="36" r="26" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="11"/>
-                  <circle cx="36" cy="36" r="26" fill="none" stroke="#3ECFB2" stroke-width="11" stroke-dasharray="72 163" stroke-dashoffset="0" transform="rotate(-90 36 36)"/>
-                  <circle cx="36" cy="36" r="26" fill="none" stroke="#6BA8C8" stroke-width="11" stroke-dasharray="32 163" stroke-dashoffset="-72" transform="rotate(-90 36 36)"/>
-                  <circle cx="36" cy="36" r="26" fill="none" stroke="#E8A94A" stroke-width="11" stroke-dasharray="23 163" stroke-dashoffset="-104" transform="rotate(-90 36 36)"/>
-                </svg>
-                <div class="donut-legend-a">
-                  <div class="dl-item-a"><div class="dl-dot-a" style="background:var(--teal)"></div>Elect. 44%</div>
-                  <div class="dl-item-a"><div class="dl-dot-a" style="background:var(--blue)"></div>Acc. 20%</div>
-                  <div class="dl-item-a"><div class="dl-dot-a" style="background:var(--amber)"></div>Periph. 14%</div>
-                </div>
-              </div>
-            </div>
+            <div class="gc-body-a" style="height:260px;"><canvas #adminCategoryChart></canvas></div>
           </div>
         </div>
 
@@ -2346,11 +2769,11 @@ export class ManagerComponent implements OnInit {
             <thead><tr><th>Order</th><th>Customer</th><th>Store</th><th>Amount</th><th>Status</th></tr></thead>
             <tbody>
               <tr *ngFor="let o of orders.slice(0,5)">
-                <td class="td-mono-a">{{o.id}}</td>
-                <td class="td-name-a">{{o.customer}}</td>
-                <td>{{o.store}}</td>
-                <td>{{o.amount}}</td>
-                <td><span class="spill-a" [ngClass]="o.class">● {{o.status}}</span></td>
+                <td class="td-mono-a">#{{o.orderId}}</td>
+                <td class="td-name-a">{{o.user?.fullName || 'N/A'}}</td>
+                <td>{{o.items?.length || 0}} items</td>
+                <td>{{o.totalAmount | currency}}</td>
+                <td><span class="spill-a" [class.sp-green-a]="o.status==='DELIVERED'" [class.sp-blue-a]="o.status==='SHIPPED' || o.status==='PROCESSING'" [class.sp-amber-a]="o.status==='PENDING'" [class.sp-red-a]="o.status==='CANCELLED'">● {{o.status}}</span></td>
               </tr>
             </tbody>
           </table>
@@ -2409,6 +2832,49 @@ export class ManagerComponent implements OnInit {
         </div>
       </div>
 
+      <!-- CROSS-STORE COMPARISON PANEL -->
+      <div class="panel-a" [class.active]="tab === 'comparison'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Cross-Store Comparison</div><div class="page-sub-a">Compare stores by revenue, orders, rating & avg. order value.</div></div>
+        </div>
+        <div *ngIf="storeComparison.length === 0" style="text-align:center;padding:48px;color:var(--text3);font-size:13px;">Loading comparison data...</div>
+        <div *ngIf="storeComparison.length > 0">
+          <div style="margin-bottom:20px;">
+            <canvas #storeComparisonChart style="width:100%;max-height:320px;"></canvas>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);text-align:left;">
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">#</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">Store</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">Owner</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Revenue</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Orders</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Avg. Order</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;text-align:right;">Rating</th>
+                  <th style="padding:10px 12px;color:var(--text3);font-weight:500;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let s of storeComparison; let i = index" style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                  <td style="padding:10px 12px;color:var(--text3);">{{i + 1}}</td>
+                  <td style="padding:10px 12px;font-weight:500;">{{s.name}}</td>
+                  <td style="padding:10px 12px;color:var(--text3);">{{s.owner}}</td>
+                  <td style="padding:10px 12px;text-align:right;color:#3ECFB2;font-weight:500;">{{s.revenue | currency}}</td>
+                  <td style="padding:10px 12px;text-align:right;">{{s.orders}}</td>
+                  <td style="padding:10px 12px;text-align:right;">{{s.avgOrderValue | currency}}</td>
+                  <td style="padding:10px 12px;text-align:right;">{{s.rating}} ★</td>
+                  <td style="padding:10px 12px;">
+                    <span style="padding:2px 8px;border-radius:4px;font-size:10px;" [style.background]="s.status === 'OPEN' ? 'rgba(62,207,178,0.12)' : 'rgba(224,112,112,0.12)'" [style.color]="s.status === 'OPEN' ? '#3ECFB2' : '#E07070'">{{s.status}}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- USERS PANEL -->
       <div class="panel-a" [class.active]="tab === 'users'">
         <div class="top-bar-a">
@@ -2463,6 +2929,74 @@ export class ManagerComponent implements OnInit {
         </div>
       </div>
 
+      <!-- ORDERS PANEL -->
+      <div class="panel-a" [class.active]="tab === 'orders'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Order Management</div><div class="page-sub-a">View and manage all platform orders.</div></div>
+        </div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let o of allOrders">
+                <td class="td-mono-a">#ORD-{{o.orderId}}</td>
+                <td class="td-name-a">{{o.user?.fullName || 'N/A'}}</td>
+                <td>{{o.totalAmount | currency}}</td>
+                <td><span class="spill-a" [ngClass]="{'sp-green-a': o.status === 'DELIVERED', 'sp-blue-a': o.status === 'PROCESSING' || o.status === 'SHIPPED', 'sp-amber-a': o.status === 'PENDING'}">● {{o.status}}</span></td>
+                <td>{{o.orderDate | date:'short'}}</td>
+              </tr>
+              <tr *ngIf="allOrders.length === 0">
+                <td colspan="5" style="text-align:center;color:var(--text3);padding:32px;">No orders yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CATEGORIES PANEL -->
+      <div class="panel-a" [class.active]="tab === 'categories'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">Category Management</div><div class="page-sub-a">Manage product taxonomy.</div></div>
+          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a" (click)="addCategory()">+ Add Category</button></div>
+        </div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>Category</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let c of categories">
+                <td class="td-name-a">{{c.name}}</td>
+                <td>{{c.description || '—'}}</td>
+                <td><span class="spill-a" [class.sp-green-a]="c.active" [class.sp-amber-a]="!c.active">{{c.active ? 'Active' : 'Inactive'}}</span></td>
+                <td>
+                  <div style="display:flex;gap:6px;">
+                    <button class="sc-btn-a danger" style="padding:4px 10px;font-size:10px;" (click)="deleteCategory(c)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="categories.length === 0"><td colspan="4" style="text-align:center;color:var(--text3);padding:32px;">No categories. Add one to get started.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AUDIT LOGS PANEL -->
+      <div class="panel-a" [class.active]="tab === 'auditlogs'">
+        <div class="top-bar-a"><div><div class="page-title-a">Audit Logs</div><div class="page-sub-a">Platform activity monitoring.</div></div></div>
+        <div class="table-card-a">
+          <table class="tbl-a">
+            <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let log of auditLogs">
+                <td style="font-family:'JetBrains Mono',monospace;font-size:10px;">{{log.time}}</td>
+                <td class="td-name-a">{{log.user}}</td>
+                <td><span class="spill-a" [class.sp-green-a]="log.type==='success'" [class.sp-blue-a]="log.type==='info'" [class.sp-amber-a]="log.type==='warning'">{{log.action}}</span></td>
+                <td style="color:var(--text3);font-size:11px;">{{log.detail}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- CONFIG PANEL -->
       <div class="panel-a" [class.active]="tab === 'settings'">
         <div class="top-bar-a"><div><div class="page-title-a">System Config</div><div class="page-sub-a">Manage platform behavior.</div></div></div>
@@ -2490,28 +3024,35 @@ export class ManagerComponent implements OnInit {
 </div>
   `,
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, AfterViewInit {
   tab = 'dashboard';
   isLoading = true;
   auth = inject(AuthService);
   productService = inject(ProductService);
   storeService = inject(StoreService);
   adminService = inject(AdminService);
+  categoryService = inject(CategoryService);
   toast = inject(ToastService);
   router = inject(Router);
-  
-  months = [
-    {label:'J', val:35}, {label:'F', val:52}, {label:'M', val:44}, {label:'A', val:68},
-    {label:'M', val:55}, {label:'J', val:72}, {label:'J', val:61}, {label:'A', val:80},
-    {label:'S', val:65}, {label:'O', val:100}, {label:'N', val:74}, {label:'D', val:30}
-  ];
-  
+
+  @ViewChild('adminRevenueChart') adminRevenueCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('adminCategoryChart') adminCategoryCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('storeComparisonChart') storeComparisonCanvas!: ElementRef<HTMLCanvasElement>;
+  private revChart: Chart | null = null;
+  private catChart: Chart | null = null;
+  private compChart: Chart | null = null;
+
+  storeComparison: any[] = [];
+  categories: any[] = [];
+  auditLogs: any[] = [];
+
   stores: any[] = [];
   users: any[] = [];
   orders: any[] = [];
+  allOrders: any[] = [];
   pagedProducts: any[] = [];
   stats: any = {};
-  
+
   sysSettings = {
     maintenance: false,
     registrations: true,
@@ -2520,6 +3061,86 @@ export class AdminComponent implements OnInit {
 
   ngOnInit() {
     this.refreshData();
+    this.categoryService.getAll().subscribe(res => this.categories = res);
+    this.loadAuditLogs();
+    this.logAudit('Login', 'success', 'Admin authenticated via JWT');
+  }
+
+  loadAuditLogs() {
+    this.adminService.getAuditLogs().subscribe({
+      next: (logs) => this.auditLogs = logs.map(l => ({
+        time: l.createdAt?.replace('T', ' ')?.slice(0, 19) || '',
+        user: l.username || 'System',
+        action: l.action,
+        type: l.type,
+        detail: l.detail
+      })),
+      error: () => { }
+    });
+  }
+
+  logAudit(action: string, type: string, detail: string) {
+    this.adminService.createAuditLog(action, type, detail).subscribe({
+      next: () => this.loadAuditLogs(),
+      error: () => { }
+    });
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => this.buildAdminCharts(), 800);
+  }
+
+  private buildAdminCharts() {
+    if (this.adminRevenueCanvas?.nativeElement) {
+      if (this.revChart) this.revChart.destroy();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const revenueByMonth = new Array(12).fill(0);
+      this.allOrders.forEach((o: any) => {
+        const d = new Date(o.orderDate);
+        if (!isNaN(d.getTime())) revenueByMonth[d.getMonth()] += o.totalAmount || 0;
+      });
+      this.revChart = new Chart(this.adminRevenueCanvas.nativeElement, {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [{
+            label: 'Revenue ($)',
+            data: revenueByMonth,
+            borderColor: '#3ECFB2',
+            backgroundColor: 'rgba(62,207,178,0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#3ECFB2',
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+          }
+        }
+      });
+    }
+
+    if (this.adminCategoryCanvas?.nativeElement) {
+      if (this.catChart) this.catChart.destroy();
+      const catMap: Record<string, number> = {};
+      this.pagedProducts.forEach((p: any) => { catMap[p.category || 'Other'] = (catMap[p.category || 'Other'] || 0) + 1; });
+      const labels = Object.keys(catMap);
+      const data = Object.values(catMap);
+      const palette = ['#3ECFB2', '#6BA8C8', '#E8A94A', '#E07070', '#A78BFA', '#34D399', '#F472B6'];
+      this.catChart = new Chart(this.adminCategoryCanvas.nativeElement, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: palette.slice(0, labels.length), borderWidth: 0 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#7A918D', padding: 12, font: { size: 10 } } } }
+        }
+      });
+    }
   }
 
   refreshData() {
@@ -2536,15 +3157,67 @@ export class AdminComponent implements OnInit {
           this.pagedProducts = results[0];
           this.stores = results[1];
           this.users = results[2];
-          this.orders = results[3];
+          this.allOrders = results[3];
+          this.orders = results[3].slice(0, 10);
           this.stats = results[4];
           this.isLoading = false;
+          setTimeout(() => this.buildAdminCharts(), 200);
         },
         error: () => {
           this.toast.show('Error fetching data', 'error');
           this.isLoading = false;
         }
       });
+    });
+  }
+
+  loadStoreComparison() {
+    this.adminService.getStoreComparison().subscribe({
+      next: (data) => {
+        this.storeComparison = data;
+        setTimeout(() => this.buildComparisonChart(), 300);
+      },
+      error: () => this.toast.show('Failed to load comparison data', 'error')
+    });
+  }
+
+  private buildComparisonChart() {
+    if (!this.storeComparisonCanvas?.nativeElement) return;
+    if (this.compChart) this.compChart.destroy();
+    const labels = this.storeComparison.map(s => s.name);
+    this.compChart = new Chart(this.storeComparisonCanvas.nativeElement, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Revenue ($)',
+            data: this.storeComparison.map(s => s.revenue),
+            backgroundColor: 'rgba(62,207,178,0.7)',
+            borderRadius: 4,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Orders',
+            data: this.storeComparison.map(s => s.orders),
+            backgroundColor: 'rgba(107,168,200,0.7)',
+            borderRadius: 4,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { color: '#7A918D', font: { size: 10 }, padding: 16 } }
+        },
+        scales: {
+          x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { position: 'left', ticks: { color: '#3ECFB2' }, grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Revenue ($)', color: '#3ECFB2', font: { size: 10 } } },
+          y1: { position: 'right', ticks: { color: '#6BA8C8' }, grid: { display: false }, title: { display: true, text: 'Orders', color: '#6BA8C8', font: { size: 10 } } }
+        }
+      }
     });
   }
 
@@ -2561,10 +3234,36 @@ export class AdminComponent implements OnInit {
   }
 
   banUser(u: any) {
-    if(!confirm(`Ban ${u.fullName}?`)) return;
+    if (!confirm(`Ban ${u.fullName}?`)) return;
     this.adminService.banUser(u.userId).subscribe(() => {
       this.toast.show('User banned');
+      this.logAudit('Ban User', 'warning', `Banned ${u.fullName}`);
       this.refreshData();
+    });
+  }
+
+  addCategory() {
+    const name = prompt('Category name:');
+    if (!name) return;
+    this.categoryService.create({ name, description: '', active: true }).subscribe({
+      next: (c) => {
+        this.categories.push(c);
+        this.toast.show('Category created');
+        this.logAudit('Create Category', 'success', name);
+      },
+      error: (e) => this.toast.show(e.error?.message || 'Failed to create category', 'error')
+    });
+  }
+
+  deleteCategory(c: any) {
+    if (!confirm(`Delete category "${c.name}"?`)) return;
+    this.categoryService.delete(c.categoryId).subscribe({
+      next: () => {
+        this.categories = this.categories.filter(x => x.categoryId !== c.categoryId);
+        this.toast.show('Category deleted');
+        this.logAudit('Delete Category', 'warning', c.name);
+      },
+      error: () => this.toast.show('Failed to delete category', 'error')
     });
   }
 
@@ -2577,14 +3276,15 @@ export class AdminComponent implements OnInit {
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
     <div class="page-frame">
       <div class="navbar-nexus">
         <div style="display:flex;align-items:center;gap:15px;">
-          <div class="logo-admin" routerLink="/consumer"><div class="logo-dot-admin"></div>Nexus Settings</div>
+          <div class="logo-admin" routerLink="/consumer"><app-nexus-logo size="sm" wordmark="Nexus Settings"></app-nexus-logo></div>
         </div>
-        <div class="nav-r-nexus">
+        <div class="nav-r-nexus" style="display:flex;align-items:center;gap:10px;">
+          <app-nexus-theme-toggle></app-nexus-theme-toggle>
           <div class="mag-pill" style="font-size:11px; padding:6px 14px; border-radius:12px;" (click)="goBack()">← Exit Settings</div>
         </div>
       </div>
@@ -2630,22 +3330,41 @@ export class AdminComponent implements OnInit {
                   <input [value]="editUser.role" disabled style="opacity:0.5; cursor:not-allowed;"/>
                 </div>
               </div>
+
+              <div style="height:1px;background:var(--border);margin:24px 0;"></div>
+              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;font-weight:600;">Profile Details</div>
+              <div class="grid-2-nexus" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                <div class="field-nexus"><label>Gender</label><input [(ngModel)]="profile.gender" placeholder="e.g. Male, Female, Other"/></div>
+                <div class="field-nexus"><label>Age</label><input [(ngModel)]="profile.age" type="number" placeholder="25"/></div>
+                <div class="field-nexus"><label>City</label><input [(ngModel)]="profile.city" placeholder="e.g. Istanbul"/></div>
+                <div class="field-nexus"><label>Country</label><input [(ngModel)]="profile.country" placeholder="e.g. Turkey"/></div>
+                <div class="field-nexus">
+                  <label>Membership</label>
+                  <input [value]="profile.membershipType" disabled style="opacity:0.5; cursor:not-allowed;"/>
+                </div>
+                <div class="field-nexus">
+                  <label>Total Spend</label>
+                  <input [value]="((profile.totalSpend || 0) | currency)" disabled style="opacity:0.5; cursor:not-allowed;"/>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="panel-nexus" *ngIf="tab === 'password'">
+          <div class="panel-nexus" [class.active]="tab === 'password'" *ngIf="tab === 'password'">
              <div class="top-bar-nexus"><div><div class="page-title-nexus">Security</div><div class="page-sub-nexus">Change your access credentials.</div></div></div>
              <div class="card-nexus" style="max-width:400px; padding:24px; margin-top:20px;">
-                <div class="field-nexus" style="margin-bottom:15px;"><label>Current Password</label><input type="password" placeholder="••••••••"/></div>
-                <div class="field-nexus" style="margin-bottom:15px;"><label>New Password</label><input type="password" placeholder="••••••••" (input)="updatePwStrength($event)"/></div>
+                <div class="field-nexus" style="margin-bottom:15px;"><label>Current Password</label><input type="password" placeholder="••••••••" [(ngModel)]="currentPassword"/></div>
+                <div class="field-nexus" style="margin-bottom:15px;"><label>New Password</label><input type="password" placeholder="••••••••" [(ngModel)]="newPassword" (input)="updatePwStrength($event)"/></div>
                 <div style="display:flex; gap:4px; margin-bottom:15px;">
                   <div *ngFor="let i of [1,2,3,4]" [style.background]="pwS >= i ? pwC : 'var(--glass)'" style="flex:1; height:3px; border-radius:2px;"></div>
                 </div>
-                <button class="sc-btn-nexus primary" style="width:100%;" (click)="saveProfile($event)">Update Password</button>
+                <p *ngIf="pwError" style="color:var(--red);font-size:12px;margin-bottom:10px;">{{pwError}}</p>
+                <p *ngIf="pwSuccess" style="color:var(--green);font-size:12px;margin-bottom:10px;">{{pwSuccess}}</p>
+                <button class="sc-btn-nexus primary" style="width:100%;" (click)="changePassword()">Update Password</button>
              </div>
           </div>
 
-          <div class="panel-nexus" *ngIf="tab === 'addresses'">
+          <div class="panel-nexus" [class.active]="tab === 'addresses'" *ngIf="tab === 'addresses'">
              <div class="top-bar-nexus"><div><div class="page-title-nexus">Addresses</div><div class="page-sub-nexus">Manage your shipping locations.</div></div></div>
              <div class="grid-2-nexus" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
                 <div class="card-nexus" style="padding:20px; border-color:var(--teal-glow);">
@@ -2688,11 +3407,17 @@ export class AdminComponent implements OnInit {
 export class SettingsComponent implements OnInit {
   tab = 'personal';
   editUser: any = {};
+  profile: any = { gender: '', age: null, city: '', country: '', membershipType: 'BASIC' };
   pwS = 0; pwC = '';
   breakdown: any = { categories: [] };
-  
+  currentPassword = '';
+  newPassword = '';
+  pwError = '';
+  pwSuccess = '';
+
   auth = inject(AuthService);
   adminService = inject(AdminService);
+  profileService = inject(CustomerProfileService);
   toast = inject(ToastService);
   router = inject(Router);
 
@@ -2700,6 +3425,10 @@ export class SettingsComponent implements OnInit {
     this.auth.currentUser$.subscribe(u => {
       if (u) {
         this.editUser = { ...u };
+        this.profileService.getMyProfile().subscribe({
+          next: (p: any) => { if (p) this.profile = { ...this.profile, ...p }; },
+          error: () => { }
+        });
         if (u.role === 'ADMIN' || u.role === 'MANAGER') {
           this.adminService.getSalesBreakdown().subscribe(res => {
             this.breakdown = res;
@@ -2711,8 +3440,8 @@ export class SettingsComponent implements OnInit {
 
   goBack() {
     const role = this.editUser.role || 'CONSUMER';
-    if(role === 'ADMIN') this.router.navigate(['/admin']);
-    else if(role === 'MANAGER') this.router.navigate(['/manager']);
+    if (role === 'ADMIN') this.router.navigate(['/admin']);
+    else if (role === 'MANAGER') this.router.navigate(['/manager']);
     else this.router.navigate(['/consumer']);
   }
 
@@ -2721,34 +3450,63 @@ export class SettingsComponent implements OnInit {
     const oldText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="set-spin">◌</span> Saving...';
-    
-    setTimeout(() => {
-      this.auth.updateUser(this.editUser);
-      this.toast.show('Profile updated successfully!', 'success');
-      btn.innerHTML = '✓ Saved';
-      setTimeout(() => {
-        btn.innerHTML = oldText;
-        btn.disabled = false;
-      }, 2000);
-    }, 1000);
+
+    this.profileService.save(this.profile).subscribe({
+      next: (saved: any) => {
+        if (saved) this.profile = { ...this.profile, ...saved };
+        this.auth.updateUser(this.editUser);
+        this.toast.show('Profile updated successfully!', 'success');
+        btn.innerHTML = '✓ Saved';
+        setTimeout(() => { btn.innerHTML = oldText; btn.disabled = false; }, 2000);
+      },
+      error: () => {
+        this.auth.updateUser(this.editUser);
+        this.toast.show('Profile updated (local only)', 'info');
+        btn.innerHTML = oldText; btn.disabled = false;
+      }
+    });
+  }
+
+  changePassword() {
+    this.pwError = '';
+    this.pwSuccess = '';
+    if (!this.currentPassword || !this.newPassword) {
+      this.pwError = 'Please fill in both fields.';
+      return;
+    }
+    if (this.newPassword.length < 6) {
+      this.pwError = 'New password must be at least 6 characters.';
+      return;
+    }
+    this.auth.changePassword(this.currentPassword, this.newPassword).subscribe({
+      next: () => {
+        this.pwSuccess = 'Password changed successfully!';
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.pwS = 0;
+      },
+      error: (err: any) => {
+        this.pwError = err?.error?.message || 'Failed to change password.';
+      }
+    });
   }
 
   updatePwStrength(ev: any) {
     const v = ev.target.value || '';
     this.pwS = 0;
-    if(v.length >= 6) this.pwS++;
-    if(v.length >= 10) this.pwS++;
-    if(/[0-9]/.test(v)) this.pwS++;
-    if(/[A-Z]/.test(v)) this.pwS++;
-    const colors = ['#E07070','#E8A94A','#E8A94A','#3EC98A'];
-    this.pwC = this.pwS > 0 ? colors[this.pwS-1] : '';
+    if (v.length >= 6) this.pwS++;
+    if (v.length >= 10) this.pwS++;
+    if (/[0-9]/.test(v)) this.pwS++;
+    if (/[A-Z]/.test(v)) this.pwS++;
+    const colors = ['#E07070', '#E8A94A', '#E8A94A', '#3EC98A'];
+    this.pwC = this.pwS > 0 ? colors[this.pwS - 1] : '';
   }
 }
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
 .landing-page-full {
@@ -2766,6 +3524,23 @@ export class SettingsComponent implements OnInit {
   --border2: rgba(255,255,255,0.12);
   --glass: rgba(255,255,255,0.04);
 }
+:host-context(html.light-mode) .landing-page-full {
+  background:#F5F2ED;color:#1A1916;
+  --text-dim:#8A8070;--text-deep:#A09888;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --glass:rgba(0,0,0,0.04);
+  --teal:#2BA898;--teal2:#1EA393;--teal-dim:rgba(43,168,152,0.15);--teal-glow:rgba(43,168,152,0.2);
+}
+:host-context(html.light-mode) .navbar-l{background:rgba(255,255,255,0.95);}
+:host-context(html.light-mode) .hero-title-l,
+:host-context(html.light-mode) .stat-val-l,
+:host-context(html.light-mode) .section-title-l,
+:host-context(html.light-mode) .feat-title-l,
+:host-context(html.light-mode) .sc-name-l,
+:host-context(html.light-mode) .sc-price-l,
+:host-context(html.light-mode) .cta-title-l{color:#1A1916;}
+:host-context(html.light-mode) .feat-card-l{background:#F0EDE6;}
+:host-context(html.light-mode) .feat-card-l:hover{background:rgba(0,0,0,0.04);}
 
 .navbar-l {
   display: flex; align-items: center; justify-content: space-between;
@@ -2895,7 +3670,7 @@ export class SettingsComponent implements OnInit {
 <div class="landing-page-full">
   <!-- NAVBAR -->
   <div class="navbar-l">
-    <div class="logo-l"><div class="logo-dot-l"></div>Nexus</div>
+    <div class="logo-l"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
     <div class="nav-pills-l">
       <a class="npill-l active" routerLink="/">Home</a>
       <a class="npill-l" routerLink="/consumer">Shop</a>
@@ -2903,6 +3678,7 @@ export class SettingsComponent implements OnInit {
       <a class="npill-l" href="#">Contact</a>
     </div>
     <div class="nav-r-l">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
       <a class="nbtn-l nbtn-ghost-l" routerLink="/login">Login</a>
       <a class="nbtn-l nbtn-teal-l" routerLink="/login">Sign Up</a>
     </div>
@@ -3048,7 +3824,7 @@ export class SettingsComponent implements OnInit {
 
   <!-- FOOTER -->
   <div class="footer-l">
-    <div class="footer-logo-l">Nexus</div>
+    <div class="footer-logo-l" style="display:flex;align-items:center;"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
     <div class="footer-links-l">
       <div class="footer-link-l">About</div>
       <div class="footer-link-l">Privacy</div>
@@ -3065,8 +3841,8 @@ export class LandingComponent {
   auth = inject(AuthService);
   get dashboardLink() {
     const role = this.auth.currentUserValue?.role;
-    if(role === 'ADMIN') return '/admin';
-    if(role === 'MANAGER') return '/manager';
+    if (role === 'ADMIN') return '/admin';
+    if (role === 'MANAGER') return '/manager';
     return '/consumer';
   }
 }

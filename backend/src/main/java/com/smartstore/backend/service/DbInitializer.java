@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -73,17 +74,20 @@ public class DbInitializer {
         }
     }
 
-    @SuppressWarnings("null")
     private void seedStores() {
-        storeRepository.save(Store.builder().name("Nexus Main Store").ownerName("Admin").totalRevenue(427000.0).orderCount(6421).rating(4.9).status("OPEN").build());
-        storeRepository.save(Store.builder().name("TechHub Store").ownerName("James Wilson").totalRevenue(218000.0).orderCount(3104).rating(4.7).status("OPEN").build());
-        storeRepository.save(Store.builder().name("GadgetPro").ownerName("Sarah Miller").totalRevenue(142000.0).orderCount(2089).rating(4.8).status("OPEN").build());
+        Store s1 = Store.builder().name("Nexus Main Store").ownerName("Admin").totalRevenue(427000.0).orderCount(6421).rating(4.9).status("OPEN").build();
+        Store s2 = Store.builder().name("TechHub Store").ownerName("James Wilson").totalRevenue(218000.0).orderCount(3104).rating(4.7).status("OPEN").build();
+        Store s3 = Store.builder().name("GadgetPro").ownerName("Sarah Miller").totalRevenue(142000.0).orderCount(2089).rating(4.8).status("OPEN").build();
+        storeRepository.save(Objects.requireNonNull(s1));
+        storeRepository.save(Objects.requireNonNull(s2));
+        storeRepository.save(Objects.requireNonNull(s3));
     }
 
-    @SuppressWarnings("null")
     private void seedUsers() {
-        updateOrSaveUser("Buse Ünal", "buse@akdeniz.edu.tr", "$2a$10$8.UnS8OWu7qL6E2Q31m0.Ok0.3u8.8.8.8.8.8.8.8.8.8.8", Role.ADMIN);
+        updateOrSaveUser("System Admin", "admin@smartstore.com", "admin123", Role.ADMIN);
+        updateOrSaveUser("Buse Ünal", "buse@akdeniz.edu.tr", "admin123", Role.ADMIN);
         updateOrSaveUser("James Wilson", "james@techhub.com", "manager123", Role.MANAGER);
+        updateOrSaveUser("Manager User", "manager@nexus.com", "manager123", Role.MANAGER);
         updateOrSaveUser("Elif Buse", "elif@akdeniz.edu.tr", "user123", Role.CONSUMER);
     }
 
@@ -95,9 +99,8 @@ public class DbInitializer {
         });
         user.setFullName(name);
         user.setRole(role);
-        
-        // Always attempt to encode if a plain string is provided.
-        // If it already looks like a hash, we use it as is.
+        user.setEnabled(true);
+
         if (pass.startsWith("$2a$")) {
             user.setPasswordHash(pass);
         } else {

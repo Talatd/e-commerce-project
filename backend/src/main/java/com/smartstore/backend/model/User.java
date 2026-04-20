@@ -1,5 +1,7 @@
 package com.smartstore.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -57,7 +59,9 @@ public class User {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
+    @JsonIgnore
     public String getPasswordHash() { return passwordHash; }
+    @JsonProperty
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
     public String getFullName() { return fullName; }

@@ -1,15 +1,15 @@
 import { Routes } from '@angular/router';
-import { LoginComponent, AdminComponent, ManagerComponent, ConsumerComponent, SettingsComponent, LandingComponent } from './pages';
-import { CartComponent, ProductDetailComponent, OrdersComponent } from './shop-pages';
+import { authGuard, roleGuard } from './auth.guard';
 
 export const routes: Routes = [
-  { path: '', component: LandingComponent },
-  { path: 'login', component: LoginComponent },
-  { path: 'admin', component: AdminComponent },
-  { path: 'manager', component: ManagerComponent },
-  { path: 'consumer', component: ConsumerComponent },
-  { path: 'settings', component: SettingsComponent },
-  { path: 'cart', component: CartComponent },
-  { path: 'product/:id', component: ProductDetailComponent },
-  { path: 'orders', component: OrdersComponent }
+  { path: '', loadComponent: () => import('./pages').then(m => m.LandingComponent) },
+  { path: 'login', loadComponent: () => import('./pages').then(m => m.LoginComponent) },
+  { path: 'admin', loadComponent: () => import('./pages').then(m => m.AdminComponent), canActivate: [roleGuard(['ADMIN'])] },
+  { path: 'manager', loadComponent: () => import('./pages').then(m => m.ManagerComponent), canActivate: [roleGuard(['ADMIN', 'MANAGER'])] },
+  { path: 'consumer', loadComponent: () => import('./pages').then(m => m.ConsumerComponent), canActivate: [authGuard] },
+  { path: 'settings', loadComponent: () => import('./pages').then(m => m.SettingsComponent), canActivate: [authGuard] },
+  { path: 'cart', loadComponent: () => import('./shop-pages').then(m => m.CartComponent), canActivate: [authGuard] },
+  { path: 'product/:id', loadComponent: () => import('./shop-pages').then(m => m.ProductDetailComponent), canActivate: [authGuard] },
+  { path: 'orders', loadComponent: () => import('./shop-pages').then(m => m.OrdersComponent), canActivate: [authGuard] },
+  { path: '**', redirectTo: '' }
 ];

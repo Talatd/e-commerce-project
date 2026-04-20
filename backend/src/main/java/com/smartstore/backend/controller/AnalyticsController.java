@@ -1,5 +1,6 @@
 package com.smartstore.backend.controller;
 
+import com.smartstore.backend.repository.CustomerProfileRepository;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.StoreRepository;
 import com.smartstore.backend.repository.UserRepository;
@@ -7,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,8 +27,10 @@ public class AnalyticsController {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
+    private final CustomerProfileRepository profileRepository;
 
     @GetMapping("/admin-stats")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get platform KPIs", description = "Returns revenue, orders, users and store counts.")
     public ResponseEntity<Map<String, Object>> getAdminStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -62,6 +66,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/sales-breakdown")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get sales aggregation", description = "Returns sales by category and region.")
     public ResponseEntity<Map<String, Object>> getSalesBreakdown() {
         Map<String, Object> data = new HashMap<>();
@@ -80,5 +85,71 @@ public class AnalyticsController {
         ));
         
         return ResponseEntity.ok(data);
+    }
+
+    @GetMapping("/store-comparison")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Cross-store comparison", description = "Compares stores by revenue, orders, and rating for admin analytics.")
+    public ResponseEntity<List<Map<String, Object>>> getStoreComparison() {
+        List<Map<String, Object>> comparison = new java.util.ArrayList<>();
+
+        storeRepository.findAll().forEach(store -> {
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("storeId", store.getId());
+            entry.put("name", store.getName());
+            entry.put("owner", store.getOwnerName());
+            entry.put("revenue", store.getTotalRevenue());
+            entry.put("orders", store.getOrderCount());
+            entry.put("rating", store.getRating());
+            entry.put("status", store.getStatus());
+            double avgOrderValue = store.getOrderCount() > 0
+                    ? store.getTotalRevenue() / store.getOrderCount() : 0;
+            entry.put("avgOrderValue", Math.round(avgOrderValue * 100.0) / 100.0);
+            comparison.add(entry);
+        });
+
+        comparison.sort((a, b) -> Double.compare(
+                (Double) b.get("revenue"), (Double) a.get("revenue")));
+
+        return ResponseEntity.ok(comparison);
+    }
+
+    @GetMapping("/customer-segments")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Operation(summary = "Customer segmentation", description = "Aggregates customer profiles by membership type, city, and spending tiers.")
+    public ResponseEntity<Map<String, Object>> getCustomerSegments() {
+        Map<String, Object> segments = new HashMap<>();
+
+        var profiles = profileRepository.findAll();
+
+        Map<String, Integer> byMembership = new HashMap<>();
+        Map<String, Integer> byCity = new HashMap<>();
+        Map<String, Integer> bySpendTier = new HashMap<>();
+        double totalSpend = 0;
+        int totalProfiles = profiles.size();
+
+        for (var p : profiles) {
+            String membership = p.getMembershipType() != null ? p.getMembershipType() : "Unknown";
+            byMembership.put(membership, byMembership.getOrDefault(membership, 0) + 1);
+            String city = p.getCity() != null ? p.getCity() : "Unknown";
+            byCity.put(city, byCity.getOrDefault(city, 0) + 1);
+            double spend = p.getTotalSpend() != null ? p.getTotalSpend().doubleValue() : 0;
+            totalSpend += spend;
+            String tier = spend >= 5000 ? "Premium (5000+)" : spend >= 1000 ? "Regular (1000-5000)" : "New (<1000)";
+            bySpendTier.put(tier, bySpendTier.getOrDefault(tier, 0) + 1);
+        }
+
+        segments.put("totalCustomers", totalProfiles);
+        segments.put("avgSpend", totalProfiles > 0 ? Math.round(totalSpend / totalProfiles) : 0);
+        segments.put("byMembership", byMembership);
+        segments.put("byCity", byCity.entrySet().stream()
+                .sorted(java.util.Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(10)
+                .collect(java.util.stream.Collectors.toMap(
+                        java.util.Map.Entry::getKey, java.util.Map.Entry::getValue,
+                        (a, b) -> a, java.util.LinkedHashMap::new)));
+        segments.put("bySpendTier", bySpendTier);
+
+        return ResponseEntity.ok(segments);
     }
 }

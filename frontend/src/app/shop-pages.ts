@@ -1,87 +1,201 @@
 import { Component, inject, OnInit, ViewChild, ElementRef, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { ProductService, OrderService, AuthService, ToastService } from './services';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { ProductService, OrderService, AuthService, ToastService, ShipmentService } from './services';
+import { NexusLogoComponent } from './nexus-logo.component';
+import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
 
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
-    <div class="page-head" style="display:flex;justify-content:space-between;" *ngIf="step < 3">
-      <div>
-        <div class="page-title">{{ step === 1 ? 'Your Cart' : 'Secure Checkout' }}</div>
-        <div class="page-sub">{{ step === 1 ? 'Review your items' : 'Complete your payment' }}</div>
-      </div>
-      <div class="secure-badge" *ngIf="step === 2">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L2 2.8v3.5c0 2.5 1.8 4.5 4 5.2 2.2-.7 4-2.7 4-5.2V2.8L6 1Z" stroke="#344844" stroke-width="1"/></svg>
-        256-bit SSL encrypted
-      </div>
-    </div>
-    <div class="app-content" [style.padding]="step === 3 ? '0' : '20px'">
-      <div class="steps" style="margin-bottom:20px;" *ngIf="step < 3">
-        <div class="step">
-          <div class="step-num done"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <span class="step-label done">Cart</span>
+    <div class="nx-page">
+
+      <!-- NAVBAR -->
+      <div class="nx-navbar">
+        <div class="nx-logo" routerLink="/consumer"><app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo></div>
+        <div class="nx-nav-pills">
+          <div class="nx-npill" routerLink="/consumer">Home</div>
+          <div class="nx-npill active">Shop</div>
+          <div class="nx-npill" routerLink="/orders">Orders</div>
+          <div class="nx-npill" routerLink="/settings">Settings</div>
         </div>
-        <div class="step-line done"></div>
-        <div class="step">
-          <div class="step-num" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">
-             <span *ngIf="step <= 2">2</span>
-             <svg *ngIf="step > 2" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="nx-nav-r">
+          <app-nexus-theme-toggle></app-nexus-theme-toggle>
+          <div class="nx-icon-btn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.5" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1" fill="#6A8A84"/><circle cx="10" cy="11" r="1" fill="#6A8A84"/></svg>
+            <div class="nx-cart-badge" *ngIf="totalQty > 0">{{totalQty}}</div>
           </div>
-          <span class="step-label" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">Payment</span>
+          <div class="nx-nbtn" routerLink="/consumer">← Back to Shop</div>
         </div>
-        <div class="step-line" [class.done]="step > 2" [class.idle]="step <= 2"></div>
-        <div class="step"><div class="step-num idle">3</div><span class="step-label idle">Confirmation</span></div>
       </div>
 
-      <!-- STEP 1: CART -->
-      <div class="row2" *ngIf="step === 1">
-        <div class="gcard" style="padding: 20px;">
-          <h3 style="margin-bottom:15px;font-family:'Playfair Display',serif;font-weight:400;font-style:italic;">Items ({{cartItems.length}})</h3>
-          
-          <div class="c-item tilt-card" *ngFor="let item of cartItems; let i = index" style="padding:16px; margin-bottom:10px; border:1px solid var(--border); box-shadow:none;">
-            <div class="card-glow"></div>
-            <div class="c-info" style="position:relative; z-index:2;">
-              <div class="c-brand">{{item.category}}</div>
-              <div class="c-name">{{item.name}}</div>
-              <div class="c-price">{{item.basePrice | currency}}</div>
-              <div class="stock-wrap" style="margin-top:8px;">
-                <div class="stock-row">
-                  <div class="stock-label"><div class="stock-dot ok"></div><span class="stock-text ok">Available</span></div>
-                  <div class="stock-count ok">In Stock</div>
-                </div>
-                <div class="stock-bar"><div class="stock-bar-fill ok" style="width:75%"></div></div>
-              </div>
+      <!-- STEPS -->
+      <div class="nx-steps" *ngIf="step < 3">
+        <div class="nx-step">
+          <div class="nx-step-num done"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="nx-step-label done">Cart</span>
+        </div>
+        <div class="nx-step-line done"></div>
+        <div class="nx-step">
+          <div class="nx-step-num" [class.active]="step === 1" [class.done]="step > 1" [class.idle]="false">
+            <span *ngIf="step <= 1">2</span>
+            <svg *ngIf="step > 1" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="nx-step-label" [class.active]="step === 1" [class.done]="step > 1">Checkout</span>
+        </div>
+        <div class="nx-step-line" [class.done]="step > 1"></div>
+        <div class="nx-step">
+          <div class="nx-step-num" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">
+            <span *ngIf="step <= 2">3</span>
+            <svg *ngIf="step > 2" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="nx-step-label" [class.active]="step === 2" [class.done]="step > 2" [class.idle]="step < 2">Payment</span>
+        </div>
+        <div class="nx-step-line" [class.done]="step > 2"></div>
+        <div class="nx-step">
+          <div class="nx-step-num idle">4</div>
+          <span class="nx-step-label idle">Confirmation</span>
+        </div>
+      </div>
+
+      <!-- STEP 1: CART + CHECKOUT -->
+      <div class="nx-cart-main" *ngIf="step === 1">
+        <div class="nx-cart-left">
+          <div class="section-title">Your Cart ({{totalQty}})</div>
+
+          <div class="nx-cart-item" *ngFor="let item of cartItems; let i = index">
+            <div class="nx-item-img">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="8" width="28" height="18" rx="3" stroke="#3ECFB2" stroke-width="1.2" opacity="0.5"/><rect x="13" y="26" width="10" height="2.5" rx="1.2" fill="rgba(62,207,178,0.2)"/><rect x="7" y="11" width="22" height="12" rx="1.5" fill="rgba(62,207,178,0.05)"/></svg>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px; position:relative; z-index:2;">
+            <div class="nx-item-info">
+              <div class="nx-item-brand">{{item.category}}</div>
+              <div class="nx-item-name">{{item.name}}</div>
+              <div class="nx-item-variant">{{item.variant || item.description || '—'}}</div>
+            </div>
+            <div class="nx-item-right">
+              <div class="nx-item-price">{{item.basePrice * item.qty | currency}}</div>
               <div class="qty-box">
                 <div class="qty-btn" (click)="updateQty(i, -1)">−</div>
                 <div class="qty-val">{{item.qty}}</div>
                 <div class="qty-btn" (click)="updateQty(i, 1)">+</div>
               </div>
-              <div class="remove-btn" (click)="removeItem(i)" style="font-size:10px;color:var(--red);cursor:pointer;">Remove</div>
+              <div class="nx-remove-btn" (click)="removeItem(i)">Remove</div>
             </div>
           </div>
-          <div *ngIf="cartItems.length === 0" style="padding: 2rem;text-align:center;color:var(--text3);">Your cart is empty.</div>
+
+          <div *ngIf="cartItems.length === 0" style="padding:3rem;text-align:center;color:var(--text3);font-size:13px;">Your cart is empty.</div>
+
+          <!-- COUPON -->
+          <div class="nx-coupon-row" *ngIf="cartItems.length > 0">
+            <input class="nx-coupon-input" placeholder="Enter coupon code..." [(ngModel)]="couponCode"/>
+            <div class="nx-coupon-btn" (click)="applyCoupon()">Apply</div>
+          </div>
+
+          <!-- DELIVERY METHOD -->
+          <div class="nx-delivery-section" *ngIf="cartItems.length > 0">
+            <div class="nx-delivery-title">Delivery Method</div>
+            <div class="nx-delivery-opts">
+              <div class="nx-delivery-opt" [class.active]="deliveryMethod === 'standard'" (click)="deliveryMethod = 'standard'; deliveryCost = 0">
+                <div class="nx-delivery-left">
+                  <div class="nx-delivery-radio"><div class="nx-delivery-radio-dot" *ngIf="deliveryMethod === 'standard'"></div></div>
+                  <div>
+                    <div class="nx-delivery-name">Standard Shipping</div>
+                    <div class="nx-delivery-eta">3–5 business days</div>
+                  </div>
+                </div>
+                <div class="nx-delivery-free">Free</div>
+              </div>
+              <div class="nx-delivery-opt" [class.active]="deliveryMethod === 'express'" (click)="deliveryMethod = 'express'; deliveryCost = 9.99">
+                <div class="nx-delivery-left">
+                  <div class="nx-delivery-radio"><div class="nx-delivery-radio-dot" *ngIf="deliveryMethod === 'express'"></div></div>
+                  <div>
+                    <div class="nx-delivery-name">Express Shipping</div>
+                    <div class="nx-delivery-eta">1–2 business days</div>
+                  </div>
+                </div>
+                <div class="nx-delivery-price">$9.99</div>
+              </div>
+              <div class="nx-delivery-opt" [class.active]="deliveryMethod === 'sameday'" (click)="deliveryMethod = 'sameday'; deliveryCost = 19.99">
+                <div class="nx-delivery-left">
+                  <div class="nx-delivery-radio"><div class="nx-delivery-radio-dot" *ngIf="deliveryMethod === 'sameday'"></div></div>
+                  <div>
+                    <div class="nx-delivery-name">Same Day Delivery</div>
+                    <div class="nx-delivery-eta">Today by 9 PM</div>
+                  </div>
+                </div>
+                <div class="nx-delivery-price">$19.99</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div>
-          <div class="summary-card">
-            <h3 style="font-family:'Playfair Display',serif;font-weight:400;margin-bottom:20px;font-style:italic;">Order Summary</h3>
-            <div class="summary-line"><span class="sl-label">Subtotal</span><span class="sl-val">{{subtotal | currency}}</span></div>
-            <div class="summary-line"><span class="sl-label">Shipping</span><span class="sl-val green">Free</span></div>
+        <!-- RIGHT: ORDER SUMMARY -->
+        <div class="nx-cart-right">
+          <div class="section-title">Order Summary</div>
+
+          <div class="nx-summary-card">
+            <div class="summary-line"><span class="sl-label">Subtotal ({{totalQty}} items)</span><span class="sl-val">{{subtotal | currency}}</span></div>
+            <div class="summary-line" *ngIf="discount > 0"><span class="sl-label">Discount (−{{discountPercent}}%)</span><span class="sl-val nx-green">−{{discount | currency}}</span></div>
+            <div class="summary-line"><span class="sl-label">Shipping</span><span class="sl-val" [class.nx-green]="deliveryCost === 0">{{deliveryCost === 0 ? 'Free' : (deliveryCost | currency)}}</span></div>
+            <div class="summary-line"><span class="sl-label">Tax (8%)</span><span class="sl-val">{{tax | currency}}</span></div>
             <div class="summary-divider"></div>
-            <div class="summary-line" style="margin-top:14px;"><span class="sl-label" style="font-size:14px;color:var(--text);font-weight:500;">Total</span><span class="total-val">{{subtotal | currency}}</span></div>
-            <button class="ripple-btn primary" style="width:100%; margin-top:20px;" (click)="goStep2()" [disabled]="cartItems.length === 0">Proceed to Payment →</button>
+            <div class="nx-total-line">
+              <span class="nx-total-label">Total</span>
+              <span class="total-val">{{grandTotal | currency}}</span>
+            </div>
+          </div>
+
+          <div class="nx-pay-title">Payment Method</div>
+          <div class="nx-pay-methods">
+            <div class="nx-pay-method" [class.active]="payMethod === 'card'" (click)="payMethod = 'card'">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M1 6h12" stroke="currentColor" stroke-width="1.1"/></svg>
+              Card
+            </div>
+            <div class="nx-pay-method" [class.active]="payMethod === 'paypal'" (click)="payMethod = 'paypal'">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.1"/><path d="M5 4h2.5c1.2 0 2 .8 2 2s-.8 2-2 2H6L5.5 10" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              PayPal
+            </div>
+            <div class="nx-pay-method" [class.active]="payMethod === 'bank'" (click)="payMethod = 'bank'">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="4" width="10" height="6" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M5 4V3a2 2 0 0 1 4 0v1" stroke="currentColor" stroke-width="1.1"/></svg>
+              Bank
+            </div>
+          </div>
+
+          <button class="nx-checkout-btn" (click)="goStep2()" [disabled]="cartItems.length === 0">Proceed to Payment →</button>
+
+          <div class="nx-secure-note">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1L2 2.5v3c0 2.2 1.5 4 3.5 4.5C7.5 9.5 9 7.7 9 5.5v-3L5.5 1Z" stroke="#344844" stroke-width="1.1"/></svg>
+            Secure checkout · 256-bit SSL
+          </div>
+
+          <div class="nx-trust-row">
+            <div class="nx-trust-item">
+              <div class="nx-trust-icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9h12M9 3v12" stroke="#344844" stroke-width="1.2" stroke-linecap="round"/><rect x="2" y="2" width="14" height="14" rx="3" stroke="#344844" stroke-width="1.2"/></svg>
+              </div>
+              <div class="nx-trust-label">Free<br>Returns</div>
+            </div>
+            <div class="nx-trust-item">
+              <div class="nx-trust-icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L3 5v5c0 3.3 2.7 5.8 6 6.8 3.3-1 6-3.5 6-6.8V5L9 2Z" stroke="#344844" stroke-width="1.2"/></svg>
+              </div>
+              <div class="nx-trust-label">2 Year<br>Warranty</div>
+            </div>
+            <div class="nx-trust-item">
+              <div class="nx-trust-icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6.5" stroke="#344844" stroke-width="1.2"/><path d="M6 9l2 2 4-4" stroke="#344844" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="nx-trust-label">Verified<br>Products</div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- STEP 2: PAYMENT GATEWAY -->
-      <div class="main" *ngIf="step === 2" style="grid-template-columns: 1fr 340px;">
+      <div class="nx-cart-main" *ngIf="step === 2">
         <div class="left">
           
           <!-- CARD VISUAL -->
@@ -138,8 +252,26 @@ import { ProductService, OrderService, AuthService, ToastService } from './servi
             </div>
           </div>
 
+          <!-- PAYMENT METHOD SELECTION -->
+          <div class="section-title" style="margin-top:20px;margin-bottom:12px;">Payment Method</div>
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <div (click)="paymentMethod='card'" [style.border-color]="paymentMethod==='card' ? 'var(--teal)' : 'var(--border)'" style="flex:1;padding:12px;border:1.5px solid;border-radius:8px;cursor:pointer;text-align:center;background:var(--card);transition:border-color .2s;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-bottom:4px;"><rect x="2" y="5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M2 8h14" stroke="currentColor" stroke-width="1.1"/></svg>
+              <div style="font-size:10px;font-weight:500;">Credit Card</div>
+            </div>
+            <div (click)="paymentMethod='paypal'" [style.border-color]="paymentMethod==='paypal' ? 'var(--teal)' : 'var(--border)'" style="flex:1;padding:12px;border:1.5px solid;border-radius:8px;cursor:pointer;text-align:center;background:var(--card);transition:border-color .2s;">
+              <div style="font-size:14px;font-weight:700;color:#0070BA;margin-bottom:4px;">P</div>
+              <div style="font-size:10px;font-weight:500;">PayPal</div>
+            </div>
+            <div (click)="paymentMethod='bank'" [style.border-color]="paymentMethod==='bank' ? 'var(--teal)' : 'var(--border)'" style="flex:1;padding:12px;border:1.5px solid;border-radius:8px;cursor:pointer;text-align:center;background:var(--card);transition:border-color .2s;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-bottom:4px;"><path d="M9 2L2 7h14L9 2Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M4 10v4M7 10v4M11 10v4M14 10v4M2 16h14" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              <div style="font-size:10px;font-weight:500;">Bank Transfer</div>
+            </div>
+          </div>
+
           <!-- CARD INPUT FIELDS -->
-          <div class="section-title" style="margin-top:20px;margin-bottom:12px;">Card Details</div>
+          <ng-container *ngIf="paymentMethod === 'card'">
+          <div class="section-title" style="margin-bottom:12px;">Card Details</div>
           <div class="fields">
             <div class="field">
               <div class="field-label">Card Number</div>
@@ -172,6 +304,33 @@ import { ProductService, OrderService, AuthService, ToastService } from './servi
               </div>
             </div>
           </div>
+          </ng-container>
+
+          <!-- PAYPAL -->
+          <ng-container *ngIf="paymentMethod === 'paypal'">
+            <div style="text-align:center;padding:24px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
+              <div style="font-size:24px;font-weight:700;color:#0070BA;margin-bottom:8px;">PayPal</div>
+              <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">You will be redirected to PayPal to complete payment securely.</div>
+              <input class="fi" placeholder="PayPal email address" [(ngModel)]="paypalEmail" style="max-width:300px;margin:0 auto;text-align:center;"/>
+            </div>
+          </ng-container>
+
+          <!-- BANK TRANSFER -->
+          <ng-container *ngIf="paymentMethod === 'bank'">
+            <div style="padding:20px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
+              <div style="font-size:12px;font-weight:500;margin-bottom:12px;">Bank Transfer Details</div>
+              <div style="font-size:11px;color:var(--text3);line-height:1.8;">
+                <div><strong>Bank:</strong> SmartStore International Bank</div>
+                <div><strong>IBAN:</strong> TR00 0000 0000 0000 0000 0000 00</div>
+                <div><strong>SWIFT:</strong> SMSTSTXX</div>
+                <div><strong>Reference:</strong> ORD-{{(Math.random() * 9999) | number:'1.0-0'}}</div>
+              </div>
+              <div style="margin-top:12px;font-size:10px;color:var(--teal);padding:8px;background:rgba(62,207,178,0.06);border-radius:6px;">
+                Your order will be processed once payment is confirmed (1-2 business days).
+              </div>
+            </div>
+          </ng-container>
+
         </div>
 
         <div class="right">
@@ -243,7 +402,7 @@ import { ProductService, OrderService, AuthService, ToastService } from './servi
           </div>
           <div>
             <div class="eta-label">Estimated Delivery</div>
-            <div class="eta-val">December 5, 2024</div>
+            <div class="eta-val">{{estimatedDelivery}}</div>
             <div class="eta-sub">Between 2:00 PM – 6:00 PM · Home</div>
           </div>
           <div class="eta-track">
@@ -286,7 +445,7 @@ import { ProductService, OrderService, AuthService, ToastService } from './servi
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="5.5" r="4" stroke="#080808" stroke-width="1.2"/><path d="M2 13c0-3 2-4.5 4.5-4.5S11 10 11 13" stroke="#080808" stroke-width="1.2" stroke-linecap="round"/></svg>
             Track Order
           </button>
-          <button class="btn-ghost" routerLink="/shop">
+          <button class="btn-ghost" routerLink="/consumer">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 4h7l-1 6H4L3 4Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><circle cx="5.5" cy="11.5" r="1" fill="currentColor"/><circle cx="8.5" cy="11.5" r="1" fill="currentColor"/></svg>
             Continue Shopping
           </button>
@@ -306,6 +465,18 @@ export class CartComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   toast = inject(ToastService);
 
+  // Cart Step 1 State
+  couponCode = '';
+  deliveryMethod = 'standard';
+  deliveryCost = 0;
+  payMethod = 'card';
+  discount = 0;
+  discountPercent = 0;
+
+  Math = Math;
+  paymentMethod = 'card';
+  paypalEmail = '';
+
   // Payment Form State
   addrMode = 'saved';
   cardFlipped = false;
@@ -321,6 +492,12 @@ export class CartComponent implements OnInit, OnDestroy {
   isProcessing = false;
   paySuccess = false;
   orderId = Math.floor(1000 + Math.random() * 9000);
+
+  get estimatedDelivery(): string {
+    const d = new Date();
+    d.setDate(d.getDate() + (this.deliveryMethod === 'sameday' ? 0 : this.deliveryMethod === 'express' ? 2 : 5));
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
 
   // Confetti State
   @ViewChild('confettiCanvas') canvasRef?: ElementRef<HTMLCanvasElement>;
@@ -354,7 +531,30 @@ export class CartComponent implements OnInit, OnDestroy {
     this.subtotal = this.cartItems.reduce((acc, item) => acc + (item.basePrice * item.qty), 0);
   }
 
+  get totalQty(): number {
+    return this.cartItems.reduce((acc, item) => acc + item.qty, 0);
+  }
+
+  get tax(): number {
+    return (this.subtotal - this.discount) * 0.08;
+  }
+
+  get grandTotal(): number {
+    return this.subtotal - this.discount + this.deliveryCost + this.tax;
+  }
+
+  applyCoupon() {
+    if (this.couponCode.toUpperCase() === 'NEXUS20') {
+      this.discountPercent = 20;
+      this.discount = this.subtotal * 0.2;
+      this.toast.show('Coupon applied! 20% off');
+    } else if (this.couponCode.trim()) {
+      this.toast.show('Invalid coupon code', 'error');
+    }
+  }
+
   goStep2() {
+    this.paymentMethod = this.payMethod;
     this.step = 2;
   }
 
@@ -401,21 +601,23 @@ export class CartComponent implements OnInit, OnDestroy {
   }
 
   processPayment() {
-    const cleanNum = this.rawNum.replace(/\\s/g,'');
-    let valid = true;
-
-    if (cleanNum.length < 16) { this.numErr = true; valid = false; }
-    if (this.rawExp.replace(/\\D/g,'').length < 4) { this.expErr = true; valid = false; }
-    if (this.rawCvv.length < 3) { this.cvvErr = true; valid = false; }
-
-    if (!valid) return;
+    if (this.paymentMethod === 'card') {
+      const cleanNum = this.rawNum.replace(/\s/g, '');
+      let valid = true;
+      if (cleanNum.length < 16) { this.numErr = true; valid = false; }
+      if (this.rawExp.replace(/\D/g, '').length < 4) { this.expErr = true; valid = false; }
+      if (this.rawCvv.length < 3) { this.cvvErr = true; valid = false; }
+      if (!valid) return;
+    } else if (this.paymentMethod === 'paypal' && !this.paypalEmail.includes('@')) {
+      return;
+    }
 
     this.isProcessing = true;
     
     const user = this.auth.currentUserValue;
     const orderPayload = {
       user: { userId: user?.userId || 1 },
-      totalAmount: this.subtotal * 1.08,
+      totalAmount: this.grandTotal,
       shippingAddress: "123 Nexus Grove, SF, CA",
       status: 'PENDING',
       items: this.cartItems.map(item => ({
@@ -532,8 +734,11 @@ export class CartComponent implements OnInit, OnDestroy {
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NexusThemeToggleComponent],
   template: `
+    <div class="nx-floating-theme" style="position:fixed;bottom:22px;right:22px;z-index:2000;">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
+    </div>
     <div class="page-head" *ngIf="product">
       <div>
         <div class="page-title">{{product.name}}</div>
@@ -580,13 +785,49 @@ export class CartComponent implements OnInit, OnDestroy {
            </div>
         </div>
       </div>
+
+      <!-- REVIEWS SECTION -->
+      <div class="gcard" style="padding:24px; margin-top:20px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <div style="font-family:'Playfair Display',serif; font-size:18px;">Customer Reviews</div>
+          <div style="font-size:12px; color:var(--text3);" *ngIf="reviews.length > 0">{{reviews.length}} review{{reviews.length > 1 ? 's' : ''}} · Avg {{avgRating}}★</div>
+        </div>
+        <div *ngIf="reviews.length === 0" style="text-align:center; padding:24px; color:var(--text3); font-size:12px;">No reviews yet. Be the first to review this product!</div>
+        <div *ngFor="let r of reviews" style="padding:14px 0; border-bottom:1px solid var(--border);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:28px; height:28px; border-radius:50%; background:var(--teal-dim); display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--teal); font-weight:600;">{{(r.user?.fullName || 'U').charAt(0)}}</div>
+              <div style="font-size:12px; font-weight:500; color:var(--text);">{{r.user?.fullName || 'Anonymous'}}</div>
+            </div>
+            <div style="font-size:11px; color:var(--text3);">{{r.createdAt | date:'mediumDate'}}</div>
+          </div>
+          <div style="display:flex; gap:2px; margin-bottom:6px;">
+            <span *ngFor="let s of [1,2,3,4,5]" style="font-size:12px;" [style.color]="s <= r.rating ? '#E8A94A' : 'var(--text3)'">★</span>
+          </div>
+          <div style="font-size:12px; color:var(--text2); line-height:1.5;">{{r.comment}}</div>
+          <div *ngIf="r.sentimentScore != null" style="margin-top:6px;">
+            <span style="font-size:9px; padding:2px 8px; border-radius:8px; letter-spacing:0.05em; text-transform:uppercase;"
+              [style.background]="r.sentimentScore > 0.6 ? 'rgba(62,201,138,0.1)' : r.sentimentScore < 0.4 ? 'rgba(224,112,112,0.1)' : 'rgba(107,168,200,0.1)'"
+              [style.color]="r.sentimentScore > 0.6 ? '#3EC98A' : r.sentimentScore < 0.4 ? '#E07070' : '#6BA8C8'">
+              {{r.sentimentScore > 0.6 ? 'Positive' : r.sentimentScore < 0.4 ? 'Negative' : 'Neutral'}}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   `
 })
 export class ProductDetailComponent implements OnInit {
   product: any;
+  reviews: any[] = [];
   route = inject(ActivatedRoute);
   productService = inject(ProductService);
+
+  get avgRating(): string {
+    if (this.reviews.length === 0) return '0';
+    const avg = this.reviews.reduce((s, r) => s + (r.rating || 0), 0) / this.reviews.length;
+    return avg.toFixed(1);
+  }
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
@@ -594,6 +835,10 @@ export class ProductDetailComponent implements OnInit {
       if (id) {
         this.productService.getProducts().subscribe(res => {
           this.product = res.find((p: any) => p.productId === +id);
+        });
+        this.productService.getReviews(+id).subscribe({
+          next: (res) => this.reviews = res || [],
+          error: () => this.reviews = []
         });
       }
     });
@@ -652,91 +897,107 @@ export class ProductDetailComponent implements OnInit {
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NexusThemeToggleComponent],
   template: `
+    <div class="nx-floating-theme" style="position:fixed;bottom:22px;right:22px;z-index:2000;">
+      <app-nexus-theme-toggle></app-nexus-theme-toggle>
+    </div>
     <div class="page-head">
       <div>
-        <div class="page-title">Order Tracking</div>
-        <div class="page-sub">Trace your recent purchases</div>
+        <div class="page-title">My Orders</div>
+        <div class="page-sub">Purchase history & tracking</div>
       </div>
-      <div class="status-pill" style="display:inline-flex;align-items:center;gap:6px;background:rgba(107,168,200,0.1);border:1px solid rgba(107,168,200,0.2);color:#6BA8C8;font-size:11px;padding:6px 14px;border-radius:20px;">
-        <div class="live-dot" style="width:6px;height:6px;border-radius:50%;background:#6BA8C8;animation:pulse-blue 1.5s infinite;"></div>
-        In Transit
+      <div style="display:flex;gap:8px;">
+        <button class="ripple-btn ghost" style="font-size:11px;padding:6px 16px;" (click)="exportOrders()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v8M3 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Export CSV
+        </button>
       </div>
     </div>
     <div class="app-content">
 
-      <!-- TIMELINE PROGRESS -->
-      <div class="progress-wrap" style="margin-bottom:40px;">
-        <div class="progress-track">
-          <div class="progress-fill" style="width:65%;"></div>
-        </div>
-        <div class="progress-labels">
-          <span class="prog-label active">Confirmed</span>
-          <span class="prog-label active">Processing</span>
-          <span class="prog-label active">Shipped</span>
-          <span class="prog-label active">In Transit</span>
-          <span class="prog-label">Delivered</span>
+      <!-- PURCHASE HISTORY TABLE -->
+      <div class="gcard" style="margin-bottom:24px;" *ngIf="myOrders.length > 0">
+        <div class="gc-head"><div class="gc-title">Purchase History</div><div class="gc-link">{{myOrders.length}} orders</div></div>
+        <div class="gc-body" style="padding:0;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead><tr style="border-bottom:1px solid var(--border);text-align:left;">
+              <th style="padding:10px 16px;font-weight:500;color:var(--text3);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">Order</th>
+              <th style="padding:10px 12px;font-weight:500;color:var(--text3);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">Date</th>
+              <th style="padding:10px 12px;font-weight:500;color:var(--text3);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">Amount</th>
+              <th style="padding:10px 12px;font-weight:500;color:var(--text3);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">Items</th>
+              <th style="padding:10px 12px;font-weight:500;color:var(--text3);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">Status</th>
+            </tr></thead>
+            <tbody>
+              <tr *ngFor="let o of myOrders" style="border-bottom:1px solid var(--border);">
+                <td style="padding:10px 16px;font-family:'JetBrains Mono',monospace;color:var(--teal);">#ORD-{{o.orderId}}</td>
+                <td style="padding:10px 12px;color:var(--text2);">{{o.orderDate | date:'mediumDate'}}</td>
+                <td style="padding:10px 12px;font-weight:500;">{{o.totalAmount | currency}}</td>
+                <td style="padding:10px 12px;color:var(--text2);">{{o.items?.length || 0}} items</td>
+                <td style="padding:10px 12px;">
+                  <span style="font-size:10px;padding:3px 10px;border-radius:10px;font-weight:500;"
+                    [style.background]="o.status === 'DELIVERED' ? 'rgba(62,201,138,0.1)' : o.status === 'PENDING' ? 'rgba(232,169,74,0.1)' : 'rgba(107,168,200,0.1)'"
+                    [style.color]="o.status === 'DELIVERED' ? '#3EC98A' : o.status === 'PENDING' ? '#E8A94A' : '#6BA8C8'">
+                    ● {{o.status}}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div class="row2">
+      <div *ngIf="myOrders.length === 0" class="gcard" style="padding:48px;text-align:center;color:var(--text3);">
+        <div style="font-size:36px;margin-bottom:12px;opacity:0.2;">📦</div>
+        <div style="font-size:13px;">No orders yet. Start shopping!</div>
+      </div>
+
+      <!-- SHIPMENT TRACKING (Dynamic per order) -->
+      <div *ngIf="selectedOrder" style="margin-bottom:40px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);">Tracking: #ORD-{{selectedOrder.orderId}}</div>
+          <select style="background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;" [(ngModel)]="selectedOrderId" (change)="onOrderSelect()">
+            <option *ngFor="let o of myOrders" [value]="o.orderId">ORD-{{o.orderId}} — {{o.totalAmount | currency}}</option>
+          </select>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-track">
+            <div class="progress-fill" [style.width.%]="trackingProgress"></div>
+          </div>
+          <div class="progress-labels">
+            <span class="prog-label" [class.active]="isStepDone('PENDING')">Confirmed</span>
+            <span class="prog-label" [class.active]="isStepDone('PREPARING')">Preparing</span>
+            <span class="prog-label" [class.active]="isStepDone('SHIPPED')">Shipped</span>
+            <span class="prog-label" [class.active]="isStepDone('IN_TRANSIT')">In Transit</span>
+            <span class="prog-label" [class.active]="isStepDone('DELIVERED')">Delivered</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="row2" *ngIf="selectedOrder">
         <div class="gcard" style="padding:22px;">
           <h3 style="font-family:'Playfair Display',serif;font-weight:400;font-style:italic;margin-bottom:20px;">Shipment Timeline</h3>
-          
           <div class="timeline">
-            <!-- Step 1 -->
             <div class="tl-item done">
-              <div class="tl-left">
-                <div class="tl-dot done"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5" stroke="#3ECFB2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-              </div>
-              <div class="tl-right">
-                <div class="tl-title done">Order Confirmed <span class="tl-time">09:14 AM</span></div>
-                <div class="tl-desc">Payment verified. Order confirmed.</div>
-              </div>
+              <div class="tl-left"><div class="tl-dot done"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5" stroke="#3ECFB2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+              <div class="tl-right"><div class="tl-title done">Order Confirmed <span class="tl-time">{{selectedOrder.orderDate | date:'shortTime'}}</span></div><div class="tl-desc">Payment verified. Order confirmed.</div></div>
             </div>
-            
-            <!-- Step 2 -->
-            <div class="tl-item done">
-              <div class="tl-left">
-                <div class="tl-dot done"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5" stroke="#3ECFB2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-              </div>
-              <div class="tl-right">
-                <div class="tl-title done">Processing <span class="tl-time">14:30 PM</span></div>
-                <div class="tl-desc">Items packed at Istanbul Warehouse.</div>
-              </div>
+            <div class="tl-item" [class.done]="isStepDone('PREPARING')" [class.idle]="!isStepDone('PREPARING')">
+              <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('PREPARING')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5" [attr.stroke]="isStepDone('PREPARING') ? '#3ECFB2' : '#344844'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+              <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('PREPARING')">Preparing</div><div class="tl-desc">Items being packed at warehouse.</div></div>
             </div>
-
-            <!-- Step 3 / Active -->
-            <div class="tl-item active">
-              <div class="tl-left">
-                <div class="tl-dot active"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-              </div>
-              <div class="tl-right">
-                <div class="tl-title active">In Transit — Live <span class="tl-time">11:47 AM</span></div>
-                <div class="tl-desc">Package is on its way. Last checkpoint scanned.</div>
-                
-                <div class="scan-wrap" style="margin-bottom:10px;">
-                  <div class="scan-line"></div>
-                  <div class="scan-text" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);display:flex;align-items:center;gap:8px;">
-                    <div class="scan-dot" style="width:5px;height:5px;border-radius:50%;background:var(--teal);animation:blink 1s infinite;"></div>
-                    Scanning live location updates...
-                  </div>
-                </div>
-              </div>
+            <div class="tl-item" [class.done]="isStepDone('IN_TRANSIT')" [class.idle]="!isStepDone('IN_TRANSIT')">
+              <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('IN_TRANSIT')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" [attr.stroke]="isStepDone('IN_TRANSIT') ? '#3ECFB2' : '#344844'" stroke-width="1.3" stroke-linecap="round"/></svg></div></div>
+              <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('IN_TRANSIT')">In transit</div><div class="tl-desc">On the way to you.</div></div>
             </div>
-
-            <!-- Step 4 -->
-            <div class="tl-item idle">
-              <div class="tl-left">
-                <div class="tl-dot idle"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="#344844" stroke-width="1.1"/><path d="M6 4v2.5l1.5 1.5" stroke="#344844" stroke-width="1.1" stroke-linecap="round"/></svg></div>
-              </div>
-              <div class="tl-right">
-                <div class="tl-title idle">Out for Delivery</div>
-                <div class="tl-desc">Est. Tomorrow</div>
-              </div>
+            <div class="tl-item" [class.done]="isStepDone('SHIPPED')" [class.active]="selectedOrder.status === 'SHIPPED'" [class.idle]="!isStepDone('SHIPPED')">
+              <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('SHIPPED')" [class.active]="selectedOrder.status === 'SHIPPED'"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" [attr.stroke]="isStepDone('SHIPPED') ? '#3ECFB2' : '#344844'" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+              <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('SHIPPED')" [class.active]="selectedOrder.status === 'SHIPPED'">Shipped</div><div class="tl-desc">{{shipmentData?.carrier || 'Carrier'}} — {{shipmentData?.trackingNumber || 'Pending'}}</div></div>
             </div>
-            
+            <div class="tl-item" [class.done]="isStepDone('DELIVERED')" [class.idle]="!isStepDone('DELIVERED')">
+              <div class="tl-left"><div class="tl-dot" [class.done]="isStepDone('DELIVERED')" [class.idle]="!isStepDone('DELIVERED')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" [attr.stroke]="isStepDone('DELIVERED') ? '#3ECFB2' : '#344844'" stroke-width="1.1"/></svg></div></div>
+              <div class="tl-right"><div class="tl-title" [class.done]="isStepDone('DELIVERED')">Delivered</div><div class="tl-desc">{{shipmentData?.deliveredAt ? (shipmentData.deliveredAt | date:'mediumDate') : (shipmentData?.estimatedDelivery ? 'Est. ' + (shipmentData.estimatedDelivery | date:'mediumDate') : 'Pending')}}</div></div>
+            </div>
           </div>
         </div>
 
@@ -745,29 +1006,33 @@ export class ProductDetailComponent implements OnInit {
             <div class="card-glow"></div>
             <div style="position:relative; z-index:2;">
               <div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;">Estimated Delivery</div>
-              <div style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:4px;">Tomorrow</div>
-              <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:14px;overflow:hidden;"><div style="height:100%;width:65%;background:var(--teal);border-radius:2px;"></div></div>
+              <div style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:4px;">{{shipmentData?.estimatedDelivery ? (shipmentData.estimatedDelivery | date:'mediumDate') : 'Calculating...'}}</div>
+              <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:14px;overflow:hidden;"><div [style.width.%]="trackingProgress" style="height:100%;background:var(--teal);border-radius:2px;"></div></div>
             </div>
           </div>
           
           <div class="gcard" style="margin-bottom: 12px;">
             <div class="gc-head"><div class="gc-title">Carrier Info</div></div>
             <div class="gc-body" style="color:var(--text3); font-size:12px; line-height: 1.5;">
-               <strong style="color:var(--text);">FedEx Express</strong><br>
-               Tracking: FX-89234152<br><br>
-               <button class="ripple-btn ghost" style="width:100%; padding:8px;">View Route Map</button>
+               <strong style="color:var(--text);">{{shipmentData?.carrier || 'Pending'}}</strong><br>
+               Tracking: {{shipmentData?.trackingNumber || 'N/A'}}<br>
+               Mode: {{shipmentData?.modeOfShipment || 'Standard'}}
             </div>
           </div>
 
           <div class="gcard" style="padding:22px; display:flex; flex-direction:column; align-items:center; gap:10px; background:rgba(62,207,178,0.03);">
              <h3 style="font-family:'Playfair Display',serif;font-weight:400;font-style:italic;">Got it already?</h3>
              <p style="font-size:11px;color:var(--text2);text-align:center;">If you received this part of your order, let us know how we did.</p>
-             <button class="open-btn" (click)="openModal()" style="margin-top:4px;">
+             <button class="open-btn" (click)="openReviewForOrder(selectedOrder)" style="margin-top:4px;">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L8.6 5.2H13L9.7 7.8l1.3 4.2L7 9.5 2.9 12l1.3-4.2L1 5.2h4.4L7 1Z" stroke="#080808" stroke-width="1.2" stroke-linejoin="round"/></svg>
                 Write a Review
              </button>
           </div>
         </div>
+      </div>
+
+      <div *ngIf="!selectedOrder && myOrders.length > 0" style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">
+        Select an order above to view tracking details.
       </div>
 
       <!-- REVIEW MODAL OVERLAY -->
@@ -851,7 +1116,7 @@ export class ProductDetailComponent implements OnInit {
     </div>
   `
 })
-export class OrdersComponent {
+export class OrdersComponent implements OnInit {
   isModalOpen = false;
   isSuccess = false;
   isSubmitting = false;
@@ -860,10 +1125,88 @@ export class OrdersComponent {
   popStar = 0;
   reviewText = '';
   charCount = 0;
+  myOrders: any[] = [];
+  selectedOrder: any = null;
+  selectedOrderId: number | null = null;
+  shipmentData: any = null;
+  reviewProductId: number | null = null;
+
+  /** Order + shipment lifecycle (aligned with backend shipment statuses where applicable). */
+  private readonly trackingSteps = ['PENDING', 'PREPARING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED'];
 
   productService = inject(ProductService);
+  orderService = inject(OrderService);
+  shipmentService = inject(ShipmentService);
   auth = inject(AuthService);
   toast = inject(ToastService);
+
+  ngOnInit() {
+    this.orderService.getMyOrders().subscribe(orders => {
+      this.myOrders = orders.sort((a: any, b: any) =>
+        new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+      if (this.myOrders.length > 0) {
+        this.selectedOrderId = this.myOrders[0].orderId;
+        this.onOrderSelect();
+      }
+    });
+  }
+
+  onOrderSelect() {
+    this.selectedOrder = this.myOrders.find(o => o.orderId == this.selectedOrderId) || null;
+    this.shipmentData = null;
+    if (this.selectedOrder) {
+      this.shipmentService.getByOrder(this.selectedOrder.orderId).subscribe({
+        next: (s: any) => this.shipmentData = s,
+        error: () => this.shipmentData = null
+      });
+    }
+  }
+
+  private normalizeTrackStatus(raw: string | undefined): string {
+    if (!raw) return 'PENDING';
+    const u = String(raw).toUpperCase();
+    if (u === 'PROCESSING') return 'PREPARING';
+    if (u === 'OUT_FOR_DELIVERY') return 'IN_TRANSIT';
+    if (u === 'CANCELLED' || u === 'RETURNED') return 'PENDING';
+    if (this.trackingSteps.includes(u)) return u;
+    return 'PENDING';
+  }
+
+  get trackingProgress(): number {
+    if (!this.selectedOrder) return 0;
+    const status = this.normalizeTrackStatus(this.shipmentData?.status || this.selectedOrder.status);
+    const idx = this.trackingSteps.indexOf(status);
+    return idx >= 0 ? ((idx + 1) / this.trackingSteps.length) * 100 : 20;
+  }
+
+  isStepDone(step: string): boolean {
+    if (!this.selectedOrder) return false;
+    const current = this.normalizeTrackStatus(this.shipmentData?.status || this.selectedOrder.status);
+    const target = this.normalizeTrackStatus(step);
+    const ci = this.trackingSteps.indexOf(current);
+    const ti = this.trackingSteps.indexOf(target);
+    if (ci < 0 || ti < 0) return false;
+    return ci >= ti;
+  }
+
+  openReviewForOrder(order: any) {
+    const firstItem = order?.items?.[0];
+    this.reviewProductId = firstItem?.productId || firstItem?.product?.productId || null;
+    this.isModalOpen = true;
+  }
+
+  exportOrders() {
+    const csv = ['Order ID,Date,Amount,Status,Items']
+      .concat(this.myOrders.map((o: any) =>
+        `ORD-${o.orderId},${o.orderDate},${o.totalAmount},${o.status},${o.items?.length || 0}`
+      )).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'orders.csv'; a.click();
+    URL.revokeObjectURL(url);
+    this.toast.show('Orders exported');
+  }
 
   tags = [
     {label: 'Great value', selected: false},
@@ -916,10 +1259,9 @@ export class OrdersComponent {
     if (!this.canSubmit()) return;
     this.isSubmitting = true;
     
-    const user = this.auth.currentUserValue;
-    const productId = 1; // Default for now, ideally passed from order details
+    const productId = this.reviewProductId || this.selectedOrder?.items?.[0]?.productId || 1;
 
-    this.productService.submitReview(productId, user?.userId || 1, this.rating, this.reviewText).subscribe({
+    this.productService.submitReview(productId, this.rating, this.reviewText).subscribe({
       next: () => {
         this.isSubmitting = false;
         this.isSuccess = true;

@@ -10,7 +10,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "product_reviews")
+@Table(name = "product_reviews", indexes = {
+    @Index(name = "idx_review_product", columnList = "product_id"),
+    @Index(name = "idx_review_user", columnList = "user_id")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -35,7 +38,12 @@ public class ProductReview {
     private String comment;
 
     @Column(precision = 3, scale = 2)
-    private BigDecimal sentimentScore; // AI tabanlı duygu skoru
+    private BigDecimal sentimentScore;
+
+    @Column(length = 1000)
+    private String storeResponse;
+
+    private LocalDateTime respondedAt;
 
     private LocalDateTime createdAt;
 

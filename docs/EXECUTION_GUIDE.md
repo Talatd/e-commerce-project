@@ -1,60 +1,94 @@
-# 🏁 SmartStore AI: Execution Guide
+# SmartStore — Execution Guide
 
-This guide explains how to run the three integrated components of the reconstructed project.
+Three components work together: **Spring Boot API**, **AI Hub (FastAPI)**, and **Angular SPA**.
 
 ## 1. Prerequisites
-- **Java 21** & **Maven**
-- **Python 3.13+**
-- **Node.js 20+** & **Angular CLI**
-- **MySQL 8.0** running on port 3306
+
+- **Java 21** and **Maven**
+- **Node.js 20+** (global Angular CLI is optional; you can use `npx ng`)
+- **Python 3.10+**
+- **MySQL 8** (`localhost:3306`)
 
 ---
 
-## 2. Backend (Spring Boot)
-1. **Initialize DB**: Run the script located at `backend/database/schema.sql` in your MySQL instance.
-2. **Configuration**: Update `backend/src/main/resources/application.properties` with your MySQL credentials.
-3. **Run**:
-   ```bash
-   cd backend
-   mvn spring-boot:run
-   ```
-   *The API will be available at http://localhost:8080. Swagger docs: http://localhost:8080/swagger-ui.html*
+## 2. Database
+
+1. Create the database in MySQL, or rely on `createDatabaseIfNotExist=true` in the JDBC URL in `application.properties`.
+2. For a clean schema from SQL, run `backend/database/schema.sql`.
+3. Edit `backend/src/main/resources/application.properties` for your credentials (`DB_USERNAME`, `DB_PASSWORD`, or `spring.datasource.*`).
 
 ---
 
-## 3. AI Service (Python/FastAPI)
-1. **Setup Environment**:
-   ```bash
-   cd ai-service
-   pip install -r requirements.txt
-   ```
-2. **ENV Keys**: Create a `.env` file with:
-   - `GEMINI_API_KEY=your_key`
-   - `DB_USER=root`, `DB_PASSWORD=root`, `DB_NAME=smartstore_db`
-3. **Run**:
-   ```bash
-   python main.py
-   ```
-   *The AI Hub will be available at http://localhost:8000.*
+## 3. Backend (Spring Boot)
+
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+- API: **http://localhost:8080**
+- Swagger: **http://localhost:8080/swagger-ui.html**
+
+On first startup, `DbInitializer` may seed sample products, stores, and users.
+
+**AI proxy URL:** `smartstore.ai.url` (default `http://localhost:8000`). If AI Hub is down, chat endpoints may return a graceful error.
 
 ---
 
-## 4. Frontend (Angular)
-1. **Setup**:
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. **Run**:
-   ```bash
-   ng serve
-   ```
-   *Open your browser at http://localhost:4200.*
+## 4. AI Hub (FastAPI)
+
+Folder name: **`ai-hub`** (repository root).
+
+```bash
+cd ai-hub
+pip install -r requirements.txt
+```
+
+Example `.env`:
+
+```env
+GEMINI_API_KEY=your_google_ai_studio_key
+DB_USER=root
+DB_PASSWORD=root
+DB_HOST=localhost
+DB_NAME=smartstore_db
+```
+
+Run:
+
+```bash
+python main.py
+```
+
+Service: **http://localhost:8000** — health: `GET /health`
 
 ---
 
-## 📊 Data Ingestion (Admin Only)
-Once all services are running, you can ingest the real-world datasets using the provided **Sample CSV files** via the Admin endpoints:
-- Use `POST /api/v1/admin/ingest/products-ds4` with `backend/data_samples/ds4_products.csv`
-- Use `POST /api/v1/admin/ingest/inventory-ds5` with `backend/data_samples/ds5_inventory.csv`
-- Use `POST /api/v1/admin/ingest/reviews-ds6` with `backend/data_samples/ds6_reviews.csv`
+## 5. Frontend (Angular)
+
+```bash
+cd frontend
+npm install
+ng serve
+```
+
+App: **http://localhost:4200**
+
+- Development API base: `src/environments/environment.ts` → `apiBaseUrl`
+- Production build: `npm run build` uses `environment.prod.ts` (Angular `fileReplacements`)
+
+---
+
+## 6. Sample logins
+
+See the **Sample accounts** table in [README.md](./README.md).
+
+---
+
+## 7. Troubleshooting
+
+| Symptom | Likely cause |
+|---------|----------------|
+| Chat / AI not responding | AI Hub not running, missing `GEMINI_API_KEY`, or wrong `smartstore.ai.url` |
+| 401 / forced logout | Access token expired and refresh failed — sign in again |
+| CORS errors | Allowed origins in backend `SecurityConfig` (e.g. `http://localhost:4200`) |
