@@ -149,9 +149,9 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .cat-pill.active{background:var(--teal-dim);color:var(--teal2);border-color:rgba(62,207,178,0.2);}
 .cat-pill:not(.active):hover{background:var(--glass2);color:var(--text);}
 
-.shop-body{display:flex;flex:1;min-height:500px;}
-.filter-sidebar{width:210px;min-width:210px;border-right:1px solid var(--border);padding:16px 12px;transition:width 0.35s cubic-bezier(0.4,0,0.2,1),min-width 0.35s,opacity 0.25s;overflow-y:auto;}
-.filter-sidebar.collapsed{width:0;min-width:0;opacity:0;overflow:hidden;padding:0;}
+.shop-body{display:flex;flex:1;min-height:500px;min-width:0;}
+.filter-sidebar{width:210px;min-width:210px;flex-shrink:0;border-right:1px solid var(--border);padding:16px 12px;transition:width 0.35s cubic-bezier(0.4,0,0.2,1),min-width 0.35s,opacity 0.25s;overflow-y:auto;position:relative;z-index:2;}
+.filter-sidebar.collapsed{width:0;min-width:0;opacity:0;overflow:hidden;padding:0;pointer-events:none;border:none;}
 .fs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .fs-title{font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--text2);font-weight:500;}
 .fs-clear{font-size:10px;color:var(--text3);cursor:pointer;transition:color 0.15s;}
@@ -178,7 +178,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .rstare{font-size:11px;color:var(--text3);}
 .rlabel{font-size:11.5px;color:var(--text2);}
 
-.products-area{flex:1;padding:16px 18px;overflow-y:auto;}
+.products-area{flex:1;min-width:0;padding:16px 18px;overflow-x:hidden;overflow-y:auto;position:relative;z-index:1;}
 .products-area::-webkit-scrollbar{width:2px;}
 .products-area::-webkit-scrollbar-thumb{background:var(--border2);}
 .active-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:0;}
@@ -189,7 +189,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .rb-count span{color:var(--text);font-weight:500;}
 .rb-sort{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text2);background:var(--glass);border:1px solid var(--border);border-radius:20px;padding:5px 13px;cursor:pointer;}
 
-.prod-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.prod-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
 .pcard{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.2s,transform 0.2s;position:relative;}
 .pcard:hover{border-color:rgba(62,207,178,0.2);transform:translateY(-3px);}
 .pcard:hover .pc-quick{opacity:1;}
@@ -288,13 +288,17 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .pc-badge.tag-audio { background:rgba(232,169,74,0.1); color:var(--amber); border:1px solid rgba(232,169,74,0.18); }
 
 /* SETUP GRID */
-.setup-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px; padding:20px 24px; }
-.setup-card { position:relative; height:180px; border-radius:16px; overflow:hidden; cursor:pointer; transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); border:1px solid var(--border); }
-.setup-card:hover { transform:translateY(-4px); }
-.setup-img-overlay { position:absolute; inset:0; background:linear-gradient(0deg, rgba(8,8,8,0.9) 0%, transparent 65%); z-index:1; }
+.setup-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; padding:20px 24px; }
+.setup-card { position:relative; height:180px; border-radius:16px; overflow:hidden; cursor:pointer; transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border:1px solid var(--border); isolation:isolate; }
+.setup-card:hover { transform:translateY(-4px); border-color:var(--teal-dim); box-shadow:0 12px 24px -10px rgba(0,0,0,0.5); }
+.setup-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:-2; transition:transform 0.6s ease-out; }
+.setup-card:hover .setup-img { transform:scale(1.1); }
+.setup-img-overlay { position:absolute; inset:0; background:linear-gradient(0deg, rgba(8,8,8,0.92) 0%, transparent 65%); z-index:-1; }
+:host-context(html.light-mode) .setup-img-overlay { background:linear-gradient(0deg, rgba(20,20,20,0.85) 0%, transparent 60%); }
 .setup-content { position:absolute; bottom:16px; left:16px; z-index:2; }
-.setup-tag { font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--teal); font-weight:700; margin-bottom:4px; }
-.setup-name { font-family:'Playfair Display',serif; font-size:18px; color:var(--text); font-style:italic; }
+.setup-tag { font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:var(--teal2); font-weight:700; margin-bottom:4px; }
+.setup-name { font-family:'Playfair Display',serif; font-size:19px; color:#fff; font-style:italic; }
+:host-context(html.light-mode) .setup-name { color:#fff; }
 
 /* === PRODUCT DETAIL === */
 .product-section{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);}
@@ -675,6 +679,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
         </div>
         <div class="setup-grid">
           <div class="setup-card" (click)="activeTab='shop'; searchQuery='Shadow Coder';">
+            <img src="/products/shadow-coder-keyboard.png" class="setup-img" alt="Shadow Coder">
             <div class="setup-img-overlay"></div>
             <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(62,207,178,0.1), transparent);z-index:0;"></div>
             <div class="setup-content">
@@ -683,6 +688,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             </div>
           </div>
           <div class="setup-card" (click)="activeTab='shop'; searchQuery='Organic Creator';">
+            <img src="/products/walnut-vinyl-player.png" class="setup-img" alt="Organic Creator">
             <div class="setup-img-overlay"></div>
             <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(167,139,204,0.1), transparent);z-index:0;"></div>
             <div class="setup-content">
@@ -691,6 +697,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             </div>
           </div>
           <div class="setup-card" (click)="activeTab='shop'; searchQuery='Discovery';">
+            <img src="/products/heng-balance-magnetic-lamp.png" class="setup-img" alt="The Discovery">
             <div class="setup-img-overlay"></div>
             <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(224,112,112,0.1), transparent);z-index:0;"></div>
             <div class="setup-content">
@@ -699,6 +706,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             </div>
           </div>
           <div class="setup-card" (click)="activeTab='shop'; searchQuery='Global Nomad';">
+            <img src="/products/cyber-tech-pouch-pro.png" class="setup-img" alt="Global Nomad">
             <div class="setup-img-overlay"></div>
             <div style="position:absolute;inset:0;background:radial-gradient(circle at center, rgba(62,201,207,0.1), transparent);z-index:0;"></div>
             <div class="setup-content">
@@ -761,7 +769,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
           <div class="fsec">
             <div class="fsec-label">Brand <span>▾</span></div>
             <div class="fsec-body">
-              <div class="fcheck" *ngFor="let b of brands" [class.on]="b.checked" (click)="toggleBrand(b.name)">
+              <div class="fcheck" *ngFor="let b of brands; trackBy: trackBrandByName" [class.on]="b.checked" (click)="toggleBrand(b.name)">
                 <div class="fbox"><svg *ngIf="b.checked" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
                 <span class="flabel">{{b.name}}</span>
               </div>
@@ -1281,11 +1289,15 @@ export class ConsumerComponent implements OnInit {
     return 'tag-minimal';
   }
 
+  trackBrandByName(_index: number, b: { name: string; checked: boolean }): string {
+    return b.name;
+  }
+
   toggleBrand(name: string) {
     if (this.selectedBrands.includes(name)) {
       this.selectedBrands = this.selectedBrands.filter(b => b !== name);
     } else {
-      this.selectedBrands.push(name);
+      this.selectedBrands = [...this.selectedBrands, name];
     }
   }
 
@@ -1338,8 +1350,8 @@ export class ConsumerComponent implements OnInit {
     this.minPrice = 0;
     this.selectedRating = 0;
     this.selectedCat = 'All';
-    this.brands.forEach(b => b.checked = false);
-    this.categories.forEach(c => c.checked = false);
+    this.selectedBrands = [];
+    this.categories.forEach(c => (c.checked = false));
     this.availability = { inStock: false, onSale: false, newArrivals: false };
     this.searchQuery = '';
   }
