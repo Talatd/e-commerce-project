@@ -27,6 +27,7 @@ class ProductControllerTest {
     @Mock private ProductRepository productRepository;
     @Mock private ProductReviewRepository reviewRepository;
     @Mock private com.smartstore.backend.repository.UserRepository userRepository;
+    @Mock private com.smartstore.backend.repository.StoreRepository storeRepository;
     @InjectMocks private ProductController controller;
 
     @BeforeEach
@@ -41,7 +42,7 @@ class ProductControllerTest {
         var page = new PageImpl<>(List.of(p));
         when(productRepository.findByNameContainingIgnoreCase(eq("Laptop"), any(Pageable.class))).thenReturn(page);
 
-        ResponseEntity<?> response = controller.getAllProducts("Laptop", null, 0, 50);
+        ResponseEntity<?> response = controller.getAllProducts("Laptop", null, null, 0, 50);
 
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());

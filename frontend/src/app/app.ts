@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { AuthService, ProductService, ToastService } from './services';
 import { NexusLogoComponent } from './nexus-logo.component';
 import { ThemeService } from './theme.service';
+import { CONSUMER_NAV, isFullpageStandalonePath } from './consumer-nav.paths';
 
 @Component({
   selector: 'app-root',
@@ -12,6 +13,7 @@ import { ThemeService } from './theme.service';
   templateUrl: './app.html'
 })
 export class AppComponent implements OnInit {
+  readonly consumerNav = CONSUMER_NAV;
   auth = inject(AuthService);
   router = inject(Router);
   toastService = inject(ToastService);
@@ -20,10 +22,16 @@ export class AppComponent implements OnInit {
   private allProducts: any[] = [];
   activeToasts: any[] = [];
 
+  /** True when the main shell (glow navbar + optional sidebar) should wrap the outlet. */
+  get usesMainAppShell(): boolean {
+    return !isFullpageStandalonePath(this.router.url);
+  }
+
   get shouldShowGlobalSidebar(): boolean {
-    const hiddenRoutes = ['/login', '/admin', '/manager', '/consumer', '/settings'];
-    if (this.router.url === '/' || this.router.url === '/login') return false;
-    return !hiddenRoutes.some(r => this.router.url.startsWith(r));
+    const path = this.router.url.split('?')[0];
+    if (path === '/' || path === '/login') return false;
+    const hidden = ['/login', '/admin', '/manager', CONSUMER_NAV.shop, CONSUMER_NAV.settings];
+    return !hidden.some(r => path.startsWith(r));
   }
 
   ngOnInit() {
@@ -34,7 +42,7 @@ export class AppComponent implements OnInit {
       if (u && this.router.url === '/login') {
         if (u.role === 'ADMIN') this.router.navigate(['/admin']);
         else if (u.role === 'MANAGER') this.router.navigate(['/manager']);
-        else this.router.navigate(['/consumer']);
+        else this.router.navigate([CONSUMER_NAV.shop]);
       }
     });
 
@@ -49,7 +57,7 @@ export class AppComponent implements OnInit {
       my = e.clientY;
       
       const target = e.target as HTMLElement;
-      const isPointer = target.closest('button, .mag-pill, .npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link');
+      const isPointer = target.closest('button, .mag-pill, .npill, .nx-npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link');
       const computedPointer = getComputedStyle(target).cursor === 'pointer' || (target.parentElement && getComputedStyle(target.parentElement).cursor === 'pointer');
       
       if (isPointer || computedPointer) {

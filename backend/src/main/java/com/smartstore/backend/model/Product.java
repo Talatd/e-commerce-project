@@ -4,10 +4,12 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -19,6 +21,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Product {
 
     @Id
@@ -39,10 +42,17 @@ public class Product {
 
     private String imageUrl;
 
+    @Builder.Default
     private Integer stockQuantity = 0;
+    private String tags;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "store_id")
+    private Store store;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<RegionalInventory> regionalInventories;
+    @Builder.Default
+    private List<RegionalInventory> regionalInventories = new ArrayList<>();
 
     @Column(updatable = false)
     private LocalDateTime createdAt;

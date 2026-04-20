@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './services';
+import { CONSUMER_NAV } from './consumer-nav.paths';
 
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
@@ -25,7 +26,7 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
     if (!user) {
       router.navigate(['/login']);
     } else {
-      router.navigate(['/consumer']);
+      router.navigate([CONSUMER_NAV.shop]);
     }
     return false;
   };
