@@ -4,6 +4,8 @@ import com.smartstore.backend.model.Product;
 import com.smartstore.backend.model.ProductReview;
 import com.smartstore.backend.repository.ProductRepository;
 import com.smartstore.backend.repository.ProductReviewRepository;
+import com.smartstore.backend.ws.StockBroadcastService;
+import com.smartstore.backend.ws.StockEvent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class ProductController {
     private final com.smartstore.backend.repository.UserRepository userRepository;
     private final com.smartstore.backend.repository.StoreRepository storeRepository;
     private final com.smartstore.backend.service.DbInitializer dbInitializer;
+    private final StockBroadcastService stockBroadcastService;
 
     @GetMapping
     @Operation(summary = "Get all products", description = "Retrieves the product catalog, optionally paginated.")
@@ -195,6 +198,7 @@ public class ProductController {
     @Operation(summary = "Update product", description = "Updates an existing product's details and stock.")
     public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product productDetails) {
         Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
+        Integer prevStock = product.getStockQuantity();
         product.setName(productDetails.getName());
         product.setDescription(productDetails.getDescription());
         product.setBasePrice(productDetails.getBasePrice());
@@ -202,6 +206,17 @@ public class ProductController {
         product.setCategory(productDetails.getCategory());
         product.setImageUrl(productDetails.getImageUrl());
         Product saved = productRepository.save(Objects.requireNonNull(product));
+        Integer nextStock = saved.getStockQuantity();
+        if (prevStock != null && nextStock != null && !prevStock.equals(nextStock)) {
+            stockBroadcastService.publish(new StockEvent(
+                    saved.getProductId(),
+                    nextStock,
+                    nextStock - prevStock,
+                    "admin_update",
+                    "admin",
+                    System.currentTimeMillis()
+            ));
+        }
         return ResponseEntity.ok(saved);
     }
 

@@ -48,6 +48,10 @@
             "polyfills": [
               "zone.js"
             ],
+            "allowedCommonJsDependencies": [
+              "@stomp/stompjs",
+              "sockjs-client"
+            ],
             "assets": [
               {
                 "glob": "**/*",
@@ -69,12 +73,12 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "550kB",
+                  "maximumWarning": "650kB",
                   "maximumError": "1.25MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "48kB",
+                  "maximumWarning": "70kB",
                   "maximumError": "96kB"
                 }
               ],

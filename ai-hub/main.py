@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import json as json_module
 import traceback
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 from agents import ai_graph
 
@@ -291,7 +291,7 @@ async def process_query_stream(request: ChatRequest):
             request.query, session["history"], sid, request.user_id, request.role
         )
 
-        step_names = {
+        step_messages = {
             "guardrails": "Checking scope...",
             "sql": "Generating SQL...",
             "execute": "Executing query...",
@@ -300,30 +300,86 @@ async def process_query_stream(request: ChatRequest):
             "visualize": "Visualizing...",
         }
 
-        yield f"data: {json_module.dumps({'type': 'step', 'step': 'start', 'message': 'Thinking...'})}\n\n"
+        def _sse(payload: Dict[str, Any]) -> str:
+            return f"data: {json_module.dumps(payload)}\n\n"
 
-        try:
-            # For simplicity in stream, we run invoke but could use .stream() for more granularity
-            # Updating current_state as we go if we used .stream()
-            final_state = await asyncio.to_thread(ai_graph.invoke, initial_state)
-            
-            # Since we modernized agents.py, the stream usage might need adjustment, 
-            # for now we send a single completion event or use a simple loop if needed.
-            
-            payload = {
-                "type": "final",
-                "success": True,
-                "session_id": sid,
-                "query": request.query,
-                "response": final_state.get("response", ""),
-                "sql": final_state.get("sql_query", ""),
-                "data": final_state.get("results", []),
-                "visualization": final_state.get("visualization_code", ""),
-            }
-            yield f"data: {json_module.dumps(payload)}\n\n"
-        except Exception as e:
-            traceback.print_exc()
-            yield f"data: {json_module.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        def _merge_state(current: Dict[str, Any], update: Any) -> Dict[str, Any]:
+            if isinstance(update, dict):
+                merged = dict(current)
+                merged.update(update)
+                return merged
+            return current
+
+        yield _sse({"type": "step", "step": "start", "message": "Thinking...", "ts": int(time.time() * 1000)})
+
+        loop = asyncio.get_running_loop()
+        q: asyncio.Queue = asyncio.Queue()
+        stop_sentinel = object()
+
+        def _stream_runner():
+            current_state: Dict[str, Any] = dict(initial_state)
+            last_step: Optional[str] = None
+            try:
+                if hasattr(ai_graph, "stream"):
+                    for event in ai_graph.stream(initial_state):
+                        # event shape (langgraph 0.0.x): {"node_name": <partial_state_or_full_state>}
+                        if isinstance(event, dict) and len(event) > 0:
+                            node = next(iter(event.keys()))
+                            payload = event.get(node)
+                            if node != last_step:
+                                last_step = node
+                                asyncio.run_coroutine_threadsafe(
+                                    q.put(
+                                        {"kind": "step", "step": node, "message": step_messages.get(node, "Working...")}
+                                    ),
+                                    loop,
+                                )
+                            if isinstance(payload, dict):
+                                current_state = _merge_state(current_state, payload)
+                    asyncio.run_coroutine_threadsafe(q.put({"kind": "final", "state": current_state}), loop)
+                else:
+                    # Fallback: no stream support
+                    final_state = ai_graph.invoke(initial_state)
+                    if isinstance(final_state, dict):
+                        current_state = _merge_state(current_state, final_state)
+                    asyncio.run_coroutine_threadsafe(q.put({"kind": "final", "state": current_state}), loop)
+            except Exception as e:
+                traceback.print_exc()
+                asyncio.run_coroutine_threadsafe(q.put({"kind": "error", "message": str(e)}), loop)
+            finally:
+                asyncio.run_coroutine_threadsafe(q.put(stop_sentinel), loop)
+
+        # Start streaming in background thread (keeps async generator responsive)
+        threading.Thread(target=_stream_runner, daemon=True).start()
+
+        while True:
+            item = await q.get()
+            if item is stop_sentinel:
+                break
+
+            if isinstance(item, dict) and item.get("kind") == "step":
+                step = item.get("step") or "step"
+                yield _sse({"type": "step", "step": step, "message": item.get("message", ""), "ts": int(time.time() * 1000)})
+                continue
+
+            if isinstance(item, dict) and item.get("kind") == "error":
+                yield _sse({"type": "error", "message": item.get("message", "Unknown error")})
+                continue
+
+            if isinstance(item, dict) and item.get("kind") == "final":
+                final_state = item.get("state") if isinstance(item.get("state"), dict) else {}
+                payload = {
+                    "type": "final",
+                    "success": True,
+                    "session_id": sid,
+                    "query": request.query,
+                    "response": final_state.get("response", ""),
+                    "sql": final_state.get("sql_query", ""),
+                    "data": final_state.get("results", []),
+                    "visualization": final_state.get("visualization_code", ""),
+                }
+                yield _sse(payload)
+                continue
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

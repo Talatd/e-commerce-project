@@ -11,6 +11,8 @@ import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.ProductRepository;
 import com.smartstore.backend.repository.UserRepository;
 import com.smartstore.backend.service.MailService;
+import com.smartstore.backend.ws.StockBroadcastService;
+import com.smartstore.backend.ws.StockEvent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class OrderController {
     private final UserRepository userRepository;
     private final MailService mailService;
     private final CouponRepository couponRepository;
+    private final StockBroadcastService stockBroadcastService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -103,8 +106,17 @@ public class OrderController {
                                     + " (available: " + product.getStockQuantity()
                                     + ", requested: " + item.getQuantity() + ")");
                 }
-                product.setStockQuantity(stock - item.getQuantity());
+                int newStock = stock - item.getQuantity();
+                product.setStockQuantity(newStock);
                 productRepository.save(product);
+                stockBroadcastService.publish(new StockEvent(
+                        product.getProductId(),
+                        newStock,
+                        -item.getQuantity(),
+                        "order",
+                        buyer.getEmail(),
+                        System.currentTimeMillis()
+                ));
                 if (item.getPriceAtPurchase() == null) {
                     item.setPriceAtPurchase(product.getBasePrice());
                 }

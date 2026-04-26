@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { HttpBackend, HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, Subject, of, map, catchError } from 'rxjs';
 import { apiRoot } from '../environments/environment';
+import { Client, StompSubscription } from '@stomp/stompjs';
+import * as SockJS from 'sockjs-client';
 
 const API_V1 = apiRoot();
 
@@ -163,6 +165,81 @@ export class AiService {
 
   clearSession() {
     this.sessionId = null;
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class StockSocketService {
+  private client: Client | null = null;
+  private connected = false;
+  private connecting = false;
+  private subs = new Map<string, StompSubscription>();
+  private wsUrl = API_V1.replace(/\/api\/v1\/?$/i, '') + '/ws';
+
+  private ensureConnected() {
+    if (this.connected || this.connecting) return;
+    this.connecting = true;
+
+    const c = new Client({
+      reconnectDelay: 2500,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      webSocketFactory: () => {
+        const SockCtor = (SockJS as any).default ?? (SockJS as any);
+        return new SockCtor(this.wsUrl);
+      },
+      debug: () => { /* keep silent */ },
+    });
+
+    c.onConnect = () => {
+      this.connected = true;
+      this.connecting = false;
+    };
+
+    c.onStompError = () => {
+      this.connected = false;
+    };
+
+    c.onWebSocketClose = () => {
+      this.connected = false;
+    };
+
+    this.client = c;
+    c.activate();
+  }
+
+  subscribeProductStock(productId: number, onEvent: (evt: any) => void): () => void {
+    if (!productId || !Number.isFinite(Number(productId))) return () => {};
+    this.ensureConnected();
+    const topic = `/topic/stock.${productId}`;
+
+    const trySub = () => {
+      if (!this.client || !this.connected) return false;
+      if (this.subs.has(topic)) return true;
+      const sub = this.client.subscribe(topic, (m) => {
+        try {
+          onEvent(JSON.parse(m.body || '{}'));
+        } catch {
+          onEvent({ raw: m.body });
+        }
+      });
+      this.subs.set(topic, sub);
+      return true;
+    };
+
+    // If not connected yet, retry briefly (client has reconnectDelay too).
+    if (!trySub()) {
+      const t = setInterval(() => {
+        if (trySub()) clearInterval(t);
+      }, 250);
+      setTimeout(() => clearInterval(t), 6000);
+    }
+
+    return () => {
+      const s = this.subs.get(topic);
+      try { s?.unsubscribe(); } catch {}
+      this.subs.delete(topic);
+    };
   }
 }
 

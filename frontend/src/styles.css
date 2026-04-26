@@ -61,6 +61,35 @@ body {
   transition: background 0.7s cubic-bezier(0.4,0,0.2,1);
 }
 
+/* Skeleton shimmer primitives */
+.skel{
+  position:relative;
+  overflow:hidden;
+  border-radius:12px;
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--glass2) 70%, transparent) 0%,
+    color-mix(in srgb, var(--glass) 80%, transparent) 35%,
+    color-mix(in srgb, var(--glass2) 70%, transparent) 70%
+  );
+  background-size:200% 100%;
+  animation:skel-shimmer 1.2s ease-in-out infinite;
+}
+.skel::after{
+  content:"";
+  position:absolute;inset:0;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  transform:translateX(-60%);
+  animation:skel-sweep 1.2s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes skel-shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+@keyframes skel-sweep{0%{transform:translateX(-60%);}100%{transform:translateX(60%);}}
+.skel-line{height:10px;border-radius:999px;}
+.skel-line.sm{height:8px;opacity:0.9;}
+.skel-line.lg{height:14px;}
+.skel-img{border-radius:14px;}
+.skel-card{border-radius:16px;border:1px solid var(--border);background:var(--glass);overflow:hidden;}
+
 .wrap{
   display:flex;flex-direction:column;
   height:100vh;

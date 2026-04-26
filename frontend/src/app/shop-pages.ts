@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ViewChild, ElementRef, HostListener, OnDestr
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
-import { ProductService, OrderService, AuthService, ToastService, ShipmentService, CouponService } from './services';
+import { ProductService, OrderService, AuthService, ToastService, ShipmentService, CouponService, StockSocketService } from './services';
 import { NexusLogoComponent } from './nexus-logo.component';
 import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
 import { ConsumerStandaloneTopNavComponent } from './consumer-standalone-top-nav.component';
@@ -817,7 +817,27 @@ export class CartComponent implements OnInit, OnDestroy {
         <a class="nx-nbtn" [routerLink]="consumerNav.shop" [queryParams]="{ tab: 'shop' }">← Shop</a>
       </app-consumer-standalone-top-nav>
 
-    <div class="app-content" *ngIf="!detailReady" style="padding:48px 24px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>
+    <div class="app-content" *ngIf="!detailReady" style="padding:24px;">
+      <div class="gcard" style="padding:18px;margin-bottom:14px;">
+        <div class="skel skel-line sm" style="width:30%;margin-bottom:10px;"></div>
+        <div class="skel skel-line" style="width:58%;margin-bottom:6px;"></div>
+        <div class="skel skel-line sm" style="width:38%;"></div>
+      </div>
+      <div class="row2 nx-product-grid">
+        <div class="gcard nx-product-media" style="padding:14px;">
+          <div class="skel skel-img" style="width:100%;height:320px;"></div>
+        </div>
+        <div class="gcard" style="padding:18px;">
+          <div class="skel skel-line sm" style="width:24%;margin-bottom:10px;"></div>
+          <div class="skel skel-line lg" style="width:64%;margin-bottom:16px;"></div>
+          <div class="skel skel-line sm" style="width:46%;margin-bottom:10px;"></div>
+          <div class="skel skel-line" style="width:90%;margin-bottom:8px;"></div>
+          <div class="skel skel-line" style="width:84%;margin-bottom:8px;"></div>
+          <div class="skel skel-line" style="width:76%;margin-bottom:18px;"></div>
+          <div class="skel skel-line lg" style="width:52%;"></div>
+        </div>
+      </div>
+    </div>
 
     <div class="app-content" *ngIf="detailReady && loadError" style="padding:48px 24px;text-align:center;color:var(--text3);">
       <p style="margin-bottom:16px;">Product not found.</p>
@@ -949,7 +969,7 @@ export class CartComponent implements OnInit, OnDestroy {
     .nx-product-ph { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:48px; color:var(--text3); font-size:12px; }
   `]
 })
-export class ProductDetailComponent implements OnInit {
+export class ProductDetailComponent implements OnInit, OnDestroy {
   readonly consumerNav = CONSUMER_NAV;
   product: any = null;
   reviews: any[] = [];
@@ -958,6 +978,8 @@ export class ProductDetailComponent implements OnInit {
   route = inject(ActivatedRoute);
   productService = inject(ProductService);
   toast = inject(ToastService);
+  stockSocket = inject(StockSocketService);
+  private unsubStock: (() => void) | null = null;
 
   get avgRating(): string {
     if (this.reviews.length === 0) return '0';
@@ -1001,6 +1023,8 @@ export class ProductDetailComponent implements OnInit {
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       this.detailReady = false;
+      try { this.unsubStock?.(); } catch {}
+      this.unsubStock = null;
       if (!id) {
         this.product = null;
         this.loadError = true;
@@ -1014,6 +1038,16 @@ export class ProductDetailComponent implements OnInit {
           this.product = found || null;
           this.loadError = !found;
           this.detailReady = true;
+
+          if (this.product?.productId) {
+            const pid = Number(this.product.productId);
+            this.unsubStock = this.stockSocket.subscribeProductStock(pid, (evt: any) => {
+              const next = evt?.stockQuantity;
+              if (this.product && next != null && Number.isFinite(Number(next))) {
+                this.product.stockQuantity = Math.max(0, Math.floor(Number(next)));
+              }
+            });
+          }
         },
         error: () => {
           this.product = null;
@@ -1026,6 +1060,11 @@ export class ProductDetailComponent implements OnInit {
         error: () => (this.reviews = [])
       });
     });
+  }
+
+  ngOnDestroy() {
+    try { this.unsubStock?.(); } catch {}
+    this.unsubStock = null;
   }
 
   onProdCardMove(ev: MouseEvent) {
@@ -1098,7 +1137,21 @@ export class ProductDetailComponent implements OnInit {
     <div class="app-content nx-orders-page">
 
       <!-- PURCHASE HISTORY TABLE -->
-      <div class="gcard" style="margin-bottom:24px;" *ngIf="myOrders.length > 0">
+      <div class="gcard" style="margin-bottom:24px;" *ngIf="ordersLoading">
+        <div class="gc-head">
+          <div class="gc-title"><div class="skel skel-line sm" style="width:140px;"></div></div>
+          <div class="gc-link"><div class="skel skel-line sm" style="width:70px;"></div></div>
+        </div>
+        <div class="gc-body" style="padding:16px;">
+          <div class="skel skel-line" style="width:55%;margin-bottom:10px;"></div>
+          <div class="skel skel-line sm" style="width:85%;margin-bottom:8px;"></div>
+          <div class="skel skel-line sm" style="width:82%;margin-bottom:8px;"></div>
+          <div class="skel skel-line sm" style="width:88%;margin-bottom:8px;"></div>
+          <div class="skel skel-line sm" style="width:78%;"></div>
+        </div>
+      </div>
+
+      <div class="gcard" style="margin-bottom:24px;" *ngIf="!ordersLoading && myOrders.length > 0">
         <div class="gc-head"><div class="gc-title">Purchase History</div><div class="gc-link">{{myOrders.length}} orders</div></div>
         <div class="gc-body" style="padding:0;">
           <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -1127,7 +1180,7 @@ export class ProductDetailComponent implements OnInit {
         </div>
       </div>
 
-      <div *ngIf="myOrders.length === 0" class="nx-orders-empty">
+      <div *ngIf="!ordersLoading && myOrders.length === 0" class="nx-orders-empty">
         <div class="nx-orders-empty-icon" aria-hidden="true">📦</div>
         <h2 class="nx-orders-empty-title">No orders yet</h2>
         <p class="nx-orders-empty-sub">When you place an order, your purchase history and live tracking will show up here.</p>
@@ -1135,7 +1188,7 @@ export class ProductDetailComponent implements OnInit {
       </div>
 
       <!-- SHIPMENT TRACKING (Dynamic per order) -->
-      <div class="nx-order-tracking-card" *ngIf="selectedOrder">
+      <div class="nx-order-tracking-card" *ngIf="!ordersLoading && selectedOrder">
         <div class="nx-order-tracking-head">
           <div>
             <div class="nx-order-tracking-kicker">Live tracking</div>
@@ -1159,7 +1212,7 @@ export class ProductDetailComponent implements OnInit {
         </div>
       </div>
 
-      <div class="row2" *ngIf="selectedOrder">
+      <div class="row2" *ngIf="!ordersLoading && selectedOrder">
         <div class="gcard" style="padding:22px;">
           <h3 style="font-family:'Playfair Display',serif;font-weight:400;font-style:italic;margin-bottom:20px;">Shipment Timeline</h3>
           <div class="timeline nx-order-timeline">
@@ -1591,6 +1644,7 @@ export class OrdersComponent implements OnInit {
   reviewProductId: number | null = null;
   reviewModalTitle = 'Rate your purchase';
   reviewModalSub = 'Share your experience';
+  ordersLoading = true;
 
   /** Order + shipment lifecycle (aligned with backend shipment statuses where applicable). */
   private readonly trackingSteps = ['PENDING', 'PREPARING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED'];
@@ -1613,12 +1667,22 @@ export class OrdersComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.orderService.getMyOrders().subscribe(orders => {
-      this.myOrders = orders.sort((a: any, b: any) =>
-        new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
-      if (this.myOrders.length > 0) {
-        this.selectedOrderId = this.myOrders[0].orderId;
-        this.onOrderSelect();
+    this.ordersLoading = true;
+    this.orderService.getMyOrders().subscribe({
+      next: (orders: any[]) => {
+        this.myOrders = (orders || []).sort((a: any, b: any) =>
+          new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+        if (this.myOrders.length > 0) {
+          this.selectedOrderId = this.myOrders[0].orderId;
+          this.onOrderSelect();
+        }
+        this.ordersLoading = false;
+      },
+      error: () => {
+        this.myOrders = [];
+        this.selectedOrder = null;
+        this.selectedOrderId = null;
+        this.ordersLoading = false;
       }
     });
   }

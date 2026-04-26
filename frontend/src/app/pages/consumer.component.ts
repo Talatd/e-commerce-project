@@ -395,13 +395,13 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .gauge-score{font-family:'Playfair Display',serif;font-size:36px;color:var(--green);line-height:1;}
 .gauge-sub{font-size:11px;color:var(--green);font-weight:500;}
 .gauge-bar{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;}
-.gauge-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--red),var(--amber),var(--green));}
+.gauge-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--red),var(--amber),var(--green));transition:width 900ms cubic-bezier(0.2,0.95,0.2,1);will-change:width;}
 .sentiment-bars{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;}
 .sb-row{display:flex;align-items:center;gap:10px;}
 .sb-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .sb-label-s{font-size:12px;font-weight:500;min-width:80px;}
 .sb-track{flex:1;height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;}
-.sb-fill{height:100%;border-radius:3px;}
+.sb-fill{height:100%;border-radius:3px;transition:width 900ms cubic-bezier(0.2,0.95,0.2,1);will-change:width;}
 .sb-pct{font-family:'JetBrains Mono',monospace;font-size:11px;min-width:32px;text-align:right;}
 .sb-count{font-size:10px;color:var(--text3);}
 .topics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -437,80 +437,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .rs-neutral{background:var(--glass2);color:var(--text2);border:1px solid var(--border);}
 .rev-kw{font-size:10px;padding:2px 8px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--text3);}
 
-/* AI ASSISTANT / CHATBOT */
-.chat-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.01);flex-shrink:0;}
-.ch-left{display:flex;align-items:center;gap:12px;}
-.ai-avatar{width:38px;height:38px;border-radius:50%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.25);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;}
-.ai-online{position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:var(--green);border:2px solid var(--bg);box-shadow:0 0 5px rgba(62,201,138,0.4);}
-.ch-name{font-size:14px;font-weight:500;color:var(--text);}
-.ch-status{font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px;}
-.ch-status-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:chatpulse 2s infinite;}
-@keyframes chatpulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
-.ch-right{display:flex;gap:7px;}
-.ch-btn{padding:6px 14px;border-radius:20px;font-size:11.5px;cursor:pointer;background:var(--glass);border:1px solid var(--border);color:var(--text2);transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;}
-.ch-btn:hover{color:var(--text);}
-.ai-badge{display:flex;align-items:center;gap:5px;background:rgba(62,207,178,0.06);border:1px solid rgba(62,207,178,0.15);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--teal2);}
-.messages-area{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
-.messages-area::-webkit-scrollbar{width:2px;}
-.messages-area::-webkit-scrollbar-thumb{background:var(--border2);}
-.msg-user{display:flex;justify-content:flex-end;}
-.msg-user-bubble{max-width:65%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);border-radius:16px 16px 4px 16px;padding:11px 15px;font-size:13.5px;color:var(--text);line-height:1.55;}
-.msg-ai{display:flex;align-items:flex-start;gap:10px;}
-.msg-ai-av{width:30px;height:30px;border-radius:50%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
-.msg-ai-body{flex:1;max-width:85%;}
-.msg-ai-name{font-size:10px;color:var(--text3);margin-bottom:5px;letter-spacing:0.04em;}
-.msg-ai-bubble{background:var(--glass);border:1px solid var(--border2);border-radius:4px 16px 16px 16px;padding:13px 16px;font-size:13.5px;color:var(--text2);line-height:1.65;}
-.msg-ai-bubble strong{color:var(--text);}
-.msg-time{font-size:10px;color:var(--text3);margin-top:4px;text-align:right;}
-.agent-steps{background:rgba(62,207,178,0.04);border:1px solid rgba(62,207,178,0.12);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
-.as-title{font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
-.as-dot{width:5px;height:5px;border-radius:50%;background:var(--teal);animation:chatpulse 1.5s infinite;}
-.step-list{display:flex;flex-direction:column;gap:7px;}
-.step-item{display:flex;align-items:center;gap:9px;font-size:11.5px;}
-.step-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;}
-.si-done{background:var(--green-dim);border:1px solid rgba(62,201,138,0.2);color:var(--green);}
-.si-active{background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);}
-.si-active-inner{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:chatpulse 1s infinite;}
-.step-label{color:var(--text2);}
-.step-label.done{color:var(--text);}
-.step-label.active{color:var(--teal2);}
-.sql-block{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin:10px 0;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text3);line-height:1.7;overflow-x:auto;white-space:pre-wrap;}
-.result-table-wrap{margin:10px 0;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
-.result-table{width:100%;border-collapse:collapse;font-size:12px;}
-.result-table th{padding:8px 12px;font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);text-align:left;font-weight:400;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border);}
-.result-table td{padding:8px 12px;color:var(--text2);border-bottom:1px solid rgba(255,255,255,0.03);}
-.result-table tr:last-child td{border:none;}
-.result-table tr:hover td{background:rgba(255,255,255,0.02);}
-.td-name{color:var(--text);font-weight:500;}
-.td-price-c{font-family:'Playfair Display',serif;font-size:13px;color:var(--text);}
-.td-score{color:var(--green);font-family:'JetBrains Mono',monospace;}
-.prod-chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0;}
-.prod-chip{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border2);cursor:pointer;transition:border-color 0.15s;}
-.prod-chip:hover{border-color:rgba(62,207,178,0.2);}
-.pc-chip-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.pc-chip-name{font-size:12px;font-weight:500;color:var(--text);}
-.pc-chip-price{font-family:'Playfair Display',serif;font-size:12px;color:var(--teal2);}
-.typing-ind{display:flex;align-items:center;gap:10px;}
-.typing-av{width:30px;height:30px;border-radius:50%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.typing-dots{display:flex;gap:4px;background:var(--glass);border:1px solid var(--border2);border-radius:20px;padding:10px 14px;}
-.td-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:tdot 1.2s infinite;}
-.td-dot:nth-child(2){animation-delay:0.2s;}
-.td-dot:nth-child(3){animation-delay:0.4s;}
-@keyframes tdot{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-5px);opacity:1;}}
-.suggestions{display:flex;gap:7px;padding:12px 24px;border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;}
-.suggestions::-webkit-scrollbar{display:none;}
-.sug{padding:6px 14px;border-radius:20px;font-size:12px;color:var(--text2);background:var(--glass);border:1px solid var(--border);cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0;}
-.sug:hover{background:var(--glass2);color:var(--text);border-color:var(--border2);}
-.chat-input-wrap{padding:14px 24px;border-top:1px solid var(--border);background:rgba(8,8,8,0.6);flex-shrink:0;}
-.chat-input-box{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:14px;padding:10px 14px;transition:border-color 0.2s,box-shadow 0.2s;}
-.chat-input-box:focus-within{border-color:rgba(62,207,178,0.3);box-shadow:0 0 0 3px rgba(62,207,178,0.05);}
-.chat-input-box input{flex:1;background:transparent;border:none;outline:none;font-size:13.5px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;caret-color:var(--teal);}
-.chat-input-box input::placeholder{color:var(--text3);}
-.send-btn{width:34px;height:34px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0;transition:all 0.15s;}
-.send-btn:hover{background:var(--teal2);transform:scale(1.05);}
-.input-meta{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 0;}
-.im-hint{font-size:10.5px;color:var(--text3);}
-.im-counter{font-size:10.5px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
+/* (moved) AI assistant/chat + flow styles → src/styles.css */
 
 /* Light mode chat polish */
 :host-context(html.light-mode) .chat-header{
@@ -934,7 +861,23 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             <div class="rb-sort">Relevance <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="#6A8A84" stroke-width="1.1" stroke-linecap="round"/></svg></div>
           </div>
           <div class="prod-grid">
-            <div class="pcard" *ngFor="let p of filteredProducts" (click)="selectProduct(p)">
+            <ng-container *ngIf="productsLoading">
+              <div class="pcard skel-card" *ngFor="let _ of [1,2,3,4,5,6,7,8]">
+                <div class="pc-img" style="padding:14px;">
+                  <div class="skel skel-img" style="width:100%;height:170px;"></div>
+                </div>
+                <div class="pc-body" style="display:flex;flex-direction:column;gap:10px;">
+                  <div class="skel skel-line sm" style="width:42%;"></div>
+                  <div class="skel skel-line" style="width:82%;"></div>
+                  <div class="skel skel-line sm" style="width:58%;"></div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+                    <div class="skel skel-line lg" style="width:34%;"></div>
+                    <div class="skel skel-line sm" style="width:26%;"></div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+            <div class="pcard" *ngFor="let p of filteredProducts" (click)="selectProduct(p)" [style.display]="productsLoading ? 'none' : ''">
               <div class="pc-img" style="background:rgba(62,207,178,0.04);">
                 <div class="pc-img-glow" style="background:radial-gradient(circle,rgba(62,207,178,0.09),transparent 70%)"></div>
                 <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="pc-img-photo" [alt]="p.name"/>
@@ -1047,26 +990,26 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             <div class="gauge-label">Overall Sentiment</div>
             <div class="gauge-score">{{sentiments[selectedProduct.productId].averageScore * 100 | number:'1.0-0'}}%</div>
             <div class="gauge-sub">{{sentiments[selectedProduct.productId].averageScore > 0.7 ? 'Very Positive' : 'Mixed'}}</div>
-            <div class="gauge-bar"><div class="gauge-fill" [style.width.%]="sentiments[selectedProduct.productId].averageScore * 100"></div></div>
+            <div class="gauge-bar"><div class="gauge-fill" [style.width.%]="(sentimentAnim[selectedProduct.productId]?.gauge || 0)"></div></div>
             <div style="font-size:10px;color:var(--text3);margin-top:4px;">{{sentiments[selectedProduct.productId].totalReviews || 0}} reviews analyzed</div>
           </div>
           <div class="sentiment-bars">
             <div class="sb-row">
               <div class="sb-icon" style="background:var(--green-dim);border:1px solid var(--green-border);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="#3EC98A" stroke-width="1.1"/></svg></div>
               <div class="sb-label-s" style="color:var(--green);">Positive</div>
-              <div class="sb-track"><div class="sb-fill" [style.width.%]="(sentiments[selectedProduct.productId].positivePercent || 78)" style="background:var(--green);"></div></div>
+              <div class="sb-track"><div class="sb-fill" [style.width.%]="(sentimentAnim[selectedProduct.productId]?.pos || 0)" style="background:var(--green);"></div></div>
               <div class="sb-pct" style="color:var(--green);">{{sentiments[selectedProduct.productId].positivePercent || 78}}%</div>
             </div>
             <div class="sb-row">
               <div class="sb-icon" style="background:var(--glass2);border:1px solid var(--border2);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="#6A8A84" stroke-width="1.1"/></svg></div>
               <div class="sb-label-s" style="color:var(--text2);">Neutral</div>
-              <div class="sb-track"><div class="sb-fill" [style.width.%]="(sentiments[selectedProduct.productId].neutralPercent || 14)" style="background:var(--text2);"></div></div>
+              <div class="sb-track"><div class="sb-fill" [style.width.%]="(sentimentAnim[selectedProduct.productId]?.neu || 0)" style="background:var(--text2);"></div></div>
               <div class="sb-pct" style="color:var(--text2);">{{sentiments[selectedProduct.productId].neutralPercent || 14}}%</div>
             </div>
             <div class="sb-row">
               <div class="sb-icon" style="background:var(--red-dim);border:1px solid var(--red-border);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="#E07070" stroke-width="1.1"/></svg></div>
               <div class="sb-label-s" style="color:var(--red);">Negative</div>
-              <div class="sb-track"><div class="sb-fill" [style.width.%]="(sentiments[selectedProduct.productId].negativePercent || 8)" style="background:var(--red);"></div></div>
+              <div class="sb-track"><div class="sb-fill" [style.width.%]="(sentimentAnim[selectedProduct.productId]?.neg || 0)" style="background:var(--red);"></div></div>
               <div class="sb-pct" style="color:var(--red);">{{sentiments[selectedProduct.productId].negativePercent || 8}}%</div>
             </div>
           </div>
@@ -1216,6 +1159,22 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
           </div>
         </div>
 
+        <!-- LIVE FLOW (LangGraph steps) -->
+        <div class="ai-flow-strip" *ngIf="isTyping">
+          <div class="ai-flow">
+            <ng-container *ngFor="let n of aiFlowOrder; let idx = index">
+              <div class="af-node" [ngClass]="aiFlowClass(n)">
+                <span class="af-dot"></span>
+                {{aiFlowLabel(n)}}
+              </div>
+              <span class="af-arrow" *ngIf="idx < aiFlowOrder.length - 1">→</span>
+            </ng-container>
+            <div class="af-meta" *ngIf="aiFlowActiveStep">
+              Active <b>{{aiFlowLabel(aiFlowActiveStep)}}</b>
+            </div>
+          </div>
+        </div>
+
         <!-- MESSAGES -->
         <div class="messages-area" #messagesContainer>
           <ng-container *ngFor="let m of chatMessages; let i = index">
@@ -1350,8 +1309,10 @@ export class ConsumerComponent implements OnInit, OnDestroy {
   filtersOpen = true;
   selectedProduct: any = null;
   products: any[] = [];
+  productsLoading = true;
   reviews: any[] = [];
   sentiments: any = {};
+  sentimentAnim: Record<number, { gauge: number; pos: number; neu: number; neg: number }> = {};
   showReviewForm = false;
   prompt = '';
   chatMessages: any[] = [];
@@ -1456,8 +1417,10 @@ export class ConsumerComponent implements OnInit, OnDestroy {
       time: this.getTimeNow()
     });
 
-    this.productService.getProducts().subscribe(res => {
-      this.products = res.map((p: any) => {
+    this.productsLoading = true;
+    this.productService.getProducts().subscribe({
+      next: (res) => {
+        this.products = (res || []).map((p: any) => {
         // Deterministically apply discount to every 3rd or 4th product based on ID, and any product containing 'Gaming' or 'MacBook'
         if (p.productId % 3 === 0 || p.productId % 4 === 0 || p.name.includes('Gaming')) {
           const disc = (p.productId % 3 === 0) ? 0.8 : (p.productId % 4 === 0 ? 0.85 : 0.75);
@@ -1468,10 +1431,17 @@ export class ConsumerComponent implements OnInit, OnDestroy {
           p.isOnSale = false;
         }
         return p;
-      });
-      const cats = Array.from(new Set(this.products.map(p => p.category)));
-      this.categories = cats.map((c: any) => ({ name: c, checked: false }));
-      this.updateSearchSuggestions(this.searchQuery || '');
+        });
+        const cats = Array.from(new Set(this.products.map(p => p.category)));
+        this.categories = cats.map((c: any) => ({ name: c, checked: false }));
+        this.updateSearchSuggestions(this.searchQuery || '');
+        this.productsLoading = false;
+      },
+      error: () => {
+        this.products = [];
+        this.categories = [];
+        this.productsLoading = false;
+      }
     });
 
     this.searchInput$
@@ -1799,6 +1769,20 @@ export class ConsumerComponent implements OnInit, OnDestroy {
   checkSentiment(p: any) {
     this.productService.getSentiment(p.productId).subscribe(res => {
       this.sentiments[p.productId] = res;
+      const pid = Number(p.productId);
+      const avg = Number(res?.averageScore ?? 0);
+      const pos = Number(res?.positivePercent ?? 78);
+      const neu = Number(res?.neutralPercent ?? 14);
+      const neg = Number(res?.negativePercent ?? 8);
+      this.sentimentAnim[pid] = { gauge: 0, pos: 0, neu: 0, neg: 0 };
+      setTimeout(() => {
+        this.sentimentAnim[pid] = {
+          gauge: Math.max(0, Math.min(100, Math.round(avg * 100))),
+          pos: Math.max(0, Math.min(100, Math.round(pos))),
+          neu: Math.max(0, Math.min(100, Math.round(neu))),
+          neg: Math.max(0, Math.min(100, Math.round(neg))),
+        };
+      }, 0);
     });
   }
 
@@ -1838,6 +1822,41 @@ export class ConsumerComponent implements OnInit, OnDestroy {
   }
 
   streamSteps: string[] = [];
+  aiFlowOrder: string[] = ['guardrails', 'sql', 'execute', 'analyze', 'visualize', 'done'];
+  aiFlowActiveStep: string | null = null;
+  aiFlowDone: string[] = [];
+  aiFlowErrorStep: string | null = null;
+
+  aiFlowLabel(id: string): string {
+    if (id === 'guardrails') return 'Guardrails';
+    if (id === 'sql') return 'SQL';
+    if (id === 'execute') return 'Execute';
+    if (id === 'analyze') return 'Analyze';
+    if (id === 'visualize') return 'Visualize';
+    if (id === 'done') return 'Done';
+    return (id || '').toString();
+  }
+
+  private normFlowStep(raw: any): string | null {
+    const s = (raw || '').toString().trim().toLowerCase();
+    if (!s) return null;
+    if (s === 'start') return null;
+    if (s === 'end' || s === '__end__' || s === 'done') return 'done';
+    if (s.includes('guard')) return 'guardrails';
+    if (s.includes('sql')) return 'sql';
+    if (s.includes('exec')) return 'execute';
+    if (s.includes('anal')) return 'analyze';
+    if (s.includes('vis')) return 'visualize';
+    if (s.includes('error')) return 'error';
+    return s;
+  }
+
+  aiFlowClass(id: string): any {
+    const isDone = this.aiFlowDone.includes(id);
+    const isActive = this.aiFlowActiveStep === id && !this.aiFlowErrorStep;
+    const isError = this.aiFlowErrorStep === id;
+    return { done: isDone, active: isActive, error: isError };
+  }
 
   private buildAltSuggestion(res: any): string | null {
     const guardrail = (res?.guardrail || '').toString().toUpperCase();
@@ -1861,6 +1880,9 @@ export class ConsumerComponent implements OnInit, OnDestroy {
     this.prompt = '';
     this.isTyping = true;
     this.streamSteps = [];
+    this.aiFlowDone = [];
+    this.aiFlowActiveStep = null;
+    this.aiFlowErrorStep = null;
     if (!this.auth.currentUserValue) {
       this.isTyping = false;
       this.chatMessages.push({
@@ -1871,10 +1893,31 @@ export class ConsumerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.ai.query(userMsg, this.history).subscribe({
-      next: (res: any) => {
+    let lastFlow: string | null = null;
+    this.ai.queryStream(
+      userMsg,
+      this.history,
+      (stepEvt: any) => {
+        const norm = this.normFlowStep(stepEvt?.step);
+        if (norm && norm !== 'error') {
+          if (lastFlow && lastFlow !== norm && !this.aiFlowDone.includes(lastFlow) && lastFlow !== 'done') {
+            this.aiFlowDone = [...this.aiFlowDone, lastFlow];
+          }
+          this.aiFlowActiveStep = norm;
+          lastFlow = norm;
+        }
+        const msg = stepEvt?.message || (norm ? `Step: ${this.aiFlowLabel(norm)}` : 'Working...');
+        if (msg) this.streamSteps = [...this.streamSteps, msg].slice(-6);
+      },
+      (res: any) => {
         this.isTyping = false;
+        if (this.aiFlowActiveStep && !this.aiFlowDone.includes(this.aiFlowActiveStep) && this.aiFlowActiveStep !== 'done') {
+          this.aiFlowDone = [...this.aiFlowDone, this.aiFlowActiveStep];
+        }
+        this.aiFlowActiveStep = 'done';
+        this.aiFlowDone = Array.from(new Set([...this.aiFlowDone, 'done']));
         this.streamSteps = [];
+
         const blocked = !!res?.blocked;
         const aiMsg: any = {
           sender: 'ai',
@@ -1889,7 +1932,9 @@ export class ConsumerComponent implements OnInit, OnDestroy {
         if (blocked) {
           aiMsg.altSuggestion = this.buildAltSuggestion(res);
         } else {
-          aiMsg.steps = ['Guardrails check', 'SQL generated', 'Query executed', 'Response formatted'];
+          aiMsg.steps = this.aiFlowOrder
+            .filter(s => s !== 'done' && this.aiFlowDone.includes(s))
+            .map(s => this.aiFlowLabel(s));
           aiMsg.duration = '0.8s';
           if (res.sql) aiMsg.sql = res.sql;
           if (res.data && res.data.length > 0) aiMsg.results = res.data;
@@ -1901,12 +1946,13 @@ export class ConsumerComponent implements OnInit, OnDestroy {
           setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
         }
       },
-      error: () => {
+      (err: string) => {
         this.isTyping = false;
         this.streamSteps = [];
-        this.chatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
+        this.aiFlowErrorStep = this.aiFlowActiveStep || 'error';
+        this.chatMessages.push({ sender: 'ai', text: err || 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
       }
-    });
+    );
   }
 
   private renderPlotly(msgIndex: number, vizCode: string, data: any[]) {
