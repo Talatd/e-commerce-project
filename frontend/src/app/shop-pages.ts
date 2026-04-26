@@ -1117,8 +1117,7 @@ export class ProductDetailComponent implements OnInit {
                 <td style="padding:10px 12px;color:var(--text2);">{{o.items?.length || 0}} items</td>
                 <td style="padding:10px 12px;">
                   <span style="font-size:10px;padding:3px 10px;border-radius:10px;font-weight:500;"
-                    [style.background]="o.status === 'DELIVERED' ? 'rgba(62,201,138,0.1)' : o.status === 'PENDING' ? 'rgba(232,169,74,0.1)' : 'rgba(107,168,200,0.1)'"
-                    [style.color]="o.status === 'DELIVERED' ? '#3EC98A' : o.status === 'PENDING' ? '#E8A94A' : '#6BA8C8'">
+                    [ngStyle]="getStatusStyles(o.status)">
                     ● {{o.status}}
                   </span>
                 </td>
@@ -1188,21 +1187,40 @@ export class ProductDetailComponent implements OnInit {
         </div>
 
         <div>
-          <div class="gcard tilt-card" style="padding:18px; margin-bottom:12px; background:var(--teal-dim); border-color:var(--teal-glow);">
+          <div class="gcard tilt-card" style="padding:18px; margin-bottom:12px; background:var(--teal-dim); border-color:var(--teal-glow); overflow:hidden;">
             <div class="card-glow"></div>
             <div style="position:relative; z-index:2;">
-              <div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;">Estimated Delivery</div>
-              <div style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:4px;">{{shipmentData?.estimatedDelivery ? (shipmentData.estimatedDelivery | date:'mediumDate') : 'Calculating...'}}</div>
-              <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:14px;overflow:hidden;"><div [style.width.%]="trackingProgress" style="height:100%;background:var(--teal);border-radius:2px;"></div></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);">Estimated Delivery</div>
+                <div *ngIf="selectedOrder.status !== 'DELIVERED'" class="nx-pulse-dot" style="width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);animation:pulse 2s infinite;"></div>
+              </div>
+              <div style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+                <svg *ngIf="selectedOrder.status === 'DELIVERED'" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                {{shipmentData?.estimatedDelivery ? (shipmentData.estimatedDelivery | date:'mediumDate') : (selectedOrder.status === 'DELIVERED' ? 'Arrived' : 'Calculating...')}}
+              </div>
+              <div style="font-size:11px; color:var(--text3); margin-bottom:12px;">{{shipmentData?.deliveredAt ? 'Delivered successfully' : 'On its way to your location'}}</div>
+              <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;"><div [style.width.%]="trackingProgress" style="height:100%;background:var(--teal);border-radius:2px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);"></div></div>
             </div>
           </div>
           
-          <div class="gcard" style="margin-bottom: 12px;">
-            <div class="gc-head"><div class="gc-title">Carrier Info</div></div>
-            <div class="gc-body" style="color:var(--text3); font-size:12px; line-height: 1.5;">
-               <strong style="color:var(--text);">{{shipmentData?.carrier || 'Pending'}}</strong><br>
-               Tracking: {{shipmentData?.trackingNumber || 'N/A'}}<br>
-               Mode: {{shipmentData?.modeOfShipment || 'Standard'}}
+          <div class="gcard" style="margin-bottom: 12px; border-left: 3px solid var(--teal);">
+            <div class="gc-head" style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="gc-title">Logistics Details</div>
+              <div style="font-size:9px; color:var(--teal); font-weight:600; padding:2px 6px; background:rgba(62,207,178,0.1); border-radius:4px;">{{shipmentData?.modeOfShipment || 'Standard'}}</div>
+            </div>
+            <div class="gc-body" style="color:var(--text3); font-size:12px; line-height: 1.6;">
+               <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                 <span>Carrier</span>
+                 <strong style="color:var(--text);">{{shipmentData?.carrier || 'Processing...'}}</strong>
+               </div>
+               <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                 <span>Tracking</span>
+                 <span style="font-family:'JetBrains Mono',monospace; color:var(--teal2);">{{shipmentData?.trackingNumber || 'Pending'}}</span>
+               </div>
+               <div style="display:flex; justify-content:space-between;">
+                 <span>Warehouse</span>
+                 <span style="color:var(--text2);">Block {{shipmentData?.warehouseBlock || 'A-1'}}</span>
+               </div>
             </div>
           </div>
 
@@ -1297,54 +1315,170 @@ export class ProductDetailComponent implements OnInit {
 
       <!-- ORDER DETAILS MODAL OVERLAY -->
       <div class="nx-orders-overlay" [class.open]="isOrderDetailsOpen" (click)="closeOrderDetailsOverlay($event)">
-        <div class="nx-orders-modal" (click)="$event.stopPropagation()">
-          <div class="nx-orders-modal-head" style="padding-bottom:16px; border-bottom:1px solid var(--border);">
-            <div>
-              <div class="nx-orders-mh-name">Order <span class="nx-ord-mono">#ORD-{{viewOrder?.orderId}}</span></div>
-              <div class="nx-orders-mh-sub">{{viewOrder?.orderDate | date:'mediumDate'}} · {{viewOrder?.items?.length || 0}} items</div>
+        <div class="nx-orders-modal nx-od-modal" (click)="$event.stopPropagation()">
+          <div class="nx-od-head">
+            <div class="nx-od-head-left">
+              <div class="nx-od-title">Order <span class="nx-ord-mono">#ORD-{{viewOrder?.orderId}}</span></div>
+              <div class="nx-od-meta">
+                <span>Placed {{viewOrder?.orderDate | date:'mediumDate'}}</span>
+                <span class="nx-od-sep"></span>
+                <span>{{viewOrder?.items?.length || 0}} items</span>
+              </div>
             </div>
-            <button type="button" class="nx-orders-close" (click)="closeOrderDetails()" aria-label="Close">×</button>
+            <div class="nx-od-head-right">
+              <span class="nx-od-status" [ngStyle]="getStatusStyles(viewOrder?.status)">● {{viewOrder?.status}}</span>
+              <button type="button" class="nx-orders-close" (click)="closeOrderDetails()" aria-label="Close">×</button>
+            </div>
           </div>
 
-          <div style="padding:16px 20px;">
-             <!-- items list -->
-             <div class="c-item" *ngFor="let item of viewOrder?.items" style="padding:12px 0;">
-                <div class="c-img" style="width:48px;height:48px;border-radius:8px;">
-                  <img *ngIf="item.product?.imageUrl" [src]="item.product.imageUrl" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />
-                  <svg *ngIf="!item.product?.imageUrl" width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2" stroke="var(--teal)" stroke-width="1.2" opacity="0.5"/></svg>
-                </div>
-                <div class="c-info">
-                   <div class="c-name" style="font-size:13px;margin-bottom:2px;">{{item.product?.name || item.productName || 'Unknown Product'}}</div>
-                   <div style="font-size:11px;color:var(--text3);">Qty: {{item.quantity}}</div>
-                </div>
-                <div class="c-price" style="font-size:14px;font-family:'Playfair Display',serif;">{{(item.priceAtPurchase * item.quantity) | currency}}</div>
-             </div>
-
-             <div class="summary-divider" style="margin:16px 0;"></div>
-             
-             <div class="summary-line">
-               <span class="sl-label">Status</span>
-               <span class="sl-val" style="font-size:10px;padding:3px 10px;border-radius:10px;font-weight:500;"
-                    [style.background]="viewOrder?.status === 'DELIVERED' ? 'rgba(62,201,138,0.1)' : viewOrder?.status === 'PENDING' ? 'rgba(232,169,74,0.1)' : 'rgba(107,168,200,0.1)'"
-                    [style.color]="viewOrder?.status === 'DELIVERED' ? '#3EC98A' : viewOrder?.status === 'PENDING' ? '#E8A94A' : '#6BA8C8'">
-                 {{viewOrder?.status}}
-               </span>
-             </div>
-             <div class="summary-line" *ngIf="viewOrder?.shippingAddress">
-               <span class="sl-label">Shipping Address</span>
-               <span class="sl-val" style="color:var(--text2);text-align:right;max-width:60%;">{{viewOrder.shippingAddress}}</span>
-             </div>
-             
-             <div class="summary-divider" style="margin:16px 0;"></div>
-             
-             <div class="summary-line" style="margin-bottom:0;">
-                <span class="sl-label" style="font-weight:500;">Total Amount</span>
-                <span class="total-val" style="font-size:18px;">{{viewOrder?.totalAmount | currency}}</span>
-             </div>
+          <div class="nx-od-actions">
+            <button type="button" class="nx-od-act teal" [disabled]="!viewShipmentData?.trackingNumber">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6h10M7 2l4 4-4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Track Shipment
+            </button>
+            <button type="button" class="nx-od-act">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3.5 5.5L6 8l2.5-2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              Download Invoice
+            </button>
+            <button type="button" class="nx-od-act">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5Z" stroke="currentColor" stroke-width="1.1"/><path d="M6 4v2.5L7.5 8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              Contact Support
+            </button>
           </div>
-          
-          <div class="nx-orders-modal-foot" style="padding-top:10px; padding-bottom:20px;">
-             <button type="button" class="nx-orders-submit-btn" style="background:var(--glass2);color:var(--text);border:1px solid var(--border);" (click)="closeOrderDetails()">Close</button>
+
+          <div class="nx-od-grid">
+            <div class="nx-od-left">
+              <div class="nx-od-card">
+                <div class="nx-od-card-head">
+                  <div class="nx-od-card-k">Shipment Tracking</div>
+                  <div class="nx-od-mono">{{viewShipmentData?.trackingNumber || 'Pending'}}</div>
+                </div>
+                <div class="nx-od-timeline">
+                  <div class="nx-od-tl-item" [class.done]="isViewStepDone('PENDING')">
+                    <div class="nx-od-tl-line"></div>
+                    <div class="nx-od-tl-dot" [class.done]="isViewStepDone('PENDING')">✓</div>
+                    <div class="nx-od-tl-body">
+                      <div class="nx-od-tl-title" [class.done]="isViewStepDone('PENDING')">Order Confirmed</div>
+                      <div class="nx-od-tl-desc">Payment verified. Order confirmed.</div>
+                    </div>
+                  </div>
+                  <div class="nx-od-tl-item" [class.done]="isViewStepDone('PREPARING')">
+                    <div class="nx-od-tl-line"></div>
+                    <div class="nx-od-tl-dot" [class.done]="isViewStepDone('PREPARING')">✓</div>
+                    <div class="nx-od-tl-body">
+                      <div class="nx-od-tl-title" [class.done]="isViewStepDone('PREPARING')">Preparing</div>
+                      <div class="nx-od-tl-desc">Items being packed at warehouse.</div>
+                    </div>
+                  </div>
+                  <div class="nx-od-tl-item" [class.done]="isViewStepDone('SHIPPED')">
+                    <div class="nx-od-tl-line"></div>
+                    <div class="nx-od-tl-dot" [class.done]="isViewStepDone('SHIPPED')" [class.active]="normalizeTrackStatus(viewShipmentData?.status || viewOrder?.status) === 'SHIPPED'">→</div>
+                    <div class="nx-od-tl-body">
+                      <div class="nx-od-tl-title" [class.done]="isViewStepDone('SHIPPED')" [class.active]="normalizeTrackStatus(viewShipmentData?.status || viewOrder?.status) === 'SHIPPED'">Shipped</div>
+                      <div class="nx-od-tl-desc">{{viewShipmentData?.carrier || 'Carrier'}} — {{viewShipmentData?.trackingNumber || 'Pending'}}</div>
+                    </div>
+                  </div>
+                  <div class="nx-od-tl-item" [class.done]="isViewStepDone('IN_TRANSIT')">
+                    <div class="nx-od-tl-line"></div>
+                    <div class="nx-od-tl-dot" [class.done]="isViewStepDone('IN_TRANSIT')" [class.active]="normalizeTrackStatus(viewShipmentData?.status || viewOrder?.status) === 'IN_TRANSIT'">⇄</div>
+                    <div class="nx-od-tl-body">
+                      <div class="nx-od-tl-title" [class.done]="isViewStepDone('IN_TRANSIT')" [class.active]="normalizeTrackStatus(viewShipmentData?.status || viewOrder?.status) === 'IN_TRANSIT'">In transit</div>
+                      <div class="nx-od-tl-desc">On the way to you.</div>
+                    </div>
+                  </div>
+                  <div class="nx-od-tl-item" [class.done]="isViewStepDone('DELIVERED')">
+                    <div class="nx-od-tl-dot" [class.done]="isViewStepDone('DELIVERED')">●</div>
+                    <div class="nx-od-tl-body">
+                      <div class="nx-od-tl-title" [class.done]="isViewStepDone('DELIVERED')">Delivered</div>
+                      <div class="nx-od-tl-desc">{{viewShipmentData?.deliveredAt ? (viewShipmentData.deliveredAt | date:'mediumDate') : (viewShipmentData?.estimatedDelivery ? 'Est. ' + (viewShipmentData.estimatedDelivery | date:'mediumDate') : 'Pending')}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="nx-od-card">
+                <div class="nx-od-card-head">
+                  <div class="nx-od-card-k">Order Items</div>
+                  <div class="nx-od-card-sub">{{viewOrder?.items?.length || 0}} items</div>
+                </div>
+                <div class="nx-od-items">
+                  <div class="nx-od-item" *ngFor="let item of viewOrder?.items">
+                    <div class="nx-od-item-img">
+                      <img *ngIf="item.product?.imageUrl" [src]="item.product.imageUrl" />
+                      <svg *ngIf="!item.product?.imageUrl" width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="5" width="16" height="11" rx="2" stroke="var(--teal)" stroke-width="1.1" opacity="0.45"/></svg>
+                    </div>
+                    <div class="nx-od-item-info">
+                      <div class="nx-od-item-name">{{item.product?.name || item.productName || 'Unknown Product'}}</div>
+                      <div class="nx-od-item-var">{{item.product?.category || ''}} · ×{{item.quantity}}</div>
+                    </div>
+                    <div class="nx-od-item-right">
+                      <div class="nx-od-item-price">{{(item.priceAtPurchase * item.quantity) | currency}}</div>
+                      <div class="nx-od-item-qty">×{{item.quantity}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nx-od-right">
+              <div class="nx-od-card nx-od-sum">
+                <div class="nx-od-card-k" style="padding:16px 16px 0;">Payment Summary</div>
+                <div class="nx-od-sum-body">
+                  <div class="nx-od-sum-line"><span class="nx-od-sum-l">Subtotal</span><span class="nx-od-sum-v">{{(viewOrder?.subtotalAmount ?? viewOrder?.totalAmount) | currency}}</span></div>
+                  <div class="nx-od-sum-line" *ngIf="(viewOrder?.discountAmount || 0) > 0"><span class="nx-od-sum-l">Discount</span><span class="nx-od-sum-v green">−{{viewOrder?.discountAmount | currency}}</span></div>
+                  <div class="nx-od-sum-line"><span class="nx-od-sum-l">Shipping</span><span class="nx-od-sum-v" [class.green]="(viewOrder?.shippingAmount || 0) === 0">{{(viewOrder?.shippingAmount || 0) === 0 ? 'Free' : (viewOrder?.shippingAmount | currency)}}</span></div>
+                  <div class="nx-od-sum-line"><span class="nx-od-sum-l">Tax</span><span class="nx-od-sum-v">{{(viewOrder?.taxAmount || 0) | currency}}</span></div>
+                  <div class="nx-od-sum-div"></div>
+                  <div class="nx-od-sum-total"><span>Total Paid</span><span class="nx-od-sum-total-v">{{viewOrder?.totalAmount | currency}}</span></div>
+                </div>
+              </div>
+
+              <div class="nx-od-card">
+                <div class="nx-od-card-head">
+                  <div class="nx-od-card-k">Delivery Details</div>
+                </div>
+                <div class="nx-od-kv">
+                  <div class="nx-od-kv-row">
+                    <div class="nx-od-kv-ico teal">⌂</div>
+                    <div>
+                      <div class="nx-od-kv-k">Delivery Address</div>
+                      <div class="nx-od-kv-v">{{viewOrder?.shippingAddress || '—'}}</div>
+                    </div>
+                  </div>
+                  <div class="nx-od-kv-row">
+                    <div class="nx-od-kv-ico blue">↦</div>
+                    <div>
+                      <div class="nx-od-kv-k">Carrier</div>
+                      <div class="nx-od-kv-v">{{viewShipmentData?.carrier || 'Pending'}}</div>
+                    </div>
+                  </div>
+                  <div class="nx-od-kv-row">
+                    <div class="nx-od-kv-ico amber">⎔</div>
+                    <div>
+                      <div class="nx-od-kv-k">Tracking ID</div>
+                      <div class="nx-od-kv-v nx-od-mono">{{viewShipmentData?.trackingNumber || 'Pending'}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="nx-od-card">
+                <div class="nx-od-card-head">
+                  <div class="nx-od-card-k">Payment Method</div>
+                </div>
+                <div class="nx-od-pay">
+                  <div class="nx-od-pay-logo">Nexus Pay</div>
+                  <div>
+                    <div class="nx-od-pay-num">•••• •••• •••• 4242</div>
+                    <div class="nx-od-pay-sub">Secure checkout</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="nx-orders-modal-foot nx-od-foot">
+            <button type="button" class="nx-orders-submit-btn" style="background:var(--glass2);color:var(--text);border:1px solid var(--border);" (click)="closeOrderDetails()">Close</button>
           </div>
         </div>
       </div>
@@ -1356,6 +1490,85 @@ export class ProductDetailComponent implements OnInit {
   styles: [`
     .order-row { border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.2s; }
     .order-row:hover { background:var(--glass2); }
+
+    /* Order detail modal (light/dark token-based) */
+    .nx-od-modal{max-width:1040px;width:calc(100vw - 32px);}
+    .nx-od-head{padding:18px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
+    .nx-od-title{font-family:'Playfair Display',serif;font-size:18px;font-style:italic;color:var(--text);margin-bottom:4px;}
+    .nx-od-meta{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text3);}
+    .nx-od-sep{width:1px;height:10px;background:var(--border);opacity:0.9;}
+    .nx-od-head-right{display:flex;align-items:center;gap:10px;}
+    .nx-od-status{font-size:10px;padding:4px 12px;border-radius:20px;font-weight:600;white-space:nowrap;}
+    .nx-od-actions{padding:12px 20px;display:flex;gap:8px;flex-wrap:wrap;}
+    .nx-od-act{padding:8px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.15s;display:flex;align-items:center;gap:6px;border:1px solid var(--border2);background:var(--glass);color:var(--text2);}
+    .nx-od-act:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
+    .nx-od-act.teal{background:var(--teal-dim);border-color:rgba(62,207,178,0.2);color:var(--teal2);}
+    .nx-od-act.teal:hover{background:var(--teal);color:#080808;border-color:var(--teal);}
+    .nx-od-act:disabled{opacity:0.35;pointer-events:none;}
+
+    .nx-od-grid{display:grid;grid-template-columns:1fr 320px;gap:14px;padding:0 20px 16px;}
+    .nx-od-left,.nx-od-right{display:flex;flex-direction:column;gap:12px;min-width:0;}
+    .nx-od-card{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+    .nx-od-card-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .nx-od-card-k{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text2);font-weight:600;}
+    .nx-od-card-sub{font-size:11px;color:var(--text3);}
+    .nx-od-mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal2);}
+
+    .nx-od-timeline{padding:16px 18px;}
+    .nx-od-tl-item{display:flex;gap:12px;position:relative;padding-bottom:16px;}
+    .nx-od-tl-item:last-child{padding-bottom:0;}
+    .nx-od-tl-item:not(:last-child) .nx-od-tl-line{position:absolute;left:10px;top:22px;width:1.5px;bottom:-2px;background:rgba(62,207,178,0.15);}
+    .nx-od-tl-item.done .nx-od-tl-line{background:rgba(62,207,178,0.35);}
+    .nx-od-tl-dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;background:var(--glass2);border:1px solid var(--border2);color:var(--text3);z-index:1;}
+    .nx-od-tl-dot.done{background:var(--teal);border-color:var(--teal);color:#080808;}
+    .nx-od-tl-dot.active{background:var(--teal-dim);border:2px solid var(--teal);color:var(--teal2);}
+    .nx-od-tl-body{flex:1;padding-top:1px;min-width:0;}
+    .nx-od-tl-title{font-size:13px;font-weight:600;color:var(--text3);margin-bottom:2px;}
+    .nx-od-tl-title.done{color:var(--text);}
+    .nx-od-tl-title.active{color:var(--teal2);}
+    .nx-od-tl-desc{font-size:11.5px;color:var(--text3);line-height:1.5;}
+
+    .nx-od-items{padding:4px 0;}
+    .nx-od-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.03);}
+    .nx-od-item:last-child{border-bottom:none;}
+    .nx-od-item-img{width:50px;height:50px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+    .nx-od-item-img img{width:100%;height:100%;object-fit:cover;display:block;}
+    .nx-od-item-info{flex:1;min-width:0;}
+    .nx-od-item-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nx-od-item-var{font-size:11px;color:var(--text3);}
+    .nx-od-item-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+    .nx-od-item-price{font-family:'Playfair Display',serif;font-size:16px;color:var(--text);}
+    .nx-od-item-qty{font-size:11px;color:var(--text3);}
+
+    .nx-od-sum-body{padding:12px 16px 16px;}
+    .nx-od-sum-line{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12.5px;}
+    .nx-od-sum-l{color:var(--text2);}
+    .nx-od-sum-v{color:var(--text);}
+    .nx-od-sum-v.green{color:var(--green);}
+    .nx-od-sum-div{height:1px;background:var(--border);margin:10px 0;}
+    .nx-od-sum-total{display:flex;align-items:baseline;justify-content:space-between;}
+    .nx-od-sum-total span{font-size:13px;font-weight:600;color:var(--text);}
+    .nx-od-sum-total-v{font-family:'Playfair Display',serif;font-size:20px;color:var(--text);}
+
+    .nx-od-kv{padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+    .nx-od-kv-row{display:flex;align-items:flex-start;gap:10px;}
+    .nx-od-kv-ico{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border);background:var(--glass2);color:var(--text2);font-size:12px;}
+    .nx-od-kv-ico.teal{background:var(--teal-dim);border-color:rgba(62,207,178,0.2);color:var(--teal2);}
+    .nx-od-kv-ico.blue{background:rgba(107,168,200,0.08);border-color:rgba(107,168,200,0.18);color:#6BA8C8;}
+    .nx-od-kv-ico.amber{background:rgba(232,169,74,0.08);border-color:rgba(232,169,74,0.18);color:#E8A94A;}
+    .nx-od-kv-k{font-size:10px;color:var(--text3);margin-bottom:2px;}
+    .nx-od-kv-v{font-size:12.5px;color:var(--text);line-height:1.4;word-break:break-word;}
+
+    .nx-od-pay{padding:12px 14px;display:flex;align-items:center;gap:10px;}
+    .nx-od-pay-logo{width:74px;height:28px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2);flex-shrink:0;}
+    .nx-od-pay-num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);}
+    .nx-od-pay-sub{font-size:10.5px;color:var(--text3);}
+
+    .nx-od-foot{padding-top:10px;padding-bottom:20px;}
+
+    @media (max-width: 980px){
+      .nx-od-grid{grid-template-columns:1fr;}
+    }
   `]
 })
 export class OrdersComponent implements OnInit {
@@ -1363,6 +1576,7 @@ export class OrdersComponent implements OnInit {
   isModalOpen = false;
   isOrderDetailsOpen = false;
   viewOrder: any = null;
+  viewShipmentData: any = null;
   isSuccess = false;
   isSubmitting = false;
   rating = 0;
@@ -1387,6 +1601,17 @@ export class OrdersComponent implements OnInit {
   auth = inject(AuthService);
   toast = inject(ToastService);
 
+  getStatusStyles(status: string) {
+    const s = (status || '').toUpperCase();
+    if (s === 'DELIVERED') return { background: 'rgba(62,201,138,0.12)', color: '#3EC98A' };
+    if (s === 'PENDING') return { background: 'rgba(232,169,74,0.12)', color: '#E8A94A' };
+    if (s === 'PROCESSING') return { background: 'rgba(74,138,199,0.12)', color: '#4A8AC7' };
+    if (s === 'SHIPPED') return { background: 'rgba(167,139,204,0.12)', color: '#A78BCC' };
+    if (s === 'CANCELLED') return { background: 'rgba(199,74,74,0.12)', color: '#C74A4A' };
+    if (s === 'RETURNED') return { background: 'rgba(106,138,132,0.12)', color: '#6A8A84' };
+    return { background: 'rgba(107,168,200,0.12)', color: '#6BA8C8' };
+  }
+
   ngOnInit() {
     this.orderService.getMyOrders().subscribe(orders => {
       this.myOrders = orders.sort((a: any, b: any) =>
@@ -1409,7 +1634,7 @@ export class OrdersComponent implements OnInit {
     }
   }
 
-  private normalizeTrackStatus(raw: string | undefined): string {
+  normalizeTrackStatus(raw: string | undefined): string {
     if (!raw) return 'PENDING';
     const u = String(raw).toUpperCase();
     if (u === 'PROCESSING') return 'PREPARING';
@@ -1429,6 +1654,16 @@ export class OrdersComponent implements OnInit {
   isStepDone(step: string): boolean {
     if (!this.selectedOrder) return false;
     const current = this.normalizeTrackStatus(this.shipmentData?.status || this.selectedOrder.status);
+    const target = this.normalizeTrackStatus(step);
+    const ci = this.trackingSteps.indexOf(current);
+    const ti = this.trackingSteps.indexOf(target);
+    if (ci < 0 || ti < 0) return false;
+    return ci >= ti;
+  }
+
+  isViewStepDone(step: string): boolean {
+    if (!this.viewOrder) return false;
+    const current = this.normalizeTrackStatus(this.viewShipmentData?.status || this.viewOrder.status);
     const target = this.normalizeTrackStatus(step);
     const ci = this.trackingSteps.indexOf(current);
     const ti = this.trackingSteps.indexOf(target);
@@ -1498,11 +1733,19 @@ export class OrdersComponent implements OnInit {
   openOrderDetails(order: any) {
     this.viewOrder = order;
     this.isOrderDetailsOpen = true;
+    this.viewShipmentData = null;
+    const oid = order?.orderId;
+    if (oid != null) {
+      this.shipmentService.getByOrder(oid).subscribe({
+        next: (s: any) => this.viewShipmentData = s,
+        error: () => this.viewShipmentData = null
+      });
+    }
   }
 
   closeOrderDetails() {
     this.isOrderDetailsOpen = false;
-    setTimeout(() => { this.viewOrder = null; }, 300);
+    setTimeout(() => { this.viewOrder = null; this.viewShipmentData = null; }, 300);
   }
 
   closeOrderDetailsOverlay(e: Event) {

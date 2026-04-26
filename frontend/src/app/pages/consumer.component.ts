@@ -2,7 +2,7 @@ import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
-import { filter } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, filter } from 'rxjs';
 import { AuthService, AiService, ProductService, OrderService, ToastService } from '../services';
 import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
 import { ConsumerStandaloneTopNavComponent } from '../consumer-standalone-top-nav.component';
@@ -126,15 +126,44 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 
 /* === SHOP TAB === */
 .search-hero{padding:28px 24px 0;background:linear-gradient(180deg,rgba(62,207,178,0.04) 0%,transparent 100%);border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.search-hero.suggesting{overflow:visible;}
 .sh-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:500px;height:200px;background:radial-gradient(ellipse,rgba(62,207,178,0.06),transparent 70%);pointer-events:none;}
 .sh-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;position:relative;z-index:1;}
 .sh-title{font-family:'Playfair Display',serif;font-size:22px;font-style:italic;color:var(--text);}
 .sh-sub{font-size:12px;color:var(--text3);margin-top:3px;}
 .search-bar{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:12px;padding:11px 16px;margin-bottom:16px;position:relative;z-index:1;transition:border-color 0.2s,box-shadow 0.2s;}
+.search-bar.suggesting{margin-bottom:162px;}
 .search-bar:focus-within{border-color:rgba(62,207,178,0.3);box-shadow:0 0 0 3px rgba(62,207,178,0.05);}
 .search-bar input{flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;caret-color:var(--teal);}
 .search-bar input::placeholder{color:var(--text3);}
 .search-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);white-space:nowrap;}
+.search-suggest{
+  position:absolute;left:10px;right:10px;top:calc(100% + 8px);
+  background:color-mix(in srgb,var(--bg) 78%, rgba(255,255,255,0.06));
+  border:1px solid var(--border2);
+  border-radius:14px;
+  box-shadow:0 22px 60px rgba(0,0,0,0.35);
+  overflow:auto;
+  max-height:148px;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  z-index:6;
+}
+.ss-item{
+  width:100%;
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  background:transparent;
+  border:none;
+  cursor:pointer;
+  text-align:left;
+  color:var(--text2);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px;
+}
+.ss-item:hover,.ss-item.active{background:var(--glass2);color:var(--text);}
+.ss-ico{width:22px;height:22px;border-radius:8px;border:1px solid var(--border);background:var(--glass);display:flex;align-items:center;justify-content:center;color:var(--teal2);flex-shrink:0;}
+.ss-text{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ss-hint{margin-left:auto;font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;flex-shrink:0;}
 .cat-row{display:flex;gap:7px;padding-bottom:16px;overflow-x:auto;position:relative;z-index:1;}
 .cat-row::-webkit-scrollbar{display:none;}
 .cat-pill{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--glass);color:var(--text2);transition:all 0.15s;white-space:nowrap;flex-shrink:0;}
@@ -144,9 +173,9 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .shop-body{display:flex;flex:1;min-height:500px;min-width:0;}
 .filter-sidebar{width:210px;min-width:210px;flex-shrink:0;border-right:1px solid var(--border);padding:16px 12px;transition:width 0.35s cubic-bezier(0.4,0,0.2,1),min-width 0.35s,opacity 0.25s;overflow-y:auto;position:relative;z-index:2;}
 .filter-sidebar.collapsed{width:0;min-width:0;opacity:0;overflow:hidden;padding:0;pointer-events:none;border:none;}
-.fs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-.fs-title{font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--text2);font-weight:500;}
-.fs-clear{font-size:10px;color:var(--text3);cursor:pointer;transition:color 0.15s;}
+.fs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:6px 10px;border-radius:10px;background:var(--glass);border:1px solid var(--border);}
+.fs-title{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3);font-weight:700;}
+.fs-clear{font-size:10px;color:var(--text3);cursor:pointer;transition:color 0.15s;letter-spacing:0.08em;text-transform:uppercase;}
 .fs-clear:hover{color:var(--red);}
 .fsec{margin-bottom:18px;}
 .fsec-label{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
@@ -793,7 +822,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 
     <!-- ==================== SHOP TAB ==================== -->
     <ng-container *ngIf="activeTab === 'shop' && !selectedProduct">
-      <div class="search-hero">
+      <div class="search-hero" [class.suggesting]="showSuggestions && searchSuggestions.length > 0">
         <div class="sh-glow"></div>
         <div class="sh-top">
           <div><div class="sh-title">Browse Products</div><div class="sh-sub">{{products.length}} curated tech items</div></div>
@@ -808,10 +837,36 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             </div>
           </div>
         </div>
-        <div class="search-bar">
+        <div class="search-bar" [class.suggesting]="showSuggestions && searchSuggestions.length > 0">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="#3ECFB2" stroke-width="1.2"/><path d="M10 10l2.5 2.5" stroke="#3ECFB2" stroke-width="1.2" stroke-linecap="round"/></svg>
-          <input [(ngModel)]="searchQuery" placeholder="Search products, brands, categories…"/>
+          <input
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange($event)"
+            (focus)="onSearchFocus()"
+            (blur)="onSearchBlur()"
+            (keydown)="onSearchKeydown($event)"
+            placeholder="Search products, brands, categories…"
+            autocomplete="off"
+          />
           <div class="search-count">{{filteredProducts.length}} results</div>
+          <div class="search-suggest" *ngIf="showSuggestions && searchSuggestions.length > 0">
+            <button
+              type="button"
+              class="ss-item"
+              *ngFor="let s of searchSuggestions; let i = index"
+              [class.active]="i === activeSuggestionIndex"
+              (mousedown)="$event.preventDefault(); applySuggestion(s)"
+            >
+              <span class="ss-ico">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" opacity="0.9"/>
+                  <path d="M10 10l2.5 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
+                </svg>
+              </span>
+              <span class="ss-text">{{s}}</span>
+              <span class="ss-hint">Enter</span>
+            </button>
+          </div>
         </div>
         <div class="cat-row">
           <div class="cat-pill" [class.active]="selectedCat==='All'" (click)="selectedCat='All'">All</div>
@@ -1302,6 +1357,11 @@ export class ConsumerComponent implements OnInit, OnDestroy {
   chatMessages: any[] = [];
   history: string[] = [];
   searchQuery = '';
+  searchSuggestions: string[] = [];
+  showSuggestions = false;
+  activeSuggestionIndex = -1;
+  private readonly searchInput$ = new Subject<string>();
+  private searchBlurTimer: any;
   maxPrice = 3000;
   minPrice = 0;
   selectedRating = 0;
@@ -1411,7 +1471,12 @@ export class ConsumerComponent implements OnInit, OnDestroy {
       });
       const cats = Array.from(new Set(this.products.map(p => p.category)));
       this.categories = cats.map((c: any) => ({ name: c, checked: false }));
+      this.updateSearchSuggestions(this.searchQuery || '');
     });
+
+    this.searchInput$
+      .pipe(debounceTime(120), distinctUntilChanged())
+      .subscribe(q => this.updateSearchSuggestions(q));
 
     try {
       this.recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
@@ -1483,13 +1548,8 @@ export class ConsumerComponent implements OnInit, OnDestroy {
   get filteredProducts() {
     let list = this.products || [];
     if (this.searchQuery) {
-      const q = this.searchQuery.toLowerCase();
-      list = list.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        (p.brand && p.brand.toLowerCase().includes(q)) ||
-        (p.tags && p.tags.toLowerCase().includes(q))
-      );
+      const q = this.searchQuery;
+      list = list.filter(p => this.matchesProductQuery(p, q));
     }
     if (this.selectedCat !== 'All') {
       list = list.filter(p => p.category === this.selectedCat);
@@ -1509,6 +1569,191 @@ export class ConsumerComponent implements OnInit, OnDestroy {
       list = list.filter(p => p.stockQuantity > 0);
     }
     return list;
+  }
+
+  onSearchChange(v: string) {
+    this.searchQuery = v;
+    this.activeSuggestionIndex = -1;
+    this.showSuggestions = true;
+    this.searchInput$.next(v || '');
+  }
+
+  onSearchFocus() {
+    if (this.searchBlurTimer) clearTimeout(this.searchBlurTimer);
+    this.showSuggestions = true;
+    this.updateSearchSuggestions(this.searchQuery || '');
+  }
+
+  onSearchBlur() {
+    if (this.searchBlurTimer) clearTimeout(this.searchBlurTimer);
+    this.searchBlurTimer = setTimeout(() => (this.showSuggestions = false), 140);
+  }
+
+  onSearchKeydown(e: KeyboardEvent) {
+    if (!this.showSuggestions || this.searchSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this.activeSuggestionIndex = Math.min(this.searchSuggestions.length - 1, this.activeSuggestionIndex + 1);
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this.activeSuggestionIndex = Math.max(0, this.activeSuggestionIndex - 1);
+      return;
+    }
+    if (e.key === 'Enter') {
+      if (this.activeSuggestionIndex >= 0 && this.activeSuggestionIndex < this.searchSuggestions.length) {
+        e.preventDefault();
+        this.applySuggestion(this.searchSuggestions[this.activeSuggestionIndex]);
+      } else {
+        this.showSuggestions = false;
+      }
+      return;
+    }
+    if (e.key === 'Escape') {
+      this.showSuggestions = false;
+      return;
+    }
+  }
+
+  applySuggestion(s: string) {
+    this.searchQuery = s;
+    this.showSuggestions = false;
+    this.activeSuggestionIndex = -1;
+    this.updateSearchSuggestions(s);
+  }
+
+  private updateSearchSuggestions(raw: string) {
+    const q = this.norm(raw);
+    if (!q) {
+      this.searchSuggestions = [];
+      return;
+    }
+
+    const candidates: Array<{ v: string; score: number }> = [];
+    const push = (v: string, score: number) => {
+      const vv = (v || '').trim();
+      if (!vv) return;
+      candidates.push({ v: vv, score });
+    };
+
+    for (const p of (this.products || [])) {
+      push(p?.name, this.scoreSuggestion(p?.name, q));
+      push(p?.brand, this.scoreSuggestion(p?.brand, q));
+      push(p?.category, this.scoreSuggestion(p?.category, q));
+    }
+
+    // unique + top N
+    const bestByValue = new Map<string, number>();
+    for (const c of candidates) {
+      if (c.score <= 0) continue;
+      const key = c.v.toLowerCase();
+      const prev = bestByValue.get(key);
+      if (prev == null || c.score > prev) bestByValue.set(key, c.score);
+    }
+    this.searchSuggestions = Array.from(bestByValue.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 7)
+      .map(([k]) => {
+        // recover original casing best-effort
+        const any = candidates.find(c => c.v.toLowerCase() === k)?.v;
+        return any || k;
+      });
+  }
+
+  private matchesProductQuery(p: any, rawQuery: string): boolean {
+    const q = this.norm(rawQuery);
+    if (!q) return true;
+
+    const text = this.productSearchText(p);
+    // Fast path: substring
+    if (text.includes(q)) return true;
+
+    // Fuzzy: token-level typo tolerance
+    const qTokens = q.split(/\s+/).filter(Boolean);
+    const tTokens = text.split(/\s+/).filter(Boolean);
+    for (const qt of qTokens) {
+      if (qt.length <= 2) {
+        if (tTokens.some(tt => tt.includes(qt))) continue;
+        return false;
+      }
+      const maxDist = qt.length <= 4 ? 1 : 2;
+      let ok = false;
+      for (const tt of tTokens) {
+        if (tt === qt) {
+          ok = true;
+          break;
+        }
+        if (Math.abs(tt.length - qt.length) > maxDist) continue;
+        if (this.levenshteinWithin(tt, qt, maxDist)) {
+          ok = true;
+          break;
+        }
+      }
+      if (!ok) return false;
+    }
+    return true;
+  }
+
+  private productSearchText(p: any): string {
+    return this.norm([p?.name, p?.brand, p?.category, p?.tags].filter(Boolean).join(' '));
+  }
+
+  private scoreSuggestion(v: string, q: string): number {
+    const t = this.norm(v);
+    if (!t) return 0;
+    if (t === q) return 100;
+    if (t.startsWith(q)) return 80;
+    if (t.includes(q)) return 55;
+    // light fuzzy: allow small typos
+    const maxDist = q.length <= 4 ? 1 : 2;
+    if (Math.abs(t.length - q.length) <= maxDist && this.levenshteinWithin(t, q, maxDist)) return 35;
+    return 0;
+  }
+
+  private norm(s: string): string {
+    return (s || '')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Returns true if Levenshtein(a,b) <= maxDist (early-exit).
+  private levenshteinWithin(a: string, b: string, maxDist: number): boolean {
+    if (a === b) return true;
+    const al = a.length, bl = b.length;
+    if (Math.abs(al - bl) > maxDist) return false;
+    if (al === 0) return bl <= maxDist;
+    if (bl === 0) return al <= maxDist;
+
+    // Ensure b is the shorter for memory
+    if (bl > al) return this.levenshteinWithin(b, a, maxDist);
+
+    let prev = new Array(bl + 1);
+    let curr = new Array(bl + 1);
+    for (let j = 0; j <= bl; j++) prev[j] = j;
+
+    for (let i = 1; i <= al; i++) {
+      curr[0] = i;
+      let rowMin = curr[0];
+      const ca = a.charCodeAt(i - 1);
+      for (let j = 1; j <= bl; j++) {
+        const cost = ca === b.charCodeAt(j - 1) ? 0 : 1;
+        const ins = curr[j - 1] + 1;
+        const del = prev[j] + 1;
+        const sub = prev[j - 1] + cost;
+        const v = Math.min(ins, del, sub);
+        curr[j] = v;
+        if (v < rowMin) rowMin = v;
+      }
+      if (rowMin > maxDist) return false;
+      const tmp = prev; prev = curr; curr = tmp;
+    }
+    return prev[bl] <= maxDist;
   }
 
   removeChip(f: string) {

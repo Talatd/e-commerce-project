@@ -76,6 +76,10 @@ public class DbInitializer {
     @SuppressWarnings("all")
     private void seedHistoricalData() {
         System.out.println("SEED: Generating historical analytics data...");
+        shipmentRepository.deleteAll();
+        orderEventRepository.deleteAll();
+        orderRepository.deleteAll();
+        reviewRepository.deleteAll();
         seedAuditLogs();
         seedCustomerReviews();
         seedHistoricalOrders();
@@ -272,8 +276,9 @@ public class DbInitializer {
             order.setTotalAmount(total);
             Order savedOrder = orderRepository.save(order);
 
-            // Seed Order Events for the saved order
+            // Seed Order Events and Shipment for the saved order
             seedEventsForOrder(savedOrder, random);
+            seedShipmentForOrder(savedOrder, random);
         }
     }
 
@@ -373,6 +378,38 @@ public class DbInitializer {
                 .eventDate(deliveryDate.plusDays(5 + random.nextInt(5)))
                 .notes("Customer requested a return. Item received and inspected.")
                 .build());
+    }
+
+    private void seedShipmentForOrder(Order order, Random random) {
+        if (order.getStatus() == OrderStatus.PENDING) return;
+
+        Shipment shipment = new Shipment();
+        shipment.setOrder(order);
+        shipment.setWarehouseBlock(new String[]{"A-14", "B-02", "C-09", "D-22", "E-05"}[random.nextInt(5)]);
+        shipment.setModeOfShipment(new String[]{"Road", "Flight", "Ship"}[random.nextInt(3)]);
+        shipment.setCarrier(new String[]{"Nexus Logistics", "Global Express", "Prime Delivery", "Swift Carrier"}[random.nextInt(4)]);
+        shipment.setTrackingNumber("NX-" + (100000 + random.nextInt(900000)));
+        
+        // Estimated delivery: 3-5 days after order date
+        shipment.setEstimatedDelivery(order.getOrderDate().plusDays(3 + random.nextInt(3)));
+        
+        if (order.getStatus() == OrderStatus.PROCESSING) {
+            shipment.setStatus(Shipment.ShipmentStatus.PREPARING);
+        } else if (order.getStatus() == OrderStatus.SHIPPED) {
+            shipment.setStatus(Shipment.ShipmentStatus.SHIPPED);
+            shipment.setShippedAt(order.getOrderDate().plusHours(24));
+        } else if (order.getStatus() == OrderStatus.DELIVERED) {
+            shipment.setStatus(Shipment.ShipmentStatus.DELIVERED);
+            shipment.setShippedAt(order.getOrderDate().plusHours(24));
+            shipment.setDeliveredAt(shipment.getEstimatedDelivery().minusHours(random.nextInt(12)));
+            shipment.setOnTimeDelivery(true);
+        } else if (order.getStatus() == OrderStatus.RETURNED) {
+            shipment.setStatus(Shipment.ShipmentStatus.RETURNED);
+            shipment.setShippedAt(order.getOrderDate().plusHours(24));
+            shipment.setDeliveredAt(order.getOrderDate().plusDays(4));
+        }
+        
+        shipmentRepository.save(shipment);
     }
 
     private void seedCuratedProducts() {
