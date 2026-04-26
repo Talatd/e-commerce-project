@@ -31,6 +31,9 @@ public class Coupon {
     @Column(nullable = false)
     private Boolean active = true;
 
+    /** If set, coupon only applies to products in this category. */
+    private String restrictedCategory;
+
     /** If set, coupon is invalid after this date/time. */
     private LocalDateTime expiresAt;
 }

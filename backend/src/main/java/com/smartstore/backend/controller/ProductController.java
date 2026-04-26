@@ -164,6 +164,20 @@ public class ProductController {
         return ResponseEntity.ok("Reviews successfully reseeded with diverse sentiments.");
     }
 
+    @PostMapping("/seed-specs-dev")
+    @Operation(summary = "Seed specifications", description = "Generates technical specifications for all products.")
+    public ResponseEntity<String> seedSpecsDev() {
+        dbInitializer.seedSpecifications();
+        return ResponseEntity.ok("Specifications successfully seeded.");
+    }
+
+    @PostMapping("/seed-shipping-dev")
+    @Operation(summary = "Seed shipping info", description = "Generates shipping and logistics data for all products.")
+    public ResponseEntity<String> seedShippingDev() {
+        dbInitializer.seedShippingInfo();
+        return ResponseEntity.ok("Shipping information successfully seeded.");
+    }
+
     @GetMapping("/reviews/count-dev")
     public ResponseEntity<Long> getReviewCountDev() {
         return ResponseEntity.ok(reviewRepository.count());

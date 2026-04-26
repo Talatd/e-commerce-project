@@ -19,8 +19,8 @@ public class OrderEvent {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @Column(nullable = false)
-    private String status; // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+    @Column(nullable = false, length = 25)
+    private String status; // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED, RETURNED
 
     @Column(nullable = false)
     private LocalDateTime eventDate;

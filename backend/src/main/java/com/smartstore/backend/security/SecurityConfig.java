@@ -45,6 +45,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/products/reviews/count-dev").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/products/seed-reviews-dev").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/products/seed-specs-dev").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/products/seed-shipping-dev").permitAll()
                 .requestMatchers("/api/v1/coupons/validate").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()

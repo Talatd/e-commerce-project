@@ -52,6 +52,12 @@ public class CustomerProfile {
     private String preferredStyle;
     private String personaType;
     private String bio;
+    private String ageRange; // e.g., "25-34"
+    private String occupation; // e.g., "Software Engineer"
+    private String interests; // e.g., "Mechanical Keyboards, Minimalist Setups"
+    private String persona; // e.g., "Shadow Coder", "Organic Creator"
+    private String membershipHistory; // Log of status changes
+
     @Builder.Default
     private Integer daysOnPlatform = 0;
 }

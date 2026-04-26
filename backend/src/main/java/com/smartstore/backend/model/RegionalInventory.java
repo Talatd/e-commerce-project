@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@lombok.Builder
 public class RegionalInventory {
 
     @Id
@@ -26,5 +27,6 @@ public class RegionalInventory {
     private String region; // US, PK, EU
 
     @Column(nullable = false)
+    @lombok.Builder.Default
     private Integer stockQuantity = 0;
 }

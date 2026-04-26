@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -40,19 +42,43 @@ public class Product {
     @Column(nullable = false)
     private BigDecimal basePrice;
 
+    @DecimalMin(value = "0.0", inclusive = false, message = "Supplier price must be greater than zero")
+    private BigDecimal supplierPrice;
+
     private String imageUrl;
 
     @Builder.Default
     private Integer stockQuantity = 0;
     private String tags;
 
+    @Builder.Default
+    private Double rating = 0.0;
+    
+    @Builder.Default
+    private Integer reviewCount = 0;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "store_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Store store;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<RegionalInventory> regionalInventories = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<ProductSpecification> specifications = new ArrayList<>();
+
+    @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private ShippingInfo shippingInfo;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;

@@ -2,6 +2,7 @@ import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { filter } from 'rxjs';
 import { AuthService, AiService, ProductService, OrderService, ToastService } from '../services';
 import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
 import { ConsumerStandaloneTopNavComponent } from '../consumer-standalone-top-nav.component';
@@ -300,17 +301,26 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 
 /* === PRODUCT DETAIL === */
 .product-section{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);}
-.img-col{padding:24px;border-right:1px solid var(--border);}
-.main-img{width:100%;aspect-ratio:1;border-radius:12px;background:rgba(62,207,178,0.04);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:12px;position:relative;overflow:hidden;}
+.img-col{padding:24px;border-right:1px solid var(--border);display:flex;flex-direction:column;}
+.main-img{
+  width:100%;
+  max-width:520px;
+  aspect-ratio:4/3;
+  border-radius:12px;
+  background:rgba(62,207,178,0.04);
+  border:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 auto 12px;
+  position:relative;
+  overflow:hidden;
+}
 .main-img::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:3;border-radius:inherit;background:radial-gradient(ellipse 88% 88% at 50% 48%,rgba(0,0,0,0) 30%,rgba(0,0,0,0.15) 58%,rgba(0,0,0,0.4) 100%);}
 :host-context(html.light-mode) .main-img::after{background:radial-gradient(ellipse 88% 88% at 50% 48%,rgba(0,0,0,0) 26%,rgba(0,0,0,0.12) 56%,rgba(0,0,0,0.35) 100%);}
 .main-img-photo{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);object-fit:cover;object-position:center;border-radius:14px;z-index:1;display:block;}
 .img-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(62,207,178,0.07),transparent 70%);pointer-events:none;z-index:2;}
 .img-badge{position:absolute;top:12px;left:12px;font-size:9px;padding:3px 9px;border-radius:10px;font-weight:600;z-index:4;}
-.thumb-row{display:flex;gap:8px;}
-.thumb{width:52px;height:52px;border-radius:8px;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s;}
-.thumb.active{border-color:rgba(62,207,178,0.35);}
-.thumb:hover{border-color:var(--border2);}
 .info-col{padding:24px;}
 .prod-brand{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--teal);margin-bottom:7px;}
 .prod-name{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;color:var(--text);line-height:1.15;margin-bottom:10px;letter-spacing:-0.01em;}
@@ -472,6 +482,38 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .input-meta{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 0;}
 .im-hint{font-size:10.5px;color:var(--text3);}
 .im-counter{font-size:10.5px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
+
+/* Light mode chat polish */
+:host-context(html.light-mode) .chat-header{
+  background:rgba(0,0,0,0.02);
+}
+:host-context(html.light-mode) .messages-area{
+  background:transparent;
+}
+:host-context(html.light-mode) .msg-ai-bubble{
+  background:rgba(0,0,0,0.03);
+  border-color:var(--border);
+  color:var(--text2);
+}
+:host-context(html.light-mode) .msg-user-bubble{
+  background:rgba(43,168,152,0.14);
+  border-color:rgba(43,168,152,0.22);
+  color:var(--text);
+}
+:host-context(html.light-mode) .typing-dots{
+  background:rgba(0,0,0,0.03);
+  border-color:var(--border);
+}
+:host-context(html.light-mode) .chat-input-wrap{
+  background:rgba(245,242,237,0.92);
+}
+:host-context(html.light-mode) .chat-input-box{
+  background:rgba(0,0,0,0.03);
+  border-color:var(--border2);
+}
+:host-context(html.light-mode) .sug{
+  background:rgba(0,0,0,0.02);
+}
 .success-banner{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--green-dim);border:1px solid rgba(62,201,138,0.18);border-radius:8px;margin-bottom:10px;}
 .success-banner span{font-size:13px;color:var(--green);font-weight:500;}
 .guardrail-card{background:var(--red-dim);border:1px solid rgba(224,112,112,0.25);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
@@ -670,13 +712,19 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
               <div class="pc-name" style="margin-bottom:4px;">{{p.name}}</div>
               <div class="pc-badges" (click)="$event.stopPropagation()">
                 <div *ngIf="p.isOnSale" class="pc-badge b-sale" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-border);">-{{p.discountPercent}}% OFF</div>
+                <div *ngIf="p.shippingInfo?.isFreeShipping" class="pc-badge b-new" style="background:var(--green-dim);color:var(--green);">Free Shipping</div>
                 <div *ngIf="p.tags?.includes('Performance')" class="pc-badge b-new" style="background:var(--red-dim);color:var(--red);">Performance</div>
                 <div *ngIf="p.tags?.includes('Aesthetic')" class="pc-badge b-new" style="background:var(--purple-dim);color:var(--purple-lit);">Aesthetic</div>
                 <div *ngIf="p.tags?.includes('Stealth')" class="pc-badge b-new" style="background:rgba(255,255,255,0.05);color:#fff;border:1px solid rgba(255,255,255,0.1);">Stealth</div>
                 <div *ngIf="p.tags?.includes('Shadow Coder')" class="pc-badge b-new" style="background:rgba(62,207,178,0.1);color:var(--teal);">Shadow Coder</div>
                 <div *ngIf="p.tags?.includes('Organic Creator')" class="pc-badge b-new" style="background:rgba(232,169,74,0.1);color:var(--amber);">Organic Creator</div>
               </div>
-              <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;"><span class="pc-star">★★★★★</span><span class="pc-rcount">4.9</span></div>
+              <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+                <div style="display:flex;gap:1px;">
+                  <svg *ngFor="let s of [1,2,3,4,5]" width="10" height="10" viewBox="0 0 13 13" [attr.fill]="(p.rating || 4.8) >= s ? '#E8A94A' : 'rgba(255,255,255,0.1)'"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg>
+                </div>
+                <span class="pc-rcount">{{p.rating || '4.8'}}</span>
+              </div>
               <div class="pc-bottom"><div><span class="pc-price">{{p.basePrice | currency}}</span><span *ngIf="p.isOnSale" class="pc-price-old">{{p.originalPrice | currency}}</span></div></div>
             </div>
           </div>
@@ -844,10 +892,16 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
                 <div class="pc-name">{{p.name}}</div>
                 <div class="pc-badges" (click)="$event.stopPropagation()">
                   <div *ngIf="p.isOnSale" class="pc-badge b-sale" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-border);">-{{p.discountPercent}}% OFF</div>
+                  <div *ngIf="p.shippingInfo?.isFreeShipping" class="pc-badge b-new" style="background:var(--green-dim);color:var(--green);">Free Shipping</div>
                   <div *ngFor="let tag of getTags(p.tags)" class="pc-badge" [ngClass]="getTagClass(tag)">{{tag}}</div>
                   <div *ngIf="p.stockQuantity > 50" class="pc-badge b-new">New</div>
                 </div>
-                <div class="pc-stars"><span class="pc-star">★★★★★</span><span class="pc-rcount">4.8</span></div>
+                <div class="pc-stars" style="display:flex;align-items:center;gap:4px;">
+                  <div style="display:flex;gap:1px;">
+                    <svg *ngFor="let s of [1,2,3,4,5]" width="10" height="10" viewBox="0 0 13 13" [attr.fill]="(p.rating || 4.8) >= s ? '#E8A94A' : 'rgba(255,255,255,0.1)'"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg>
+                  </div>
+                  <span class="pc-rcount">{{p.rating || '4.8'}}</span>
+                </div>
                 <div class="pc-bottom">
                   <div>
                     <span class="pc-price">{{p.basePrice | currency}}</span>
@@ -877,26 +931,32 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             <img *ngIf="selectedProduct.imageUrl" [src]="selectedProduct.imageUrl" class="main-img-photo" [alt]="selectedProduct.name"/>
             <svg *ngIf="!selectedProduct.imageUrl" width="160" height="160" viewBox="0 0 160 160" fill="none"><rect x="16" y="38" width="128" height="80" rx="8" stroke="#3ECFB2" stroke-width="1.5" opacity="0.45"/><rect x="60" y="118" width="40" height="8" rx="4" fill="rgba(62,207,178,0.15)"/></svg>
           </div>
-          <div class="thumb-row">
-            <div class="thumb active"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="12" rx="2.5" stroke="#3ECFB2" stroke-width="1" opacity="0.5"/></svg></div>
-            <div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" stroke="#6A8A84" stroke-width="1" opacity="0.4"/></svg></div>
-            <div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#6A8A84" stroke-width="1" opacity="0.4"/></svg></div>
-          </div>
         </div>
         <div class="info-col">
           <div class="prod-brand">{{selectedProduct.brand}}</div>
           <div class="prod-name">{{selectedProduct.name}}</div>
           <div class="rating-row">
-            <div class="stars"><svg class="star" viewBox="0 0 13 13" fill="#E8A94A"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg><svg class="star" viewBox="0 0 13 13" fill="#E8A94A"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg><svg class="star" viewBox="0 0 13 13" fill="#E8A94A"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg><svg class="star" viewBox="0 0 13 13" fill="#E8A94A"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg><svg class="star" viewBox="0 0 13 13" fill="#E8A94A"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg></div>
-            <span class="rating-val">4.9</span>
-            <span class="rating-count">(284 reviews)</span>
+            <div class="stars">
+              <svg *ngFor="let s of [1,2,3,4,5]" class="star" viewBox="0 0 13 13" [attr.fill]="(selectedProduct.rating || 4.8) >= s ? '#E8A94A' : 'rgba(255,255,255,0.1)'"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg>
+            </div>
+            <span class="rating-val">{{selectedProduct.rating || '4.8'}}</span>
+            <span class="rating-count">({{selectedProduct.reviewCount || 0}} reviews)</span>
           </div>
           <div class="price-row">
             <div class="price">{{selectedProduct.basePrice | currency}}</div>
             <div class="price-old" *ngIf="selectedProduct.isOnSale" style="font-size:18px;color:var(--text3);text-decoration:line-through;margin-left:12px;">{{selectedProduct.originalPrice | currency}}</div>
             <div class="price-save" *ngIf="selectedProduct.isOnSale" style="background:var(--red-dim);color:var(--red);padding:4px 8px;border-radius:4px;font-size:12px;margin-left:12px;font-weight:600;">Save {{selectedProduct.discountPercent}}%</div>
           </div>
-          <div class="stock-row-detail">
+          <div class="stock-row-detail" *ngIf="selectedProduct.shippingInfo">
+            <div class="stock-dot-detail" [style.background]="selectedProduct.shippingInfo.estimatedDays <= 2 ? 'var(--green)' : 'var(--amber)'"></div>
+            <div class="stock-txt">
+              {{selectedProduct.shippingInfo.carrierName}} · 
+              Arrives in {{selectedProduct.shippingInfo.estimatedDays}} day{{selectedProduct.shippingInfo.estimatedDays > 1 ? 's' : ''}} 
+              <span *ngIf="selectedProduct.shippingInfo.isFreeShipping" style="color:var(--green);margin-left:4px;">(Free Shipping)</span>
+              <span *ngIf="!selectedProduct.shippingInfo.isFreeShipping" style="color:var(--text3);margin-left:4px;">(+{{selectedProduct.shippingInfo.shippingCost | currency}})</span>
+            </div>
+          </div>
+          <div class="stock-row-detail" *ngIf="!selectedProduct.shippingInfo">
             <div class="stock-dot-detail"></div>
             <div class="stock-txt">In stock · Ships in 24h</div>
           </div>
@@ -911,10 +971,13 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             <div class="wish-btn" (click)="toggleWishlist(selectedProduct)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12S1.5 8 1.5 4.5a3 3 0 0 1 5.5-1.6A3 3 0 0 1 12.5 4.5C12.5 8 7 12 7 12Z" stroke="#6A8A84" stroke-width="1.2"/></svg></div>
           </div>
           <div class="specs-grid">
-            <div class="spec"><div class="spec-key">Category</div><div class="spec-val">{{selectedProduct.category}}</div></div>
-            <div class="spec"><div class="spec-key">Brand</div><div class="spec-val">{{selectedProduct.brand}}</div></div>
-            <div class="spec"><div class="spec-key">Stock</div><div class="spec-val">{{selectedProduct.stockQuantity}} units</div></div>
-            <div class="spec"><div class="spec-key">Rating</div><div class="spec-val">4.9 / 5.0</div></div>
+            <div class="spec" *ngFor="let s of selectedProduct.specifications">
+              <div class="spec-key">{{s.key}}</div>
+              <div class="spec-val">{{s.value}}</div>
+            </div>
+            <div class="spec" *ngIf="!selectedProduct.specifications || selectedProduct.specifications.length === 0">
+              <div class="spec-key">Quality</div><div class="spec-val">Premium Tier A+</div>
+            </div>
           </div>
         </div>
       </div>
@@ -958,6 +1021,53 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
           <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;">Most Mentioned Keywords</div>
           <div class="kw-row">
             <div class="kw-chip kw-pos" *ngFor="let kw of sentiments[selectedProduct.productId].topKeywords?.slice(0,6) || ['great quality','fast shipping','premium build','worth it']">{{kw}}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REVIEWS SECTION -->
+      <div class="reviews-section" style="padding:0 24px 40px;">
+        <div class="divider" style="margin:32px 0;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+          <div>
+            <div class="sec-title" style="font-size:20px;margin-bottom:4px;">Customer Reviews</div>
+            <div style="font-size:12px;color:var(--text3);">Verified buyer feedback</div>
+          </div>
+          <button class="btn-primary" style="padding:8px 16px;font-size:12px;" (click)="showReviewForm = !showReviewForm">Write Review</button>
+        </div>
+
+        <div class="review-list" style="display:flex;flex-direction:column;gap:24px;">
+          <div *ngIf="reviews.length === 0" style="text-align:center;padding:40px;background:var(--glass);border-radius:12px;border:1px dashed var(--border);">
+            <div style="color:var(--text3);font-size:14px;">No reviews yet. Be the first to share your experience!</div>
+          </div>
+
+          <div class="review-card" *ngFor="let r of reviews" style="background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:20px;transition:all 0.2s;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:36px;height:36px;border-radius:50%;background:var(--teal-dim);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--teal);font-size:12px;">
+                  {{r.userId ? 'U' + r.userId : 'A'}}
+                </div>
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text);">Verified Buyer</div>
+                  <div style="font-size:10px;color:var(--text3);">{{r.createdAt | date:'mediumDate'}}</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:2px;">
+                <svg *ngFor="let s of [1,2,3,4,5]" width="12" height="12" viewBox="0 0 13 13" [attr.fill]="r.rating >= s ? '#E8A94A' : 'rgba(255,255,255,0.1)'"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg>
+              </div>
+            </div>
+            <div style="font-size:14px;line-height:1.6;color:var(--text2);margin-bottom:16px;">
+              {{r.comment}}
+            </div>
+            
+            <!-- STORE RESPONSE -->
+            <div *ngIf="r.storeResponse" style="background:var(--glass2);border-left:2px solid var(--teal);padding:12px 16px;border-radius:0 8px 8px 0;margin-top:12px;">
+              <div style="font-size:11px;font-weight:600;color:var(--teal);margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M12 4L5 11 2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Store Response
+              </div>
+              <div style="font-size:12px;color:var(--text2);font-style:italic;">"{{r.storeResponse}}"</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1007,7 +1117,13 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
               <div class="wc-price-old" *ngIf="p.isOnSale" style="font-size:12px;color:var(--text3);text-decoration:line-through;margin-left:8px;">{{p.originalPrice | currency}}</div>
               <div class="wc-drop" *ngIf="p.isOnSale" style="font-size:11px;color:var(--red);margin-left:auto;font-weight:500;">↓ {{p.discountPercent}}%</div>
             </div>
-            <div class="wc-meta"><div class="wc-stars">★★★★★</div><div class="wc-rating">4.8</div><div class="wc-saved">Saved recently</div></div>
+            <div class="wc-meta">
+              <div class="wc-stars" style="display:flex;gap:1px;">
+                <svg *ngFor="let s of [1,2,3,4,5]" width="10" height="10" viewBox="0 0 13 13" [attr.fill]="(p.rating || 4.8) >= s ? '#E8A94A' : 'rgba(255,255,255,0.1)'"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg>
+              </div>
+              <div class="wc-rating">{{p.rating || '4.8'}}</div>
+              <div class="wc-saved">Saved recently</div>
+            </div>
             <div class="wc-actions"><button class="wc-cart" (click)="addToCart(p)">Add to Cart</button><div class="wc-more" (click)="selectProduct(p)">⋯</div></div>
           </div>
         </div>
@@ -1179,7 +1295,9 @@ export class ConsumerComponent implements OnInit, OnDestroy {
   filtersOpen = true;
   selectedProduct: any = null;
   products: any[] = [];
+  reviews: any[] = [];
   sentiments: any = {};
+  showReviewForm = false;
   prompt = '';
   chatMessages: any[] = [];
   history: string[] = [];
@@ -1205,344 +1323,362 @@ export class ConsumerComponent implements OnInit, OnDestroy {
   recentlyViewed: any[] = [];
   qty = 1;
   isTyping = false;
-timerInt: any;
-flashSaleTime = { hours: '04', minutes: '23', seconds: '17' };
-chatSuggestions = ['Top selling products', 'Recommend a laptop for my budget', 'Order status', 'Discounted items', 'Apple vs Samsung compare'];
-auth = inject(AuthService);
-ai = inject(AiService);
-productService = inject(ProductService);
-toast = inject(ToastService);
+  timerInt: any;
+  flashSaleTime = { hours: '04', minutes: '23', seconds: '17' };
+  chatSuggestions = ['Top selling products', 'Recommend a laptop for my budget', 'Order status', 'Discounted items', 'Apple vs Samsung compare'];
+  auth = inject(AuthService);
+  ai = inject(AiService);
+  productService = inject(ProductService);
+  toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   get cartCount(): number {
-  try {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    return cart.reduce((sum: number, i: any) => sum + (i.qty || i.quantity || 1), 0);
-  } catch { return 0; }
-}
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      return cart.reduce((sum: number, i: any) => sum + (i.qty || i.quantity || 1), 0);
+    } catch { return 0; }
+  }
 
-onLogoGoHome = () => this.goHomeTab();
+  onLogoGoHome = () => this.goHomeTab();
 
-goHomeTab() {
-  this.selectedProduct = null;
-  this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'home' }, replaceUrl: true });
-}
+  goHomeTab() {
+    this.selectedProduct = null;
+    this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'home' }, replaceUrl: true });
+  }
 
-goShopTab() {
-  this.selectedProduct = null;
-  this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'shop' }, replaceUrl: true });
-}
+  goShopTab() {
+    this.selectedProduct = null;
+    this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'shop' }, replaceUrl: true });
+  }
 
-openAssistantTab() {
-  this.activeTab = 'assistant';
-  this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
-}
+  openAssistantTab() {
+    this.activeTab = 'assistant';
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+  }
 
-openWishlistTab() {
-  this.activeTab = 'wishlist';
-  this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
-}
+  openWishlistTab() {
+    this.activeTab = 'wishlist';
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+  }
 
   private getTimeNow(): string {
-  const d = new Date();
-  return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
-}
-
-ngOnInit() {
-  this.route.queryParamMap.subscribe(q => {
-    const t = q.get('tab');
-    if (t === 'shop') this.activeTab = 'shop';
-    else if (t === 'home') this.activeTab = 'home';
-  });
-  const snap = this.route.snapshot.queryParamMap.get('tab');
-  if (snap !== 'shop' && snap !== 'home') {
-    this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'home' }, replaceUrl: true });
+    const d = new Date();
+    return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
   }
 
-  const userName = this.auth.currentUserValue?.fullName || 'there';
-  this.chatMessages.push({
-    sender: 'ai',
-    text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language, and I'll analyze the database to find the best products for you.`,
-    time: this.getTimeNow()
-  });
-
-  this.productService.getProducts().subscribe(res => {
-    this.products = res.map((p: any) => {
-      // Deterministically apply discount to every 3rd or 4th product based on ID, and any product containing 'Gaming' or 'MacBook'
-      if (p.productId % 3 === 0 || p.productId % 4 === 0 || p.name.includes('Gaming')) {
-        const disc = (p.productId % 3 === 0) ? 0.8 : (p.productId % 4 === 0 ? 0.85 : 0.75);
-        p.originalPrice = p.basePrice / disc;
-        p.isOnSale = true;
-        p.discountPercent = Math.round((1 - disc) * 100);
-      } else {
-        p.isOnSale = false;
-      }
-      return p;
-    });
-    const cats = Array.from(new Set(this.products.map(p => p.category)));
-    this.categories = cats.map((c: any) => ({ name: c, checked: false }));
-  });
-
-  try {
-    this.recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-  } catch {
-    this.recentlyViewed = [];
-  }
-
-  this.startFlashTimer();
-}
-
-startFlashTimer() {
-  let target = new Date();
-  target.setHours(23, 59, 59, 0); // end of day
-  this.timerInt = setInterval(() => {
-    const now = new Date();
-    const diff = target.getTime() - now.getTime();
-    if (diff <= 0) {
-      this.flashSaleTime = { hours: '00', minutes: '00', seconds: '00' };
-      clearInterval(this.timerInt);
-      return;
+  ngOnInit() {
+  const syncTabFromUrl = () => {
+    const t = this.route.snapshot.queryParamMap.get('tab');
+    if (t === 'shop') {
+      this.activeTab = 'shop';
+      this.selectedProduct = null;
+    } else if (t === 'home') {
+      this.activeTab = 'home';
+      this.selectedProduct = null;
     }
-    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const m = Math.floor((diff / 1000 / 60) % 60);
-    const s = Math.floor((diff / 1000) % 60);
-    this.flashSaleTime = {
-      hours: h.toString().padStart(2, '0'),
-      minutes: m.toString().padStart(2, '0'),
-      seconds: s.toString().padStart(2, '0')
-    };
-  }, 1000);
-}
+  };
 
-ngOnDestroy() {
-  if (this.timerInt) clearInterval(this.timerInt);
-}
+  // Sync immediately and after any navigation (routerLink on same component can be flaky with large templates)
+  syncTabFromUrl();
+  this.router.events.pipe(filter((e: any) => e?.constructor?.name === 'NavigationEnd')).subscribe(() => syncTabFromUrl());
 
-getTags(tagsStr: string): string[] {
-  if (!tagsStr) return [];
-  return tagsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
-}
+  this.route.queryParamMap.subscribe(() => syncTabFromUrl());
+    const snap = this.route.snapshot.queryParamMap.get('tab');
+    if (snap !== 'shop' && snap !== 'home') {
+      this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'home' }, replaceUrl: true });
+    }
 
-getTagClass(tag: string): string {
-  const t = tag.toLowerCase();
-  if (t.includes('minimal') || t.includes('aesthetic') || t.includes('design')) return 'tag-aesthetic';
-  if (t.includes('prod') || t.includes('silent') || t.includes('work')) return 'tag-productivity';
-  if (t.includes('gaming') || t.includes('perf')) return 'tag-gaming';
-  if (t.includes('audio') || t.includes('listen')) return 'tag-audio';
-  if (t.includes('nomad') || t.includes('travel')) return 'tag-productivity'; // Reusing blue for nomadic
-  return 'tag-minimal';
-}
-
-trackBrandByName(_index: number, b: { name: string; checked: boolean }): string {
-  return b.name;
-}
-
-toggleBrand(name: string) {
-  if (this.selectedBrands.includes(name)) {
-    this.selectedBrands = this.selectedBrands.filter(b => b !== name);
-  } else {
-    this.selectedBrands = [...this.selectedBrands, name];
-  }
-}
-
-  get activeFilters() {
-  const catFilters = this.categories.filter(c => c.checked).map(c => c.name);
-  return [...this.selectedBrands, ...catFilters];
-}
-
-  get filteredProducts() {
-  let list = this.products || [];
-  if (this.searchQuery) {
-    const q = this.searchQuery.toLowerCase();
-    list = list.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q) ||
-      (p.brand && p.brand.toLowerCase().includes(q)) ||
-      (p.tags && p.tags.toLowerCase().includes(q))
-    );
-  }
-  if (this.selectedCat !== 'All') {
-    list = list.filter(p => p.category === this.selectedCat);
-  }
-  if (this.maxPrice < 3000 || this.minPrice > 0) {
-    list = list.filter(p => p.basePrice <= this.maxPrice && p.basePrice >= this.minPrice);
-  }
-  const selBrands = this.brands.filter(b => b.checked).map(b => b.name);
-  if (selBrands.length > 0) {
-    list = list.filter(p => selBrands.includes(p.brand));
-  }
-  const selCats = this.categories.filter(c => c.checked).map(c => c.name);
-  if (selCats.length > 0) {
-    list = list.filter(p => selCats.includes(p.category));
-  }
-  if (this.availability.inStock) {
-    list = list.filter(p => p.stockQuantity > 0);
-  }
-  return list;
-}
-
-removeChip(f: string) {
-  if (this.selectedBrands.includes(f)) {
-    this.selectedBrands = this.selectedBrands.filter(b => b !== f);
-  }
-  const cat = this.categories.find(c => c.name === f);
-  if (cat) cat.checked = false;
-}
-
-resetFilters() {
-  this.maxPrice = 3000;
-  this.minPrice = 0;
-  this.selectedRating = 0;
-  this.selectedCat = 'All';
-  this.selectedBrands = [];
-  this.categories.forEach(c => (c.checked = false));
-  this.availability = { inStock: false, onSale: false, newArrivals: false };
-  this.searchQuery = '';
-}
-
-selectProduct(p: any) {
-  this.selectedProduct = p;
-  this.activeTab = 'shop';
-  this.qty = 1;
-  this.checkSentiment(p);
-  this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'shop' }, replaceUrl: true });
-
-  // update recently viewed
-  this.recentlyViewed = this.recentlyViewed.filter(item => item.productId !== p.productId);
-  this.recentlyViewed.unshift(p);
-  if (this.recentlyViewed.length > 4) this.recentlyViewed.pop();
-  localStorage.setItem('recentlyViewed', JSON.stringify(this.recentlyViewed));
-}
-
-checkSentiment(p: any) {
-  this.productService.getSentiment(p.productId).subscribe(res => {
-    this.sentiments[p.productId] = res;
-  });
-}
-
-toggleWishlist(p: any) {
-  const idx = this.wishlist.findIndex(w => w.productId === p.productId);
-  if (idx >= 0) {
-    this.wishlist.splice(idx, 1);
-  } else {
-    this.wishlist.push(p);
-  }
-}
-
-addToCart(p: any) {
-  let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-  let existing = cart.find((item: any) => item.productId === p.productId);
-  if (existing) existing.qty++;
-  else cart.push({ ...p, qty: 1 });
-  localStorage.setItem('cart', JSON.stringify(cart));
-  this.toast.show(p.name + ' added to cart');
-}
-
-sendSuggestion(s: string) {
-  this.prompt = s;
-  this.sendQuery();
-}
-
-clearChat() {
-  this.chatMessages = [];
-  this.history = [];
-  this.ai.clearSession();
-  const userName = this.auth.currentUserValue?.fullName || 'there';
-  this.chatMessages.push({
-    sender: 'ai',
-    text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language.`,
-    time: this.getTimeNow()
-  });
-}
-
-streamSteps: string[] = [];
-
-  private buildAltSuggestion(res: any): string | null {
-  const guardrail = (res?.guardrail || '').toString().toUpperCase();
-  const sessionStore = res?.session_store_id ? `#${res.session_store_id}` : 'your store';
-  if (guardrail.includes('CROSS_STORE')) {
-    return `Try: "Show my store (${sessionStore}) sales for this month" or "What are the top 5 products in my store this month?"`;
-  }
-  if (guardrail.includes('PROMPT_INJECTION')) {
-    return `Try: "What are the top 5 selling products this month?" or "Which products are low on stock?"`;
-  }
-  if (guardrail.includes('FILTER_BYPASS')) {
-    return `Try: "Compare this month vs last month revenue for my store (${sessionStore})"`;
-  }
-  return `Try a store-scoped question like: "Top selling products this month"`;
-}
-
-sendQuery() {
-  if (!this.prompt.trim()) return;
-  const userMsg = this.prompt.trim();
-  this.chatMessages.push({ sender: 'user', text: userMsg, time: this.getTimeNow() });
-  this.prompt = '';
-  this.isTyping = true;
-  this.streamSteps = [];
-  if (!this.auth.currentUserValue) {
-    this.isTyping = false;
+    const userName = this.auth.currentUserValue?.fullName || 'there';
     this.chatMessages.push({
       sender: 'ai',
-      text: 'Please sign in to use Nexus AI.',
-      time: this.getTimeNow(),
+      text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language, and I'll analyze the database to find the best products for you.`,
+      time: this.getTimeNow()
     });
-    return;
+
+    this.productService.getProducts().subscribe(res => {
+      this.products = res.map((p: any) => {
+        // Deterministically apply discount to every 3rd or 4th product based on ID, and any product containing 'Gaming' or 'MacBook'
+        if (p.productId % 3 === 0 || p.productId % 4 === 0 || p.name.includes('Gaming')) {
+          const disc = (p.productId % 3 === 0) ? 0.8 : (p.productId % 4 === 0 ? 0.85 : 0.75);
+          p.originalPrice = p.basePrice / disc;
+          p.isOnSale = true;
+          p.discountPercent = Math.round((1 - disc) * 100);
+        } else {
+          p.isOnSale = false;
+        }
+        return p;
+      });
+      const cats = Array.from(new Set(this.products.map(p => p.category)));
+      this.categories = cats.map((c: any) => ({ name: c, checked: false }));
+    });
+
+    try {
+      this.recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+    } catch {
+      this.recentlyViewed = [];
+    }
+
+    this.startFlashTimer();
   }
 
-  this.ai.query(userMsg, this.history).subscribe({
-    next: (res: any) => {
-      this.isTyping = false;
-      this.streamSteps = [];
-      const blocked = !!res?.blocked;
-      const aiMsg: any = {
-        sender: 'ai',
-        text: res?.response || 'No response',
-        time: this.getTimeNow(),
-        blocked,
-        guardrail: res?.guardrail,
-        detectionType: res?.detection_type,
-        sessionStoreId: res?.session_store_id,
-        requestedStoreId: res?.requested_store_id,
+  startFlashTimer() {
+    let target = new Date();
+    target.setHours(23, 59, 59, 0); // end of day
+    this.timerInt = setInterval(() => {
+      const now = new Date();
+      const diff = target.getTime() - now.getTime();
+      if (diff <= 0) {
+        this.flashSaleTime = { hours: '00', minutes: '00', seconds: '00' };
+        clearInterval(this.timerInt);
+        return;
+      }
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / 1000 / 60) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+      this.flashSaleTime = {
+        hours: h.toString().padStart(2, '0'),
+        minutes: m.toString().padStart(2, '0'),
+        seconds: s.toString().padStart(2, '0')
       };
-      if (blocked) {
-        aiMsg.altSuggestion = this.buildAltSuggestion(res);
-      } else {
-        aiMsg.steps = ['Guardrails check', 'SQL generated', 'Query executed', 'Response formatted'];
-        aiMsg.duration = '0.8s';
-        if (res.sql) aiMsg.sql = res.sql;
-        if (res.data && res.data.length > 0) aiMsg.results = res.data;
-        if (res.visualization) aiMsg.visualization = res.visualization;
-      }
-      this.chatMessages.push(aiMsg);
-      this.history.push('User: ' + userMsg, 'AI: ' + (res?.response || ''));
-      if (!blocked && res?.visualization) {
-        setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
-      }
-    },
-    error: () => {
-      this.isTyping = false;
-      this.streamSteps = [];
-      this.chatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
-    }
-  });
-}
+    }, 1000);
+  }
 
-  private renderPlotly(msgIndex: number, vizCode: string, data: any[]) {
-  const Plotly = (window as any)['Plotly'];
-  if (!Plotly) return;
-  const containerId = 'plotly-chart-' + msgIndex;
-  try {
-    const plotlyJson = JSON.parse(vizCode);
-    if (plotlyJson.data) {
-      const layout = { ...(plotlyJson.layout || {}), paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: { color: '#7A918D' } };
-      Plotly.newPlot(containerId, plotlyJson.data, layout, { responsive: true, displayModeBar: false });
+  ngOnDestroy() {
+    if (this.timerInt) clearInterval(this.timerInt);
+  }
+
+  getTags(tagsStr: string): string[] {
+    if (!tagsStr) return [];
+    return tagsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  getTagClass(tag: string): string {
+    const t = tag.toLowerCase();
+    if (t.includes('minimal') || t.includes('aesthetic') || t.includes('design')) return 'tag-aesthetic';
+    if (t.includes('prod') || t.includes('silent') || t.includes('work')) return 'tag-productivity';
+    if (t.includes('gaming') || t.includes('perf')) return 'tag-gaming';
+    if (t.includes('audio') || t.includes('listen')) return 'tag-audio';
+    if (t.includes('nomad') || t.includes('travel')) return 'tag-productivity'; // Reusing blue for nomadic
+    return 'tag-minimal';
+  }
+
+  trackBrandByName(_index: number, b: { name: string; checked: boolean }): string {
+    return b.name;
+  }
+
+  toggleBrand(name: string) {
+    if (this.selectedBrands.includes(name)) {
+      this.selectedBrands = this.selectedBrands.filter(b => b !== name);
+    } else {
+      this.selectedBrands = [...this.selectedBrands, name];
+    }
+  }
+
+  get activeFilters() {
+    const catFilters = this.categories.filter(c => c.checked).map(c => c.name);
+    return [...this.selectedBrands, ...catFilters];
+  }
+
+  get filteredProducts() {
+    let list = this.products || [];
+    if (this.searchQuery) {
+      const q = this.searchQuery.toLowerCase();
+      list = list.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        (p.brand && p.brand.toLowerCase().includes(q)) ||
+        (p.tags && p.tags.toLowerCase().includes(q))
+      );
+    }
+    if (this.selectedCat !== 'All') {
+      list = list.filter(p => p.category === this.selectedCat);
+    }
+    if (this.maxPrice < 3000 || this.minPrice > 0) {
+      list = list.filter(p => p.basePrice <= this.maxPrice && p.basePrice >= this.minPrice);
+    }
+    const selBrands = this.brands.filter(b => b.checked).map(b => b.name);
+    if (selBrands.length > 0) {
+      list = list.filter(p => selBrands.includes(p.brand));
+    }
+    const selCats = this.categories.filter(c => c.checked).map(c => c.name);
+    if (selCats.length > 0) {
+      list = list.filter(p => selCats.includes(p.category));
+    }
+    if (this.availability.inStock) {
+      list = list.filter(p => p.stockQuantity > 0);
+    }
+    return list;
+  }
+
+  removeChip(f: string) {
+    if (this.selectedBrands.includes(f)) {
+      this.selectedBrands = this.selectedBrands.filter(b => b !== f);
+    }
+    const cat = this.categories.find(c => c.name === f);
+    if (cat) cat.checked = false;
+  }
+
+  resetFilters() {
+    this.maxPrice = 3000;
+    this.minPrice = 0;
+    this.selectedRating = 0;
+    this.selectedCat = 'All';
+    this.selectedBrands = [];
+    this.categories.forEach(c => (c.checked = false));
+    this.availability = { inStock: false, onSale: false, newArrivals: false };
+    this.searchQuery = '';
+  }
+
+  selectProduct(p: any) {
+    this.selectedProduct = p;
+    this.activeTab = 'shop';
+    this.qty = 1;
+    this.checkSentiment(p);
+
+    // Fetch reviews
+    this.reviews = [];
+    this.productService.getReviews(p.productId).subscribe(res => {
+      this.reviews = res;
+    });
+
+    this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'shop' }, replaceUrl: true });
+
+    // update recently viewed
+    this.recentlyViewed = this.recentlyViewed.filter(item => item.productId !== p.productId);
+    this.recentlyViewed.unshift(p);
+    if (this.recentlyViewed.length > 4) this.recentlyViewed.pop();
+    localStorage.setItem('recentlyViewed', JSON.stringify(this.recentlyViewed));
+  }
+
+  checkSentiment(p: any) {
+    this.productService.getSentiment(p.productId).subscribe(res => {
+      this.sentiments[p.productId] = res;
+    });
+  }
+
+  toggleWishlist(p: any) {
+    const idx = this.wishlist.findIndex(w => w.productId === p.productId);
+    if (idx >= 0) {
+      this.wishlist.splice(idx, 1);
+    } else {
+      this.wishlist.push(p);
+    }
+  }
+
+  addToCart(p: any) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let existing = cart.find((item: any) => item.productId === p.productId);
+    if (existing) existing.qty++;
+    else cart.push({ ...p, qty: 1 });
+    localStorage.setItem('cart', JSON.stringify(cart));
+    this.toast.show(p.name + ' added to cart');
+  }
+
+  sendSuggestion(s: string) {
+    this.prompt = s;
+    this.sendQuery();
+  }
+
+  clearChat() {
+    this.chatMessages = [];
+    this.history = [];
+    this.ai.clearSession();
+    const userName = this.auth.currentUserValue?.fullName || 'there';
+    this.chatMessages.push({
+      sender: 'ai',
+      text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language.`,
+      time: this.getTimeNow()
+    });
+  }
+
+  streamSteps: string[] = [];
+
+  private buildAltSuggestion(res: any): string | null {
+    const guardrail = (res?.guardrail || '').toString().toUpperCase();
+    const sessionStore = res?.session_store_id ? `#${res.session_store_id}` : 'your store';
+    if (guardrail.includes('CROSS_STORE')) {
+      return `Try: "Show my store (${sessionStore}) sales for this month" or "What are the top 5 products in my store this month?"`;
+    }
+    if (guardrail.includes('PROMPT_INJECTION')) {
+      return `Try: "What are the top 5 selling products this month?" or "Which products are low on stock?"`;
+    }
+    if (guardrail.includes('FILTER_BYPASS')) {
+      return `Try: "Compare this month vs last month revenue for my store (${sessionStore})"`;
+    }
+    return `Try a store-scoped question like: "Top selling products this month"`;
+  }
+
+  sendQuery() {
+    if (!this.prompt.trim()) return;
+    const userMsg = this.prompt.trim();
+    this.chatMessages.push({ sender: 'user', text: userMsg, time: this.getTimeNow() });
+    this.prompt = '';
+    this.isTyping = true;
+    this.streamSteps = [];
+    if (!this.auth.currentUserValue) {
+      this.isTyping = false;
+      this.chatMessages.push({
+        sender: 'ai',
+        text: 'Please sign in to use Nexus AI.',
+        time: this.getTimeNow(),
+      });
       return;
     }
-  } catch { /* not JSON, try executing as code */ }
-  try {
-    const fn = new Function('data', 'Plotly', 'containerId', vizCode.replace('fig.to_json()', `Plotly.newPlot(containerId, fig.data, {...fig.layout, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#7A918D'}}, {responsive:true, displayModeBar:false})`));
-    fn(data, Plotly, containerId);
-  } catch { /* visualization rendering failed silently */ }
-}
+
+    this.ai.query(userMsg, this.history).subscribe({
+      next: (res: any) => {
+        this.isTyping = false;
+        this.streamSteps = [];
+        const blocked = !!res?.blocked;
+        const aiMsg: any = {
+          sender: 'ai',
+          text: res?.response || 'No response',
+          time: this.getTimeNow(),
+          blocked,
+          guardrail: res?.guardrail,
+          detectionType: res?.detection_type,
+          sessionStoreId: res?.session_store_id,
+          requestedStoreId: res?.requested_store_id,
+        };
+        if (blocked) {
+          aiMsg.altSuggestion = this.buildAltSuggestion(res);
+        } else {
+          aiMsg.steps = ['Guardrails check', 'SQL generated', 'Query executed', 'Response formatted'];
+          aiMsg.duration = '0.8s';
+          if (res.sql) aiMsg.sql = res.sql;
+          if (res.data && res.data.length > 0) aiMsg.results = res.data;
+          if (res.visualization) aiMsg.visualization = res.visualization;
+        }
+        this.chatMessages.push(aiMsg);
+        this.history.push('User: ' + userMsg, 'AI: ' + (res?.response || ''));
+        if (!blocked && res?.visualization) {
+          setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
+        }
+      },
+      error: () => {
+        this.isTyping = false;
+        this.streamSteps = [];
+        this.chatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
+      }
+    });
+  }
+
+  private renderPlotly(msgIndex: number, vizCode: string, data: any[]) {
+    const Plotly = (window as any)['Plotly'];
+    if (!Plotly) return;
+    const containerId = 'plotly-chart-' + msgIndex;
+    try {
+      const plotlyJson = JSON.parse(vizCode);
+      if (plotlyJson.data) {
+        const layout = { ...(plotlyJson.layout || {}), paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: { color: '#7A918D' } };
+        Plotly.newPlot(containerId, plotlyJson.data, layout, { responsive: true, displayModeBar: false });
+        return;
+      }
+    } catch { /* not JSON, try executing as code */ }
+    try {
+      const fn = new Function('data', 'Plotly', 'containerId', vizCode.replace('fig.to_json()', `Plotly.newPlot(containerId, fig.data, {...fig.layout, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#7A918D'}}, {responsive:true, displayModeBar:false})`));
+      fn(data, Plotly, containerId);
+    } catch { /* visualization rendering failed silently */ }
+  }
 }

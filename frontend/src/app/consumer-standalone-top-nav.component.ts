@@ -16,13 +16,13 @@ import { AuthService } from './services';
   imports: [CommonModule, RouterModule, NexusLogoComponent, ConsumerNavPillsComponent],
   template: `
     <div class="nx-navbar">
-      <a *ngIf="!logoClickHandler" class="nx-logo" [routerLink]="nav.shop" aria-label="Nexus shop home">
+      <a *ngIf="!logoClickHandler" class="nx-logo" [routerLink]="nav.shop" [queryParams]="{ tab: 'shop' }" aria-label="Nexus shop home">
         <app-nexus-logo size="sm" wordmark="Nexus"></app-nexus-logo>
       </a>
       <a
         *ngIf="logoClickHandler"
         class="nx-logo"
-        href="/consumer"
+        href="/consumer?tab=shop"
         (click)="handleLogoClick($event)"
         aria-label="Nexus shop home"
       >

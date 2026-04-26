@@ -22,7 +22,7 @@ import { CONSUMER_NAV } from './consumer-nav.paths';
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.5" stroke="#6A8A84" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1" fill="#6A8A84"/><circle cx="10" cy="11" r="1" fill="#6A8A84"/></svg>
           <div class="nx-cart-badge" *ngIf="totalQty > 0">{{totalQty}}</div>
         </a>
-        <a class="nx-nbtn" [routerLink]="consumerNav.shop">← Back to Shop</a>
+        <a class="nx-nbtn" [routerLink]="consumerNav.shop" [queryParams]="{ tab: 'shop' }">← Back to Shop</a>
       </app-consumer-standalone-top-nav>
 
       <div class="nx-checkout-shell">
@@ -93,7 +93,7 @@ import { CONSUMER_NAV } from './consumer-nav.paths';
 
           <div class="nx-empty-cart" *ngIf="cartItems.length === 0">
             <p>Your cart is empty.</p>
-            <a class="nx-nbtn" [routerLink]="consumerNav.shop" style="display:inline-flex;margin-top:4px;text-decoration:none;">Browse products</a>
+            <a class="nx-nbtn" [routerLink]="consumerNav.shop" [queryParams]="{ tab: 'shop' }" style="display:inline-flex;margin-top:4px;text-decoration:none;">Browse products</a>
           </div>
 
           <!-- COUPON -->
@@ -475,7 +475,7 @@ import { CONSUMER_NAV } from './consumer-nav.paths';
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="5.5" r="4" stroke="#080808" stroke-width="1.2"/><path d="M2 13c0-3 2-4.5 4.5-4.5S11 10 11 13" stroke="#080808" stroke-width="1.2" stroke-linecap="round"/></svg>
             Track Order
           </button>
-          <button class="btn-ghost" [routerLink]="consumerNav.shop">
+          <button class="btn-ghost" [routerLink]="consumerNav.shop" [queryParams]="{ tab: 'shop' }">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 4h7l-1 6H4L3 4Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><circle cx="5.5" cy="11.5" r="1" fill="currentColor"/><circle cx="8.5" cy="11.5" r="1" fill="currentColor"/></svg>
             Continue Shopping
           </button>
@@ -1132,7 +1132,7 @@ export class ProductDetailComponent implements OnInit {
         <div class="nx-orders-empty-icon" aria-hidden="true">📦</div>
         <h2 class="nx-orders-empty-title">No orders yet</h2>
         <p class="nx-orders-empty-sub">When you place an order, your purchase history and live tracking will show up here.</p>
-        <a class="nx-orders-empty-cta" [routerLink]="consumerNav.shop">Browse the shop →</a>
+        <a class="nx-orders-empty-cta" [routerLink]="consumerNav.shop" [queryParams]="{ tab: 'shop' }">Browse the shop →</a>
       </div>
 
       <!-- SHIPMENT TRACKING (Dynamic per order) -->

@@ -45,17 +45,40 @@ DATABASE SCHEMA (MySQL):
 - stores (id INT PK, name, owner_name, owner_id FK->users.user_id, total_revenue, order_count, rating, status ENUM('OPEN','CLOSED','PENDING'))
 - products (product_id INT PK, name, description, brand, category, base_price, image_url, stock_quantity)
 - regional_inventory (inventory_id INT PK, product_id FK->products.product_id, region, stock_quantity)
-- orders (order_id INT PK, user_id FK->users.user_id, total_amount, shipping_address, status ENUM('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED'), order_date)
+- shipping_info (id INT PK, product_id FK->products.product_id, carrier_name, estimated_days, shipping_cost, shipping_region, is_free_shipping)
+- product_specifications (id INT PK, product_id FK->products.product_id, spec_key, spec_value)
+- shipments (shipment_id INT PK, order_id FK->orders.order_id, status, carrier, tracking_number UNIQUE, estimated_delivery, delivered_at, created_at)
+- integration_logs (id INT PK, username, action, type, detail, created_at)
+- password_reset_tokens (id INT PK, user_id FK->users.user_id, token UNIQUE, expires_at, used)
+- coupons (coupon_id INT PK, code UNIQUE, percent_off, active, restricted_category, expires_at)
+- orders (order_id INT PK, user_id FK->users.user_id, total_amount, subtotal_amount, discount_amount, tax_amount, shipping_amount, coupon_code, shipping_address, status ENUM('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED'), order_date)
 - order_items (order_item_id INT PK, order_id FK->orders.order_id, product_id FK->products.product_id, quantity, price_at_purchase)
 - product_reviews (review_id INT PK, product_id FK->products.product_id, user_id FK->users.user_id, rating, comment, sentiment_score, store_response, created_at)
 - categories (category_id INT PK, name, description, parent_id FK->categories.category_id, active)
 - customer_profiles (profile_id INT PK, user_id FK->users.user_id, gender, age, city, country, membership_type, total_spend, items_purchased, avg_rating, satisfaction_level)
 - order_events (id INT PK, order_id FK->orders.order_id, status, event_date, notes)
 
+BUSINESS RULES (important for correct SQL):
+1. Order totals are server-calculated:
+   - orders.subtotal_amount = SUM(order_items.quantity * order_items.price_at_purchase)
+   - orders.discount_amount is the coupon discount (0 when no coupon)
+   - orders.tax_amount is tax on (subtotal - discount)
+   - orders.shipping_amount is shipping cost (can be 0)
+   - orders.total_amount = (subtotal - discount) + tax + shipping
+2. Coupons:
+   - coupons.code is case-insensitive in validation, but stored/returned as UPPERCASE
+   - coupons.percent_off is 0–100 (percentage discount)
+   - coupon is valid when active = true AND (expires_at is NULL OR expires_at > NOW())
+   - if coupons.restricted_category is NOT NULL, it only applies to order items where products.category = restricted_category
+   - when applied, orders.coupon_code = coupons.code (otherwise NULL)
+3. Prefer order financial columns on orders table (subtotal/discount/tax/shipping/total) instead of re-deriving,
+   unless the user explicitly asks to recompute from order_items.
+
 RULES:
 1. Use snake_case.
 2. Join order_items with products/orders to get product names or customer details.
 3. For Managers: Always filter by owner_id in stores or related joins.
+4. Prefer using explicit joined table filters for access control (don't rely on client-provided IDs).
 """
 
 def guardrails_agent(state: AgentState):

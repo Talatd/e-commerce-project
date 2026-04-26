@@ -43,6 +43,7 @@ public class Order {
     private String shippingAddress;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 25)
     private OrderStatus status = OrderStatus.PENDING;
 
     private LocalDateTime orderDate;
@@ -56,6 +57,6 @@ public class Order {
     }
 
     public enum OrderStatus {
-        PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+        PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED, RETURNED
     }
 }
