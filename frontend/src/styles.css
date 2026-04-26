@@ -462,6 +462,21 @@ body {
   min-width:200px;max-width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--border);
   background:var(--glass);color:var(--text);font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
 }
+.nx-order-select:focus{
+  outline:none;
+  border-color:var(--teal-glow);
+  box-shadow:0 0 0 3px rgba(62,207,178,0.12);
+}
+/* Make dropdown list readable in dark mode (browser-dependent but helps Chromium/Edge). */
+.nx-order-select option{
+  background: #0b0d0c;
+  color: #e6f0ee;
+}
+/* Light mode: keep options readable (some browsers ignore option styling). */
+::root.light-mode .nx-order-select option{
+  background: #ffffff;
+  color: #1a1916;
+}
 .nx-progress-wrap{margin-top:4px;}
 .nx-progress-track{height:6px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden;}
 :root.light-mode .nx-progress-track{background:rgba(0,0,0,0.06);}
@@ -1149,16 +1164,54 @@ a.nx-icon-btn{text-decoration:none;color:inherit;}
 .nx-checkout-pay .summary-title{font-family:'Playfair Display',serif;font-size:20px;font-style:italic;font-weight:400;color:var(--text);margin:0 0 6px;}
 
 .nx-checkout-clean .content-success{
-  display:flex;flex-direction:column;align-items:center;text-align:center;padding:32px 20px 48px;min-height:560px;position:relative;overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  text-align:center;
+  padding:14px 20px 40px;
+  min-height:0;
+  position:relative;
+  overflow:hidden;
 }
 .nx-checkout-clean .success-title{
   font-family:'Playfair Display',serif;font-size:28px;font-weight:400;font-style:italic;color:var(--text);
-  line-height:1.2;margin:20px 0 12px;
+  line-height:1.2;margin:10px 0 10px;
 }
 .nx-checkout-clean .success-title em{color:var(--teal2);font-style:italic;}
 .nx-checkout-clean .success-sub{max-width:420px;font-size:13px;color:var(--text2);line-height:1.6;margin:0 auto 24px;}
 .nx-checkout-clean .replay-btn{font-size:11px;color:var(--text3);cursor:pointer;margin-top:16px;text-decoration:underline;}
 .nx-checkout-clean .replay-btn:hover{color:var(--teal2);}
+
+.nx-checkout-clean .actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin:0 auto;
+}
+
+.nx-checkout-clean .btn-ghost{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:11px 14px;
+  border-radius:999px;
+  border:1px solid var(--border2);
+  background:var(--glass);
+  color:var(--text);
+  cursor:pointer;
+  font-size:12.5px;
+  font-weight:600;
+  transition:transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.nx-checkout-clean .btn-ghost:hover{
+  background:var(--glass2);
+  border-color:var(--border);
+  transform:translateY(-1px);
+}
+.nx-checkout-clean .btn-ghost:active{transform:translateY(0);}
 
 @media (max-width:900px){
   .nx-checkout-split,.nx-checkout-pay{grid-template-columns:1fr !important;}

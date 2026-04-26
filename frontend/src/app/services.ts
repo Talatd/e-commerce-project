@@ -228,6 +228,11 @@ export class OrderService {
   getMyOrders(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/my`);
   }
+
+  /** Manager/Admin: orders that include products from the current manager's store. */
+  getMyStoreOrders(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/my-store`);
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -237,6 +242,10 @@ export class StoreService {
 
   getStores(): Observable<any[]> {
     return this.http.get<any[]>(this.apiUrl);
+  }
+
+  updateStatus(storeId: number, status: 'OPEN' | 'CLOSED'): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${storeId}/status`, { status });
   }
 }
 
@@ -258,6 +267,10 @@ export class AdminService {
 
   banUser(id: number): Observable<any> {
     return this.http.post(`${API_V1}/admin/users/${id}/ban`, {});
+  }
+
+  updateUser(id: number, user: any): Observable<any> {
+    return this.http.put(`${API_V1}/admin/users/${id}`, user);
   }
 
   deleteUser(id: number): Observable<any> {

@@ -2,7 +2,7 @@ import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef } from 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { AuthService, ProductService, StoreService, AdminService, OrderService, CategoryService, CustomerProfileService, ToastService } from '../services';
+import { AuthService, ProductService, StoreService, AdminService, OrderService, CategoryService, CustomerProfileService, ToastService, AiService } from '../services';
 import { NexusLogoComponent } from '../nexus-logo.component';
 import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
 import { Chart } from './chart-register';
@@ -118,6 +118,23 @@ import { Chart } from './chart-register';
 .sc-btn-a.danger { color:var(--red); border-color:rgba(224,112,112,0.2); }
 .sc-btn-a:hover:not(.danger) { color:var(--text); border-color:var(--text3); }
 .sc-btn-a.danger:hover { background:var(--red-dim); }
+.ue-select{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:var(--glass);
+  color:var(--text);
+  outline:none;
+  appearance:none;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  font-family:inherit;
+  font-size:12.5px;
+}
+.ue-select:focus{border-color:rgba(62,207,178,0.35);box-shadow:0 0 0 3px rgba(62,207,178,0.12);}
+.ue-select option{background:#0b0d0c;color:#e6f0ee;}
+::host-context(html.light-mode) .ue-select option{background:#ffffff;color:#1a1916;}
 
 .prod-mgmt-grid-a { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
 .pm-card-a { background:var(--glass); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:all 0.3s; }
@@ -144,6 +161,41 @@ import { Chart } from './chart-register';
 .set-tog-a.on { background:var(--teal-dim); border-color:var(--teal-glow); }
 .set-tog-thumb-a { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--text3); transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .set-tog-a.on .set-tog-thumb-a { transform:translateX(18px); background:var(--teal); box-shadow:0 0 8px var(--teal-glow); }
+.chat-shell-a{background:var(--glass);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:560px;}
+.chat-head-a{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);}
+.chat-name-a{font-size:13px;font-weight:700;color:var(--text);}
+.chat-sub-a{font-size:11px;color:var(--text3);margin-top:2px;}
+.chat-body-a{flex:1;overflow:auto;padding:18px 20px;display:flex;flex-direction:column;gap:12px;}
+.chat-body-a::-webkit-scrollbar{width:2px;}
+.chat-body-a::-webkit-scrollbar-thumb{background:var(--border2);}
+.cu-a{display:flex;justify-content:flex-end;}
+.cu-b-a{max-width:70%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);border-radius:16px 16px 4px 16px;padding:10px 12px;font-size:13px;color:var(--text);line-height:1.55;}
+.ca-a{display:flex;align-items:flex-start;gap:10px;}
+.ca-av-a{width:28px;height:28px;border-radius:50%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ca-b-a{flex:1;background:var(--glass2);border:1px solid var(--border2);border-radius:4px 16px 16px 16px;padding:10px 12px;font-size:13px;color:var(--text2);line-height:1.6;}
+.ai-text-a{white-space:pre-wrap;color:var(--text2);font-size:13px;line-height:1.8;letter-spacing:0.01em;}
+.ai-text-a b{color:var(--text);font-weight:650;}
+.ai-hint-a{margin-top:10px;padding:10px 12px;background:rgba(232,169,74,0.08);border:1px solid rgba(232,169,74,0.18);border-radius:10px;color:var(--text2);font-size:12px;line-height:1.65;}
+.ai-hint-a .t{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber);margin-bottom:6px;font-weight:700;}
+.gr-a{background:var(--red-dim);border:1px solid rgba(224,112,112,0.25);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+.grh-a{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+.grr-a{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:11.5px;}
+.grk-a{color:var(--text3);}
+.grv-a{color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;}
+.chat-foot-a{border-top:1px solid var(--border);padding:14px 20px;}
+.chat-in-a{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:14px;padding:10px 12px;}
+.chat-in-a input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:13px;}
+.chat-send-a{width:34px;height:34px;border-radius:50%;background:var(--teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.chat-send-a:disabled{opacity:0.5;cursor:not-allowed;}
+.chat-send-a:hover:not(:disabled){background:var(--teal2);}
+.typing-row-a{display:flex;align-items:flex-start;gap:10px;opacity:0.95;}
+.typing-bubble-a{background:var(--glass2);border:1px solid var(--border2);border-radius:4px 16px 16px 16px;padding:10px 12px;display:flex;align-items:center;gap:10px;min-width:190px;}
+.typing-label-a{font-size:12px;color:var(--text3);}
+.dots-a{display:inline-flex;gap:4px;align-items:center;}
+.dot-a{width:5px;height:5px;border-radius:50%;background:rgba(110,222,200,0.8);animation:dotb-a 1s infinite ease-in-out;}
+.dot-a:nth-child(2){animation-delay:0.15s;opacity:0.8;}
+.dot-a:nth-child(3){animation-delay:0.3s;opacity:0.6;}
+@keyframes dotb-a{0%,80%,100%{transform:translateY(0);opacity:0.5;}40%{transform:translateY(-3px);opacity:1;}}
 </style>
 
 <div class="admin-page">
@@ -171,6 +223,9 @@ import { Chart } from './chart-register';
       </div>
       <div class="sitem-a" [class.active]="tab === 'analytics'" (click)="tab = 'analytics'">
         <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 10L4 6l3 2 5-6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Analytics</div>
+      </div>
+      <div class="sitem-a" [class.active]="tab === 'assistant'" (click)="tab = 'assistant'">
+        <div class="sitem-l-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L1 4v5l5.5 3L12 9V4L6.5 1Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 1v5.5M1 4l5.5 2.5L12 4" stroke="currentColor" stroke-width="1.1"/></svg>AI Assistant</div>
       </div>
 
       <div class="sg-label-a">Management</div>
@@ -313,8 +368,42 @@ import { Chart } from './chart-register';
               <div class="sc-stat-a"><div class="sc-stat-v-a">{{s.rating}}★</div><div class="sc-stat-l-a">Rating</div></div>
             </div>
             <div class="sc-actions-a">
-              <button class="sc-btn-a">View</button>
-              <button class="sc-btn-a danger">Action</button>
+              <button class="sc-btn-a" (click)="openStoreView(s)">View</button>
+              <button class="sc-btn-a danger" (click)="toggleStoreStatus(s)">{{s.status === 'OPEN' ? 'Close' : 'Open'}}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STORE VIEW MODAL -->
+      <div *ngIf="storeViewOpen" style="position:fixed; inset:0; z-index:12000; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(8,8,8,0.72); backdrop-filter:blur(10px);">
+        <div style="width:min(720px, 96vw); background:var(--bg); border:1px solid var(--border2); border-radius:16px; overflow:hidden; box-shadow:0 20px 70px rgba(0,0,0,0.5);">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border);">
+            <div style="min-width:0;">
+              <div style="font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Store details</div>
+              <div style="font-size:16px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{selectedStore?.name}}</div>
+              <div style="font-size:12px; color:var(--text3); margin-top:2px;">Owner: {{selectedStore?.ownerName}} · ID: {{selectedStore?.id}}</div>
+            </div>
+            <button class="sc-btn-a" style="max-width:120px;" (click)="closeStoreView()">Close</button>
+          </div>
+          <div style="padding:16px 18px;">
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px;">
+              <div style="background:var(--glass); border:1px solid var(--border); border-radius:14px; padding:12px 14px;">
+                <div style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3);">Revenue</div>
+                <div style="margin-top:6px; font-size:18px; font-weight:700; color:var(--text);">{{selectedStore?.totalRevenue | currency}}</div>
+              </div>
+              <div style="background:var(--glass); border:1px solid var(--border); border-radius:14px; padding:12px 14px;">
+                <div style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3);">Orders</div>
+                <div style="margin-top:6px; font-size:18px; font-weight:700; color:var(--text);">{{selectedStore?.orderCount || 0}}</div>
+              </div>
+              <div style="background:var(--glass); border:1px solid var(--border); border-radius:14px; padding:12px 14px;">
+                <div style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3);">Status</div>
+                <div style="margin-top:6px; font-size:18px; font-weight:700; color:var(--text);">{{selectedStore?.status}}</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="tbtn-a tbtn-ghost-a" style="padding:8px 12px;" (click)="toggleStoreStatus(selectedStore)">Toggle Open/Close</button>
+              <button class="tbtn-a tbtn-ghost-a" style="padding:8px 12px;" (click)="tab='comparison'; loadStoreComparison(); closeStoreView()">Open Comparison</button>
             </div>
           </div>
         </div>
@@ -377,16 +466,63 @@ import { Chart } from './chart-register';
                 <td class="td-name-a">{{u.fullName}}</td>
                 <td>{{u.email}}</td>
                 <td><span class="spill-a sp-blue-a">{{u.role}}</span></td>
-                <td><span class="spill-a sp-green-a">Active</span></td>
+                <td>
+                  <span class="spill-a" [class.sp-green-a]="u.enabled" [class.sp-amber-a]="!u.enabled">
+                    {{u.enabled ? 'Active' : 'Banned'}}
+                  </span>
+                </td>
                 <td>
                   <div style="display:flex; gap:6px;">
-                    <button class="sc-btn-a" style="padding:4px 10px; font-size:10px;">Edit</button>
-                    <button class="sc-btn-a danger" style="padding:4px 10px; font-size:10px;" (click)="banUser(u)">Ban</button>
+                    <button class="sc-btn-a" style="padding:4px 10px; font-size:10px;" (click)="openUserEdit(u)">Edit</button>
+                    <button class="sc-btn-a danger" style="padding:4px 10px; font-size:10px;" (click)="banUser(u)" [disabled]="!u.enabled">Ban</button>
                   </div>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- USER EDIT MODAL -->
+      <div *ngIf="userEditOpen" style="position:fixed; inset:0; z-index:12000; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(8,8,8,0.72); backdrop-filter:blur(10px);">
+        <div style="width:min(640px, 96vw); background:var(--bg); border:1px solid var(--border2); border-radius:16px; overflow:hidden; box-shadow:0 20px 70px rgba(0,0,0,0.5);">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border);">
+            <div style="min-width:0;">
+              <div style="font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Edit user</div>
+              <div style="font-size:16px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{userEditModel.fullName}}</div>
+              <div style="font-size:12px; color:var(--text3); margin-top:2px;">{{userEditModel.email}} · ID: {{userEditModel.userId}}</div>
+            </div>
+            <button class="sc-btn-a" style="max-width:120px;" (click)="closeUserEdit()">Close</button>
+          </div>
+          <div style="padding:16px 18px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Role</div>
+                <select [(ngModel)]="userEditModel.role" class="ue-select">
+                  <option value="ADMIN">ADMIN</option>
+                  <option value="MANAGER">MANAGER</option>
+                  <option value="CONSUMER">CONSUMER</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Status</div>
+                <div style="display:flex; gap:10px; align-items:center; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass);">
+                  <span class="spill-a" [class.sp-green-a]="userEditModel.enabled" [class.sp-amber-a]="!userEditModel.enabled">
+                    {{userEditModel.enabled ? 'Active' : 'Banned'}}
+                  </span>
+                  <button class="sc-btn-a danger" style="padding:6px 10px; font-size:11px;" (click)="userEditModel.enabled = true" [disabled]="userEditModel.enabled">Unban</button>
+                </div>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Full name</div>
+                <input [(ngModel)]="userEditModel.fullName" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" />
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <button class="tbtn-a tbtn-primary-a" style="flex:1;" (click)="saveUserEdit()" [disabled]="userEditSaving">Save changes</button>
+              <button class="tbtn-a tbtn-ghost-a" style="flex:1;" (click)="closeUserEdit()">Cancel</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -485,6 +621,72 @@ import { Chart } from './chart-register';
         </div>
       </div>
 
+      <!-- AI ASSISTANT PANEL (Admin / platform-wide) -->
+      <div class="panel-a" [class.active]="tab === 'assistant'">
+        <div class="top-bar-a">
+          <div><div class="page-title-a">AI Assistant</div><div class="page-sub-a">Platform-wide Text2SQL analytics (admin scope)</div></div>
+          <div class="top-actions-a">
+            <button class="tbtn-a tbtn-ghost-a" (click)="clearAiChat()">New Chat</button>
+          </div>
+        </div>
+        <div class="chat-shell-a">
+          <div class="chat-head-a">
+            <div>
+              <div class="chat-name-a">Nexus AI</div>
+              <div class="chat-sub-a">Admin · cross-store allowed</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="tbtn-a tbtn-ghost-a" style="padding:6px 12px;" (click)="seedAiExample('Compare total revenue of all stores')">Store comparison</button>
+              <button class="tbtn-a tbtn-ghost-a" style="padding:6px 12px;" (click)="seedAiExample('How did sales change vs last month?')">MoM</button>
+            </div>
+          </div>
+          <div class="chat-body-a">
+            <ng-container *ngFor="let m of aiChatMessages">
+              <div *ngIf="m.sender==='user'" class="cu-a"><div class="cu-b-a">{{m.text}}</div></div>
+              <div *ngIf="m.sender==='ai'" class="ca-a">
+                <div class="ca-av-a"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 5.5v7L9 16l7-3.5v-7L9 2Z" stroke="#3ECFB2" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+                <div class="ca-b-a">
+                  <div class="gr-a" *ngIf="m.blocked">
+                    <div class="grh-a">Guardrail — BLOCKED</div>
+                    <div class="grr-a">
+                      <div class="grk-a">detection_type</div><div class="grv-a">{{m.detection_type || '-'}}</div>
+                      <div class="grk-a">guardrail</div><div class="grv-a">{{m.guardrail || '-'}}</div>
+                      <div class="grk-a">requested_store</div><div class="grv-a">{{m.requested_store_id ? ('#' + m.requested_store_id) : '-'}}</div>
+                    </div>
+                  </div>
+                  <div class="ai-text-a">{{m.text}}</div>
+                  <div class="ai-hint-a" *ngIf="!m.blocked && m.noDataHint">
+                    <div class="t">No data / Next steps</div>
+                    <div>{{m.noDataHint}}</div>
+                  </div>
+                  <div *ngIf="m.sql" style="margin-top:10px;">
+                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">SQL</div>
+                    <div style="background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text3);white-space:pre-wrap;">{{m.sql}}</div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+            <div *ngIf="aiBusy" class="typing-row-a">
+              <div class="ca-av-a"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 5.5v7L9 16l7-3.5v-7L9 2Z" stroke="#3ECFB2" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+              <div class="typing-bubble-a">
+                <div class="typing-label-a">Nexus AI is thinking</div>
+                <div class="dots-a" aria-label="Loading">
+                  <span class="dot-a"></span><span class="dot-a"></span><span class="dot-a"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-foot-a">
+            <div class="chat-in-a">
+              <input placeholder="Ask platform analytics questions…" [(ngModel)]="aiPrompt" (keyup.enter)="sendAiQuery()" maxlength="500"/>
+              <button class="chat-send-a" (click)="sendAiQuery()" [disabled]="!aiPrompt.trim() || aiBusy">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 6.5L2 2l2 4.5-2 4.5 9-4.5Z" fill="#080808"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- CONFIG PANEL -->
       <div class="panel-a" [class.active]="tab === 'settings'">
         <div class="top-bar-a"><div><div class="page-title-a">System Config</div><div class="page-sub-a">Manage platform behavior.</div></div></div>
@@ -521,6 +723,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
   adminService = inject(AdminService);
   categoryService = inject(CategoryService);
   toast = inject(ToastService);
+  ai = inject(AiService);
   router = inject(Router);
 
   @ViewChild('adminRevenueChart') adminRevenueCanvas!: ElementRef<HTMLCanvasElement>;
@@ -533,6 +736,12 @@ export class AdminComponent implements OnInit, AfterViewInit {
   storeComparison: any[] = [];
   categories: any[] = [];
   auditLogs: any[] = [];
+  aiPrompt = '';
+  aiBusy = false;
+  aiChatMessages: any[] = [
+    { sender: 'ai', text: 'Ask me anything about platform analytics. I will generate SQL and summarize results.' }
+  ];
+  aiHistory: string[] = [];
 
   stores: any[] = [];
   users: any[] = [];
@@ -540,6 +749,13 @@ export class AdminComponent implements OnInit, AfterViewInit {
   allOrders: any[] = [];
   pagedProducts: any[] = [];
   stats: any = {};
+
+  storeViewOpen = false;
+  selectedStore: any = null;
+
+  userEditOpen = false;
+  userEditSaving = false;
+  userEditModel: any = { userId: null, fullName: '', email: '', role: 'CONSUMER', enabled: true };
 
   sysSettings = {
     maintenance: false,
@@ -659,6 +875,35 @@ export class AdminComponent implements OnInit, AfterViewInit {
     });
   }
 
+  openStoreView(s: any) {
+    this.selectedStore = s;
+    this.storeViewOpen = true;
+  }
+
+  closeStoreView() {
+    this.storeViewOpen = false;
+    this.selectedStore = null;
+  }
+
+  toggleStoreStatus(s: any) {
+    if (!s || !s.id) return;
+    const next = (s.status === 'OPEN' ? 'CLOSED' : 'OPEN') as 'OPEN' | 'CLOSED';
+    const label = next === 'OPEN' ? 'open' : 'close';
+    if (!confirm(`Do you want to ${label} "${s.name}"?`)) return;
+    this.storeService.updateStatus(Number(s.id), next).subscribe({
+      next: () => {
+        // Optimistic update
+        s.status = next;
+        if (this.selectedStore && this.selectedStore.id === s.id) {
+          this.selectedStore.status = next;
+        }
+        this.toast.show(`Store ${next === 'OPEN' ? 'opened' : 'closed'}`);
+        this.logAudit('Store Status Update', 'info', `Store ${s.name} -> ${next}`);
+      },
+      error: (e) => this.toast.show(e.error?.message || 'Failed to update store status', 'error')
+    });
+  }
+
   loadStoreComparison() {
     this.adminService.getStoreComparison().subscribe({
       next: (data) => {
@@ -721,12 +966,137 @@ export class AdminComponent implements OnInit, AfterViewInit {
     }, 1000);
   }
 
+  clearAiChat() {
+    this.aiPrompt = '';
+    this.aiBusy = false;
+    // AiService has session support; reset it if available.
+    this.ai.sessionId = null;
+    this.aiChatMessages = [
+      { sender: 'ai', text: 'New session started. Try: “Compare total revenue of all stores”.' }
+    ];
+    this.aiHistory = [];
+  }
+
+  seedAiExample(q: string) {
+    this.aiPrompt = q;
+    this.sendAiQuery();
+  }
+
+  sendAiQuery() {
+    const q = (this.aiPrompt || '').trim();
+    if (!q || this.aiBusy) return;
+    this.aiPrompt = '';
+    this.aiBusy = true;
+    this.aiChatMessages.push({ sender: 'user', text: q });
+
+    this.ai.query(q, this.aiHistory).subscribe({
+      next: (res: any) => {
+        const cleaned = this.cleanAiResponse(res?.response);
+        const noDataHint = this.buildNoDataHintIfNeeded(q, res);
+        this.aiChatMessages.push({
+          sender: 'ai',
+          text: cleaned || 'No response',
+          blocked: !!res?.blocked,
+          detection_type: res?.detection_type,
+          guardrail: res?.guardrail,
+          requested_store_id: res?.requested_store_id,
+          sql: res?.sql,
+          noDataHint,
+        });
+        this.aiHistory.push('User: ' + q, 'AI: ' + (cleaned || ''));
+        this.aiBusy = false;
+      },
+      error: () => {
+        this.aiChatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.' });
+        this.aiBusy = false;
+      }
+    });
+  }
+
+  private cleanAiResponse(v: any): string {
+    if (v == null) return '';
+    let s = String(v);
+    const trimmed = s.trim();
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+      try {
+        s = JSON.parse(trimmed);
+      } catch {
+        s = trimmed.slice(1, -1);
+      }
+    }
+    s = s.replace(/\\n/g, '\n').replace(/\\t/g, '  ').replace(/\\"/g, '"');
+    s = s.replace(/\*\*"?Summary"?\*\*:?/gi, 'Summary:\n');
+    s = s.replace(/\*\*"?Analysis"?\*\*:?/gi, '\nAnalysis:\n');
+    s = s.replace(/\*\*"?Recommendation"?\*\*:?/gi, '\nRecommendation:\n');
+    s = s.replace(/"\s*\*\*/g, '**').replace(/\*\*\s*"/g, '**');
+    return s.trim();
+  }
+
+  private buildNoDataHintIfNeeded(userQuery: string, res: any): string | null {
+    if (res?.blocked) return null;
+    const dataLen = Array.isArray(res?.data) ? res.data.length : 0;
+    if (dataLen > 0) return null;
+    const q = (userQuery || '').toLowerCase();
+    const isThisMonth = q.includes('this month') || q.includes('bu ay');
+    if (isThisMonth) {
+      return 'It looks like there are no matching rows for this month. Try “last month” or “last 90 days”, or create a test order so analytics has data.';
+    }
+    return 'No matching rows were returned. Try widening the date range (e.g., “last 90 days”) or verify that there is data in the database.';
+  }
+
   banUser(u: any) {
     if (!confirm(`Ban ${u.fullName}?`)) return;
     this.adminService.banUser(u.userId).subscribe(() => {
       this.toast.show('User banned');
       this.logAudit('Ban User', 'warning', `Banned ${u.fullName}`);
       this.refreshData();
+    });
+  }
+
+  openUserEdit(u: any) {
+    if (!u) return;
+    this.userEditModel = {
+      userId: u.userId,
+      fullName: u.fullName,
+      email: u.email,
+      role: u.role,
+      enabled: u.enabled !== false,
+    };
+    this.userEditOpen = true;
+  }
+
+  closeUserEdit() {
+    this.userEditOpen = false;
+    this.userEditSaving = false;
+  }
+
+  saveUserEdit() {
+    const m = this.userEditModel;
+    if (!m?.userId) return;
+    this.userEditSaving = true;
+
+    // PUT endpoint expects a user-like payload.
+    const payload = {
+      userId: m.userId,
+      fullName: (m.fullName || '').trim(),
+      email: m.email,
+      role: m.role,
+      enabled: !!m.enabled,
+      // passwordHash intentionally omitted
+    };
+
+    this.adminService.updateUser(Number(m.userId), payload).subscribe({
+      next: () => {
+        this.toast.show('User updated');
+        this.logAudit('Update User', 'info', `Updated ${payload.email} role=${payload.role} enabled=${payload.enabled}`);
+        this.userEditSaving = false;
+        this.userEditOpen = false;
+        this.refreshData();
+      },
+      error: (e) => {
+        this.userEditSaving = false;
+        this.toast.show(e.error?.message || 'Failed to update user', 'error');
+      }
     });
   }
 

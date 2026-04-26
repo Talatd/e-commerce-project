@@ -474,6 +474,16 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .im-counter{font-size:10.5px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
 .success-banner{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--green-dim);border:1px solid rgba(62,201,138,0.18);border-radius:8px;margin-bottom:10px;}
 .success-banner span{font-size:13px;color:var(--green);font-weight:500;}
+.guardrail-card{background:var(--red-dim);border:1px solid rgba(224,112,112,0.25);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+.gr-title{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);margin-bottom:10px;}
+.gr-box{background:rgba(8,8,8,0.35);border:1px solid rgba(224,112,112,0.22);border-radius:10px;overflow:hidden;}
+.gr-box-h{padding:10px 12px;border-bottom:1px solid rgba(224,112,112,0.18);display:flex;align-items:center;gap:8px;color:var(--red);font-weight:600;font-size:12px;}
+.gr-rows{padding:10px 12px;display:grid;grid-template-columns:140px 1fr;row-gap:8px;column-gap:10px;font-size:11.5px;}
+.gr-k{color:var(--text3);}
+.gr-v{color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;}
+.gr-alt{margin-top:10px;padding:10px 12px;background:rgba(62,201,138,0.06);border:1px solid rgba(62,201,138,0.18);border-radius:10px;}
+.gr-alt-t{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--green);margin-bottom:6px;}
+.gr-alt-m{font-size:12px;color:var(--text2);line-height:1.6;}
 @keyframes msg-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .msg-user,.msg-ai,.typing-ind{animation:msg-in 0.3s ease forwards;}
 
@@ -1032,8 +1042,32 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
               <div class="msg-ai-body">
                 <div class="msg-ai-name">NEXUS AI</div>
                 <div class="msg-ai-bubble">
+                  <!-- GUARDRail / BLOCKED -->
+                  <div *ngIf="m.blocked" class="guardrail-card">
+                    <div class="gr-title">
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14 4.5v4.2c0 3-2 5.2-6 6.8C4 14 2 11.8 2 8.7V4.5L8 1.5Z" stroke="#E07070" stroke-width="1.1"/><path d="M8 5v4" stroke="#E07070" stroke-width="1.2" stroke-linecap="round"/><circle cx="8" cy="11.4" r="0.8" fill="#E07070"/></svg>
+                      Guardrail Agent — BLOCKED
+                    </div>
+                    <div class="gr-box">
+                      <div class="gr-box-h">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14 4.5v4.2c0 3-2 5.2-6 6.8C4 14 2 11.8 2 8.7V4.5L8 1.5Z" stroke="#E07070" stroke-width="1.1"/></svg>
+                        Unauthorized / Out of scope request
+                      </div>
+                      <div class="gr-rows">
+                        <div class="gr-k">Detection type</div><div class="gr-v">{{m.detectionType || '-'}}</div>
+                        <div class="gr-k">Guardrail</div><div class="gr-v">{{m.guardrail || '-'}}</div>
+                        <div class="gr-k">Requested store</div><div class="gr-v">{{m.requestedStoreId ? ('#' + m.requestedStoreId) : '-'}}</div>
+                        <div class="gr-k">Session store</div><div class="gr-v">{{m.sessionStoreId ? ('#' + m.sessionStoreId) : '-'}}</div>
+                        <div class="gr-k">Action</div><div class="gr-v">SQL generation stopped</div>
+                      </div>
+                    </div>
+                    <div class="gr-alt" *ngIf="m.altSuggestion">
+                      <div class="gr-alt-t">Instead, you can ask</div>
+                      <div class="gr-alt-m">{{m.altSuggestion}}</div>
+                    </div>
+                  </div>
                   <!-- AGENT STEPS (only for responses with steps) -->
-                  <div class="agent-steps" *ngIf="m.steps && m.steps.length > 0">
+                  <div class="agent-steps" *ngIf="!m.blocked && m.steps && m.steps.length > 0">
                     <div class="as-title"><div class="as-dot"></div>Agent ran · {{m.duration || '0.8s'}}</div>
                     <div class="step-list">
                       <div class="step-item" *ngFor="let s of m.steps">
@@ -1043,12 +1077,12 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
                     </div>
                   </div>
                   <!-- SQL BLOCK -->
-                  <div *ngIf="m.sql">
+                  <div *ngIf="!m.blocked && m.sql">
                     <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Generated SQL</div>
                     <div class="sql-block">{{m.sql}}</div>
                   </div>
                   <!-- RESULT TABLE -->
-                  <div *ngIf="m.results && m.results.length > 0">
+                  <div *ngIf="!m.blocked && m.results && m.results.length > 0">
                     <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Results</div>
                     <div class="result-table-wrap">
                       <table class="result-table">
@@ -1060,19 +1094,19 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
                     </div>
                   </div>
                   <!-- SUCCESS BANNER -->
-                  <div class="success-banner" *ngIf="m.success">
+                  <div class="success-banner" *ngIf="!m.blocked && m.success">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#3EC98A" stroke-width="1.2"/><path d="M5 8l2 2 4-4" stroke="#3EC98A" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     <span>{{m.success}}</span>
                   </div>
                   <!-- TEXT -->
                   <div [innerHTML]="m.text"></div>
                   <!-- PLOTLY VISUALIZATION -->
-                  <div *ngIf="m.visualization" class="plotly-wrap">
+                  <div *ngIf="!m.blocked && m.visualization" class="plotly-wrap">
                     <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;">AI-Generated Chart</div>
                     <div [id]="'plotly-chart-' + i" style="width:100%;min-height:300px;background:rgba(255,255,255,0.02);border-radius:10px;overflow:hidden;"></div>
                   </div>
                   <!-- PRODUCT CHIPS -->
-                  <div class="prod-chips" *ngIf="m.results && m.results.length > 0">
+                  <div class="prod-chips" *ngIf="!m.blocked && m.results && m.results.length > 0">
                     <div class="prod-chip" *ngFor="let r of m.results.slice(0,3)" (click)="selectProduct(r)">
                       <div class="pc-chip-icon" style="background:rgba(62,207,178,0.08);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L1 4v4l6 3 6-3V4L7 1Z" stroke="#3ECFB2" stroke-width="1.1" stroke-linejoin="round"/></svg></div>
                       <div><div class="pc-chip-name">{{r.name}}</div><div class="pc-chip-price">{{r.basePrice | currency}}</div></div>
@@ -1351,6 +1385,21 @@ export class ConsumerComponent implements OnInit {
 
   streamSteps: string[] = [];
 
+  private buildAltSuggestion(res: any): string | null {
+    const guardrail = (res?.guardrail || '').toString().toUpperCase();
+    const sessionStore = res?.session_store_id ? `#${res.session_store_id}` : 'your store';
+    if (guardrail.includes('CROSS_STORE')) {
+      return `Try: "Show my store (${sessionStore}) sales for this month" or "What are the top 5 products in my store this month?"`;
+    }
+    if (guardrail.includes('PROMPT_INJECTION')) {
+      return `Try: "What are the top 5 selling products this month?" or "Which products are low on stock?"`;
+    }
+    if (guardrail.includes('FILTER_BYPASS')) {
+      return `Try: "Compare this month vs last month revenue for my store (${sessionStore})"`;
+    }
+    return `Try a store-scoped question like: "Top selling products this month"`;
+  }
+
   sendQuery() {
     if (!this.prompt.trim()) return;
     const userMsg = this.prompt.trim();
@@ -1368,36 +1417,42 @@ export class ConsumerComponent implements OnInit {
       return;
     }
 
-    this.ai.queryStream(
-      userMsg, this.history,
-      (step) => {
-        this.streamSteps.push(step.message);
-      },
-      (res) => {
+    this.ai.query(userMsg, this.history).subscribe({
+      next: (res: any) => {
         this.isTyping = false;
         this.streamSteps = [];
+        const blocked = !!res?.blocked;
         const aiMsg: any = {
           sender: 'ai',
-          text: res.response,
+          text: res?.response || 'No response',
           time: this.getTimeNow(),
-          steps: ['Guardrails check', 'SQL generated', 'Query executed', 'Response formatted'],
-          duration: '0.8s'
+          blocked,
+          guardrail: res?.guardrail,
+          detectionType: res?.detection_type,
+          sessionStoreId: res?.session_store_id,
+          requestedStoreId: res?.requested_store_id,
         };
-        if (res.sql) aiMsg.sql = res.sql;
-        if (res.data && res.data.length > 0) aiMsg.results = res.data;
-        if (res.visualization) aiMsg.visualization = res.visualization;
+        if (blocked) {
+          aiMsg.altSuggestion = this.buildAltSuggestion(res);
+        } else {
+          aiMsg.steps = ['Guardrails check', 'SQL generated', 'Query executed', 'Response formatted'];
+          aiMsg.duration = '0.8s';
+          if (res.sql) aiMsg.sql = res.sql;
+          if (res.data && res.data.length > 0) aiMsg.results = res.data;
+          if (res.visualization) aiMsg.visualization = res.visualization;
+        }
         this.chatMessages.push(aiMsg);
-        this.history.push('User: ' + userMsg, 'AI: ' + res.response);
-        if (res.visualization) {
+        this.history.push('User: ' + userMsg, 'AI: ' + (res?.response || ''));
+        if (!blocked && res?.visualization) {
           setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
         }
       },
-      (err) => {
+      error: () => {
         this.isTyping = false;
         this.streamSteps = [];
         this.chatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
       }
-    );
+    });
   }
 
   private renderPlotly(msgIndex: number, vizCode: string, data: any[]) {

@@ -396,7 +396,7 @@ import { CONSUMER_NAV } from './consumer-nav.paths';
         <canvas #confettiCanvas id="confetti-canvas"></canvas>
         <div class="bg-glow"></div>
 
-        <div class="success-icon-wrap" style="margin-top:20px;">
+        <div class="success-icon-wrap" style="margin-top:6px;">
           <div class="pulse-ring pr1"></div>
           <div class="pulse-ring pr2"></div>
           <div class="pulse-ring pr3"></div>
@@ -413,7 +413,7 @@ import { CONSUMER_NAV } from './consumer-nav.paths';
         </div>
 
         <div class="success-title">Order <em>confirmed,</em><br>{{displayName}}! 🎉</div>
-        <div class="success-sub">Payment of {{grandTotal | currency}} was processed successfully. A confirmation has been sent to your email.</div>
+        <div class="success-sub"><b>Your order has been completed successfully.</b> Payment of {{grandTotal | currency}} was processed successfully. A confirmation has been sent to your email.</div>
 
         <div class="eta-bar">
           <div class="eta-icon">
@@ -636,6 +636,12 @@ export class CartComponent implements OnInit, OnDestroy {
     this.isProcessing = true;
     
     const user = this.auth.currentUserValue;
+    const token = localStorage.getItem('token') || (user?.token ?? null);
+    if (!token) {
+      this.isProcessing = false;
+      this.toast.show('Session expired. Please sign in again to complete payment.', 'error');
+      return;
+    }
     const orderPayload = {
       user: { userId: user?.userId || 1 },
       totalAmount: this.grandTotal,
@@ -644,7 +650,8 @@ export class CartComponent implements OnInit, OnDestroy {
       items: this.cartItems.map(item => ({
         product: { productId: item.productId },
         quantity: item.qty,
-        priceAtPurchase: item.basePrice
+        // cart entries may come from older localStorage formats; be defensive
+        priceAtPurchase: item.basePrice ?? item.price ?? item.unitPrice ?? 0
       }))
     };
 
@@ -660,7 +667,12 @@ export class CartComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isProcessing = false;
-        this.toast.show('Failed to save order. Please try again.', 'error');
+        const msg =
+          err?.error?.message ||
+          err?.error?.error ||
+          err?.message ||
+          'Failed to save order. Please try again.';
+        this.toast.show(msg, 'error');
       }
     });
   }

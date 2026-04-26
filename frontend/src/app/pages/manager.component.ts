@@ -2,7 +2,7 @@ import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef } from 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { ProductService, OrderService, AdminService, AuthService, ToastService } from '../services';
+import { ProductService, OrderService, AdminService, AuthService, ToastService, AiService } from '../services';
 import { NexusLogoComponent } from '../nexus-logo.component';
 import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
 import { Chart } from './chart-register';
@@ -35,6 +35,10 @@ import { Chart } from './chart-register';
 }
 :host-context(html.light-mode) .mn{background:rgba(245,242,237,0.96);}
 :host-context(html.light-mode) .msb{background:rgba(245,242,237,0.55);}
+:host-context(html.light-mode) .mss{background:rgba(255,255,255,0.92);border-color:var(--border2);}
+:host-context(html.light-mode) .msr{background:transparent;}
+:host-context(html.light-mode) .mtog.off{background:rgba(0,0,0,0.04);}
+:host-context(html.light-mode) .mtog.off .mtog-t{background:rgba(26,25,22,0.35);}
 .mp{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);overflow:hidden;display:flex;flex-direction:column;height:100vh;}
 .mn{display:flex;align-items:center;justify-content:space-between;padding:12px 22px;border-bottom:1px solid var(--border);background:rgba(8,8,8,0.95);backdrop-filter:blur(20px);flex-shrink:0;z-index:20;}
 .mlogo{font-family:'Playfair Display',serif;font-style:italic;font-size:18px;color:var(--text);display:flex;align-items:center;gap:7px;}
@@ -87,12 +91,18 @@ import { Chart } from './chart-register';
 .mgt{font-size:9.5px;letter-spacing:0.09em;text-transform:uppercase;color:var(--text2);}
 .mgm{font-size:10px;color:var(--text3);}
 .mgb{padding:12px 14px;}
-.mbc{display:flex;align-items:flex-end;gap:5px;height:72px;}
-.mbcc{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.mbc{display:flex;align-items:stretch;gap:5px;height:72px;}
+.mbcc{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;flex:1;height:72px;}
 .mbcb{width:100%;border-radius:3px 3px 0 0;background:rgba(62,207,178,0.15);cursor:pointer;}
 .mbcb.hi{background:rgba(62,207,178,0.6);}
 .mbcb:hover{background:rgba(62,207,178,0.35);}
-.mbcl{font-size:8px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
+.mbcl{
+  font-size:9.5px;
+  color:rgba(122,145,141,0.95);
+  font-family:'JetBrains Mono',monospace;
+  letter-spacing:0.01em;
+  white-space:nowrap;
+}
 .mleg{display:flex;flex-direction:column;gap:6px;}
 .mli{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2);}
 .mld{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
@@ -205,6 +215,45 @@ import { Chart } from './chart-register';
 .mkpi:nth-child(2){animation-delay:0.06s;}
 .mkpi:nth-child(3){animation-delay:0.09s;}
 .mkpi:nth-child(4){animation-delay:0.12s;}
+.chat-shell{background:var(--glass);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:520px;}
+.chat-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);}
+.chat-title{display:flex;align-items:center;gap:10px;}
+.chat-name{font-size:13px;font-weight:600;color:var(--text);}
+.chat-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.chat-actions{display:flex;gap:8px;}
+.chat-btn{padding:6px 12px;border-radius:20px;font-size:11px;background:var(--glass2);border:1px solid var(--border2);color:var(--text2);cursor:pointer;}
+.chat-btn:hover{color:var(--text);}
+.chat-body{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.chat-body::-webkit-scrollbar{width:2px;}
+.chat-body::-webkit-scrollbar-thumb{background:var(--border2);}
+.m-u{display:flex;justify-content:flex-end;}
+.m-u-b{max-width:70%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);border-radius:16px 16px 4px 16px;padding:10px 12px;font-size:13px;color:var(--text);line-height:1.55;}
+.m-a{display:flex;align-items:flex-start;gap:10px;}
+.m-a-av{width:28px;height:28px;border-radius:50%;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.m-a-b{flex:1;background:var(--glass2);border:1px solid var(--border2);border-radius:4px 16px 16px 16px;padding:10px 12px;font-size:13px;color:var(--text2);line-height:1.6;}
+.ai-text{white-space:pre-wrap;color:var(--text2);font-size:13px;line-height:1.8;letter-spacing:0.01em;}
+.ai-text b{color:var(--text);font-weight:650;}
+.ai-hint{margin-top:10px;padding:10px 12px;background:rgba(232,169,74,0.08);border:1px solid rgba(232,169,74,0.18);border-radius:10px;color:var(--text2);font-size:12px;line-height:1.65;}
+.ai-hint .t{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber);margin-bottom:6px;font-weight:700;}
+.gr{background:var(--red-dim);border:1px solid rgba(224,112,112,0.25);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+.gr-h{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+.gr-r{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:11.5px;}
+.gr-k{color:var(--text3);}
+.gr-v{color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;}
+.chat-foot{border-top:1px solid var(--border);padding:12px 16px;}
+.chat-in{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:14px;padding:10px 12px;}
+.chat-in input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:13px;}
+.chat-send{width:34px;height:34px;border-radius:50%;background:var(--teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.chat-send:disabled{opacity:0.5;cursor:not-allowed;}
+.chat-send:hover:not(:disabled){background:var(--teal2);}
+.typing-row{display:flex;align-items:flex-start;gap:10px;opacity:0.95;}
+.typing-bubble{background:var(--glass2);border:1px solid var(--border2);border-radius:4px 16px 16px 16px;padding:10px 12px;display:flex;align-items:center;gap:10px;min-width:170px;}
+.typing-label{font-size:12px;color:var(--text3);}
+.dots{display:inline-flex;gap:4px;align-items:center;}
+.dot{width:5px;height:5px;border-radius:50%;background:rgba(110,222,200,0.8);animation:dotb 1s infinite ease-in-out;}
+.dot:nth-child(2){animation-delay:0.15s;opacity:0.8;}
+.dot:nth-child(3){animation-delay:0.3s;opacity:0.6;}
+@keyframes dotb{0%,80%,100%{transform:translateY(0);opacity:0.5;}40%{transform:translateY(-3px);opacity:1;}}
 </style>
 
 <div class="mp">
@@ -256,6 +305,9 @@ import { Chart } from './chart-register';
       <div class="msl">Analytics</div>
       <div class="msi" [class.act]="activePanel==='analytics'" (click)="activePanel='analytics'">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 10L4 6l3 2.5 5-6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Performance</div>
+      </div>
+      <div class="msi" [class.act]="activePanel==='assistant'" (click)="activePanel='assistant'">
+        <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L1 4v5l5.5 3L12 9V4L6.5 1Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 1v5.5M1 4l5.5 2.5L12 4" stroke="currentColor" stroke-width="1.1"/></svg>AI Assistant</div>
       </div>
       <div class="msi" [class.act]="activePanel==='customers'" (click)="activePanel='customers'; loadSegments()">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1.5 11.5c0-2.7 2-4 5-4s5 1.3 5 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Customers</div>
@@ -338,11 +390,17 @@ import { Chart } from './chart-register';
         </div>
         <div class="mcr">
           <div class="mgc">
-            <div class="mgh"><div class="mgt">Monthly Revenue</div><div class="mgm">Peak: March · $28K</div></div>
+            <div class="mgh">
+              <div class="mgt">Monthly Revenue</div>
+              <div class="mgm">{{monthlyRevenuePeakLabel}}</div>
+            </div>
             <div class="mgb">
               <div class="mbc">
-                <div class="mbcc" *ngFor="let b of [{h:38,l:'J'},{h:52,l:'F'},{h:100,l:'M',hi:true},{h:75,l:'A'},{h:62,l:'M'},{h:70,l:'J'},{h:55,l:'J'},{h:80,l:'A'},{h:66,l:'S'},{h:90,l:'O'},{h:72,l:'N'},{h:45,l:'D'}]">
-                  <div class="mbcb" [class.hi]="b.hi" [style.height.%]="b.h"></div>
+                <div class="mbcc" *ngFor="let b of monthlyRevenueBars">
+                  <div class="mbcb"
+                       [class.hi]="b.hi"
+                       [style.height.%]="b.h"
+                       [title]="b.v | currency:'USD':'symbol':'1.0-0'"></div>
                   <div class="mbcl" [style.color]="b.hi ? 'var(--teal2)' : ''">{{b.l}}</div>
                 </div>
               </div>
@@ -523,6 +581,74 @@ import { Chart } from './chart-register';
         </div>
       </ng-container>
 
+      <!-- AI ASSISTANT (Corporate / Manager) -->
+      <ng-container *ngIf="activePanel==='assistant'">
+        <div class="mtb">
+          <div><div class="mpt">AI Assistant</div><div class="mps">Store-scoped Text2SQL analytics</div></div>
+          <div class="mta"><div class="mtbtn mtbg" (click)="clearAiChat()">New Chat</div></div>
+        </div>
+        <div class="chat-shell">
+          <div class="chat-head">
+            <div class="chat-title">
+              <div class="m-a-av"><svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 5.5v7L9 16l7-3.5v-7L9 2Z" stroke="#3ECFB2" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+              <div>
+                <div class="chat-name">Nexus AI</div>
+                <div class="chat-sub">Corporate user · Store scope enforced</div>
+              </div>
+            </div>
+            <div class="chat-actions">
+              <div class="chat-btn" (click)="seedAiExample('What are the top 5 selling products this month?')">Top 5 products</div>
+              <div class="chat-btn" (click)="seedAiExample('Which products are low on stock?')">Low stock</div>
+            </div>
+          </div>
+          <div class="chat-body">
+            <ng-container *ngFor="let m of aiChatMessages">
+              <div *ngIf="m.sender==='user'" class="m-u"><div class="m-u-b">{{m.text}}</div></div>
+              <div *ngIf="m.sender==='ai'" class="m-a">
+                <div class="m-a-av"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 5.5v7L9 16l7-3.5v-7L9 2Z" stroke="#3ECFB2" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+                <div class="m-a-b">
+                  <div class="gr" *ngIf="m.blocked">
+                    <div class="gr-h">Guardrail — BLOCKED</div>
+                    <div class="gr-r">
+                      <div class="gr-k">detection_type</div><div class="gr-v">{{m.detection_type || '-'}}</div>
+                      <div class="gr-k">guardrail</div><div class="gr-v">{{m.guardrail || '-'}}</div>
+                      <div class="gr-k">requested_store</div><div class="gr-v">{{m.requested_store_id ? ('#' + m.requested_store_id) : '-'}}</div>
+                      <div class="gr-k">session_store</div><div class="gr-v">{{m.session_store_id ? ('#' + m.session_store_id) : '-'}}</div>
+                    </div>
+                  </div>
+                  <div class="ai-text">{{m.text}}</div>
+                  <div class="ai-hint" *ngIf="!m.blocked && m.noDataHint">
+                    <div class="t">No data / Next steps</div>
+                    <div>{{m.noDataHint}}</div>
+                  </div>
+                  <div *ngIf="m.sql" style="margin-top:10px;">
+                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">SQL</div>
+                    <div class="sql-block">{{m.sql}}</div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+            <div *ngIf="aiBusy" class="typing-row">
+              <div class="m-a-av"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 5.5v7L9 16l7-3.5v-7L9 2Z" stroke="#3ECFB2" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+              <div class="typing-bubble">
+                <div class="typing-label">Nexus AI is thinking</div>
+                <div class="dots" aria-label="Loading">
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-foot">
+            <div class="chat-in">
+              <input placeholder="Ask about sales, inventory, customers…" [(ngModel)]="aiPrompt" (keyup.enter)="sendAiQuery()" maxlength="500"/>
+              <button class="chat-send" (click)="sendAiQuery()" [disabled]="!aiPrompt.trim() || aiBusy">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 6.5L2 2l2 4.5-2 4.5 9-4.5Z" fill="#080808"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
       <!-- SETTINGS -->
       <ng-container *ngIf="activePanel==='settings'">
         <div class="mtb">
@@ -558,11 +684,20 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   analyticsDateTo = '';
   filteredOrders: any[] = [];
   segments: any = null;
+  monthlyRevenueBars: { h: number; l: string; hi?: boolean; v: number }[] = [];
+  monthlyRevenuePeakLabel = 'Peak: —';
+  aiPrompt = '';
+  aiBusy = false;
+  aiChatMessages: any[] = [
+    { sender: 'ai', text: 'Ask me anything about your store analytics. I will generate SQL and summarize results.' }
+  ];
+  aiHistory: string[] = [];
   productService = inject(ProductService);
   orderService = inject(OrderService);
   adminService = inject(AdminService);
   auth = inject(AuthService);
   toast = inject(ToastService);
+  ai = inject(AiService);
   router = inject(Router);
 
   @ViewChild('mgrRevenueChart') revenueCanvas!: ElementRef<HTMLCanvasElement>;
@@ -575,9 +710,10 @@ export class ManagerComponent implements OnInit, AfterViewInit {
       this.products = res;
       this.buildCategoryChart();
     });
-    this.orderService.getMyOrders().subscribe(res => {
+    this.orderService.getMyStoreOrders().subscribe(res => {
       this.storeOrders = res;
       this.filteredOrders = [...res];
+      this.recomputeMonthlyRevenueBars();
       this.buildRevenueChart();
     });
     this.productService.getAllReviews().subscribe(res => this.reviews = res);
@@ -674,6 +810,38 @@ export class ManagerComponent implements OnInit, AfterViewInit {
     this.filteredOrders = [...this.storeOrders];
   }
 
+  private recomputeMonthlyRevenueBars() {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const revenueByMonth = new Array(12).fill(0);
+
+    // Dashboard should reflect full store performance (not date-filtered analytics).
+    (this.storeOrders || []).forEach((o: any) => {
+      const d = new Date(o.orderDate);
+      if (!isNaN(d.getTime())) {
+        revenueByMonth[d.getMonth()] += Number(o.totalAmount || 0);
+      }
+    });
+
+    const max = Math.max(...revenueByMonth, 0);
+    const peakIdx = max > 0 ? revenueByMonth.findIndex(v => v === max) : -1;
+
+    // Keep a minimum visible height so months with tiny revenue still show a bar.
+    const minPct = 6;
+    this.monthlyRevenueBars = months.map((m, i) => {
+      const raw = revenueByMonth[i];
+      const pct = max > 0 ? Math.round((raw / max) * 100) : 0;
+      const h = max > 0 ? Math.max(minPct, pct) : 8;
+      return { h, l: m, hi: i === peakIdx && max > 0, v: raw };
+    });
+
+    if (peakIdx >= 0) {
+      const val = Math.round(max);
+      this.monthlyRevenuePeakLabel = `Peak: ${months[peakIdx]} · $${val.toLocaleString()}`;
+    } else {
+      this.monthlyRevenuePeakLabel = 'Peak: —';
+    }
+  }
+
   respondToReview(r: any) {
     const response = prompt('Write your reply to this review:');
     if (response && response.trim()) {
@@ -744,5 +912,97 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   logout() {
     this.auth.logout();
     this.router.navigate(['/login']);
+  }
+
+  clearAiChat() {
+    this.aiPrompt = '';
+    this.aiBusy = false;
+    this.ai.clearSession();
+    this.aiChatMessages = [
+      { sender: 'ai', text: 'New session started. Try: “Top 5 selling products this month”.' }
+    ];
+    this.aiHistory = [];
+  }
+
+  seedAiExample(q: string) {
+    this.aiPrompt = q;
+    this.sendAiQuery();
+  }
+
+  sendAiQuery() {
+    const q = (this.aiPrompt || '').trim();
+    if (!q || this.aiBusy) return;
+    this.aiPrompt = '';
+    this.aiBusy = true;
+    this.aiChatMessages.push({ sender: 'user', text: q });
+    this.ai.query(q, this.aiHistory).subscribe({
+      next: (res: any) => {
+        const cleaned = this.cleanAiResponse(res?.response);
+        const noDataHint = this.buildNoDataHintIfNeeded(q, res);
+        this.aiChatMessages.push({
+          sender: 'ai',
+          text: cleaned || 'No response',
+          blocked: !!res?.blocked,
+          detection_type: res?.detection_type,
+          guardrail: res?.guardrail,
+          session_store_id: res?.session_store_id,
+          requested_store_id: res?.requested_store_id,
+          sql: res?.sql,
+          noDataHint,
+        });
+        this.aiHistory.push('User: ' + q, 'AI: ' + (cleaned || ''));
+        this.aiBusy = false;
+      },
+      error: () => {
+        this.aiChatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.' });
+        this.aiBusy = false;
+      }
+    });
+  }
+
+  private cleanAiResponse(v: any): string {
+    if (v == null) return '';
+    let s = String(v);
+
+    // If backend accidentally returns a JSON-encoded string, decode it.
+    const trimmed = s.trim();
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+      try {
+        s = JSON.parse(trimmed);
+      } catch {
+        // best effort: strip outer quotes
+        s = trimmed.slice(1, -1);
+      }
+    }
+
+    // Unescape common sequences
+    s = s.replace(/\\n/g, '\n').replace(/\\t/g, '  ').replace(/\\"/g, '"');
+
+    // Normalize "Summary/Analysis/Recommendation" style blobs into nicer text.
+    s = s.replace(/\*\*"?Summary"?\*\*:?/gi, 'Summary:\n');
+    s = s.replace(/\*\*"?Analysis"?\*\*:?/gi, '\nAnalysis:\n');
+    s = s.replace(/\*\*"?Recommendation"?\*\*:?/gi, '\nRecommendation:\n');
+
+    // Remove repeated quotes artifacts
+    s = s.replace(/"\s*\*\*/g, '**').replace(/\*\*\s*"/g, '**');
+
+    return s.trim();
+  }
+
+  private buildNoDataHintIfNeeded(userQuery: string, res: any): string | null {
+    if (res?.blocked) return null;
+    const dataLen = Array.isArray(res?.data) ? res.data.length : 0;
+    const looksEmpty = dataLen === 0;
+    if (!looksEmpty) return null;
+
+    const q = (userQuery || '').toLowerCase();
+    const isThisMonth = q.includes('this month') || q.includes('bu ay');
+    const storeLabel = res?.session_store_id ? `store #${res.session_store_id}` : 'your store';
+
+    if (isThisMonth) {
+      return `It looks like there are no matching orders for this month in ${storeLabel}. Try “last month” or “last 90 days”, or create a test order so the dashboard has data.`;
+    }
+
+    return `No matching rows were returned. Try widening the date range (e.g., “last 90 days”) or verify there are orders for ${storeLabel}.`;
   }
 }

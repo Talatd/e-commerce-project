@@ -46,6 +46,7 @@ public class DbInitializer {
         seedAuditLogs();
         seedCustomerReviews();
         seedHistoricalOrders();
+        updateCustomerSpendMetrics();
     }
 
     @SuppressWarnings("all")
@@ -125,6 +126,42 @@ public class DbInitializer {
             // Seed Order Events for the saved order
             seedEventsForOrder(savedOrder, random);
         }
+    }
+
+    private void updateCustomerSpendMetrics() {
+        // Recompute customer profile spend after seeding orders so dashboards show meaningful values.
+        System.out.println("SEED: Updating customer spend metrics...");
+
+        var profiles = profileRepository.findAll();
+        if (profiles.isEmpty()) return;
+
+        // Aggregate orders per user
+        Map<Long, java.math.BigDecimal> spendByUser = new HashMap<>();
+        Map<Long, Integer> itemsByUser = new HashMap<>();
+
+        for (Order o : orderRepository.findAllWithItems()) {
+            if (o.getUser() == null || o.getUser().getUserId() == null) continue;
+            Long uid = o.getUser().getUserId();
+            java.math.BigDecimal amt = o.getTotalAmount() != null ? o.getTotalAmount() : java.math.BigDecimal.ZERO;
+            spendByUser.put(uid, spendByUser.getOrDefault(uid, java.math.BigDecimal.ZERO).add(amt));
+
+            int itemCount = 0;
+            if (o.getItems() != null) {
+                for (OrderItem it : o.getItems()) {
+                    itemCount += it.getQuantity() != null ? it.getQuantity() : 0;
+                }
+            }
+            itemsByUser.put(uid, itemsByUser.getOrDefault(uid, 0) + itemCount);
+        }
+
+        // Apply aggregates to profiles
+        for (CustomerProfile p : profiles) {
+            if (p.getUser() == null || p.getUser().getUserId() == null) continue;
+            Long uid = p.getUser().getUserId();
+            p.setTotalSpend(spendByUser.getOrDefault(uid, java.math.BigDecimal.ZERO));
+            p.setItemsPurchased(itemsByUser.getOrDefault(uid, 0));
+        }
+        profileRepository.saveAll(profiles);
     }
 
     @SuppressWarnings("all")

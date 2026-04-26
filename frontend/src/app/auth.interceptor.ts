@@ -5,7 +5,14 @@ import { AuthService } from './services';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const injector = inject(Injector);
-  const token = localStorage.getItem('token');
+  // Be defensive: some flows may have `user.token` but missing top-level `token`
+  let token = localStorage.getItem('token');
+  if (!token) {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || 'null');
+      token = u?.token || null;
+    } catch {}
+  }
   const authed = token
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : req;

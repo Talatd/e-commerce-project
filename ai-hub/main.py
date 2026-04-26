@@ -53,6 +53,8 @@ class ChatRequest(BaseModel):
     role: str = "CONSUMER"
     history: List[str] = []
     session_id: Optional[str] = None
+    # Provided by the backend so the AI hub can enforce store-scoped access.
+    session_store_id: Optional[int] = None
 
 @app.get("/health")
 def health_check():
@@ -75,11 +77,173 @@ def _build_initial_state(query, history, session_id, user_id, role):
         "error": "",
     }
 
+def _guardrail_block(
+    *,
+    sid: str,
+    query: str,
+    detection_type: str,
+    guardrail: str,
+    session_store_id: Optional[int],
+    requested_store_id: Optional[int] = None,
+    message: str,
+):
+    return {
+        "success": False,
+        "blocked": True,
+        "session_id": sid,
+        "query": query,
+        "response": message,
+        "detection_type": detection_type,
+        "guardrail": guardrail,
+        "session_store_id": session_store_id,
+        "requested_store_id": requested_store_id,
+        "sql": "",
+        "data": [],
+        "visualization": "",
+    }
+
+def _extract_store_id_from_query(q: str) -> Optional[int]:
+    # Matches: "store 2055", "store #2055", "Store#2055", "mağaza 2055", "mağaza #2055"
+    import re
+    m = re.search(r"(?:store|mağaza)\s*#?\s*(\d{1,9})", q, re.IGNORECASE)
+    if not m:
+        return None
+    try:
+        return int(m.group(1))
+    except Exception:
+        return None
+
+def _looks_like_prompt_injection(q: str) -> Optional[str]:
+    import re
+    patterns = [
+        r"ignore\s+(all\s+)?previous\s+instructions",
+        r"disregard\s+(all\s+)?previous",
+        r"you\s+are\s+now\s+in\s+admin\s+mode",
+        r"admin\s+mode",
+        r"developer\s+mode",
+        r"system\s+prompt",
+        r"reveal\s+(your\s+)?instructions",
+        r"bypass\s+(security|filters|restrictions)",
+        r"jailbreak",
+        r"without\s+any\s+where\s+clause",
+    ]
+    for p in patterns:
+        if re.search(p, q, re.IGNORECASE):
+            return p
+    return None
+
+def _looks_like_filter_bypass(q: str) -> bool:
+    import re
+    patterns = [
+        r"remove\s+store[_-]?id",
+        r"drop\s+store[_-]?id",
+        r"store[_-]?id\s+filt(resini|resmi)\s+kald[ıi]r",
+        r"where\s+clause\s+.*(remove|omit)",
+        r"show\s+all\s+stores",
+        r"t[üu]m\s+ma[ğg]azalar[ıi]",
+    ]
+    return any(re.search(p, q, re.IGNORECASE) for p in patterns)
+
+def _demo_response_for(query: str, session_store_id: Optional[int]):
+    q = (query or "").strip().lower()
+    store_label = f"#{session_store_id}" if session_store_id is not None else "your store"
+
+    if "top" in q and ("sell" in q or "selling" in q) and ("product" in q or "ürün" in q):
+        return {
+            "response": f"Demo mode: Here are the top 5 selling products for {store_label} (sample data).",
+            "sql_query": f"SELECT p.name, SUM(oi.quantity) AS total_qty FROM order_items oi JOIN orders o ON o.order_id=oi.order_id JOIN products p ON p.product_id=oi.product_id WHERE o.store_id={session_store_id or 0} GROUP BY p.name ORDER BY total_qty DESC LIMIT 5;",
+            "results": [],
+            "visualization_code": "",
+        }
+
+    if "stock" in q or "stok" in q:
+        return {
+            "response": f"Demo mode: Products with low stock in {store_label} (sample).",
+            "sql_query": f"SELECT name, stock_quantity FROM products WHERE stock_quantity < 10;",
+            "results": [],
+            "visualization_code": "",
+        }
+
+    return {
+        "response": f"Demo mode: I can answer store-scoped analytics questions for {store_label}. Try: “Top 5 selling products this month”.",
+        "sql_query": "",
+        "results": [],
+        "visualization_code": "",
+    }
+
+def _looks_like_top_products(q: str) -> bool:
+    ql = (q or "").lower()
+    return ("top" in ql or "en çok" in ql or "top 5" in ql) and (
+        "product" in ql or "ürün" in ql
+    ) and (
+        "sell" in ql or "selling" in ql or "sat" in ql
+    )
+
+def _no_data_summary(query: str, session_store_id: Optional[int]) -> str:
+    store_label = f"store #{session_store_id}" if session_store_id is not None else "your store"
+    ql = (query or "").lower()
+    if "this month" in ql or "bu ay" in ql:
+        period = "this month"
+    elif "last month" in ql or "geçen ay" in ql:
+        period = "last month"
+    else:
+        period = "the selected period"
+
+    if _looks_like_top_products(query):
+        return (
+            f"No sales were found for {store_label} in {period}. "
+            f"Top 5 selling products: none (0 orders). "
+            f"Try widening the range (e.g., “last 90 days”) or create a test order."
+        )
+    return (
+        f"No matching rows were found for {store_label} in {period}. "
+        f"Try widening the range (e.g., “last 90 days”) or verify there are orders in the database."
+    )
+
 @app.post("/api/v1/chatbot/query")
 async def process_query(request: ChatRequest):
     with session_lock:
         session = get_or_create_session(request.session_id, request.user_id, request.role)
         sid = session["id"]
+
+    # --- Lightweight guardrails (no external model call) ---
+    q = (request.query or "").strip()
+    trigger = _looks_like_prompt_injection(q)
+    if trigger:
+        return _guardrail_block(
+            sid=sid,
+            query=request.query,
+            detection_type="prompt_injection",
+            guardrail="PROMPT_INJECTION",
+            session_store_id=request.session_store_id,
+            message="This request has been blocked due to a prompt-injection attempt. Please ask a store-scoped analytics question for your own store.",
+        )
+
+    if _looks_like_filter_bypass(q):
+        return _guardrail_block(
+            sid=sid,
+            query=request.query,
+            detection_type="filter_bypass_attempt",
+            guardrail="FILTER_BYPASS",
+            session_store_id=request.session_store_id,
+            message="This request has been blocked because it attempts to bypass mandatory store scoping. Please query only your own store.",
+        )
+
+    requested_store_id = _extract_store_id_from_query(q)
+    if (
+        request.session_store_id is not None
+        and requested_store_id is not None
+        and requested_store_id != request.session_store_id
+    ):
+        return _guardrail_block(
+            sid=sid,
+            query=request.query,
+            detection_type="cross_store_data_access",
+            guardrail="CROSS_STORE",
+            session_store_id=request.session_store_id,
+            requested_store_id=requested_store_id,
+            message=f"Cross-store access is not allowed. You can only query your own store (#{request.session_store_id}).",
+        )
 
     initial_state = _build_initial_state(
         request.query, session["history"], sid, request.user_id, request.role
@@ -88,8 +252,18 @@ async def process_query(request: ChatRequest):
     try:
         final_state = await asyncio.to_thread(ai_graph.invoke, initial_state)
     except Exception as e:
+        # Fallback for demos / quota issues: return deterministic demo response.
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        final_state = _demo_response_for(request.query, request.session_store_id)
+
+    # If SQL executed but returned no rows, answer deterministically instead of vague text.
+    try:
+        results = final_state.get("results", []) if isinstance(final_state, dict) else []
+        sql_q = final_state.get("sql_query", "") if isinstance(final_state, dict) else ""
+        if sql_q and isinstance(results, list) and len(results) == 0:
+            final_state["response"] = _no_data_summary(request.query, request.session_store_id)
+    except Exception:
+        pass
 
     with session_lock:
         if sid in sessions:

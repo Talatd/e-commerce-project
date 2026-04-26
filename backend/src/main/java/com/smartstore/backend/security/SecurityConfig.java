@@ -82,7 +82,9 @@ public class SecurityConfig {
                 .toList();
         configuration.setAllowedOrigins(origins.isEmpty() ? java.util.List.of("http://localhost:4200") : origins);
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
+        // Be permissive for browser-driven requests (Angular adds headers like Accept, X-Requested-With, etc.)
+        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setExposedHeaders(java.util.List.of("Authorization"));
         configuration.setAllowCredentials(true);
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

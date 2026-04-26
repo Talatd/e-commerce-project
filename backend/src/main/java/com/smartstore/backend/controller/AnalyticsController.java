@@ -4,6 +4,7 @@ import com.smartstore.backend.repository.CustomerProfileRepository;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.StoreRepository;
 import com.smartstore.backend.repository.UserRepository;
+import com.smartstore.backend.dto.StoreAdminView;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -93,20 +94,22 @@ public class AnalyticsController {
     public ResponseEntity<List<Map<String, Object>>> getStoreComparison() {
         List<Map<String, Object>> comparison = new java.util.ArrayList<>();
 
-        storeRepository.findAll().forEach(store -> {
+        // Use computed revenue/orderCount (from orders/order_items), not demo fields on Store.
+        for (StoreAdminView store : storeRepository.findAllAdminViews()) {
             Map<String, Object> entry = new HashMap<>();
-            entry.put("storeId", store.getId());
-            entry.put("name", store.getName());
-            entry.put("owner", store.getOwnerName());
-            entry.put("revenue", store.getTotalRevenue());
-            entry.put("orders", store.getOrderCount());
-            entry.put("rating", store.getRating());
-            entry.put("status", store.getStatus());
-            double avgOrderValue = store.getOrderCount() > 0
-                    ? store.getTotalRevenue() / store.getOrderCount() : 0;
+            entry.put("storeId", store.id());
+            entry.put("name", store.name());
+            entry.put("owner", store.ownerName());
+            double revenue = store.totalRevenue() != null ? store.totalRevenue().doubleValue() : 0.0;
+            long orders = store.orderCount() != null ? store.orderCount() : 0L;
+            entry.put("revenue", revenue);
+            entry.put("orders", (int) Math.min(Integer.MAX_VALUE, orders));
+            entry.put("rating", store.rating());
+            entry.put("status", store.status());
+            double avgOrderValue = orders > 0 ? (revenue / orders) : 0.0;
             entry.put("avgOrderValue", Math.round(avgOrderValue * 100.0) / 100.0);
             comparison.add(entry);
-        });
+        }
 
         comparison.sort((a, b) -> Double.compare(
                 (Double) b.get("revenue"), (Double) a.get("revenue")));

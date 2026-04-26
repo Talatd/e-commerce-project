@@ -48,6 +48,14 @@ public class OrderController {
         return ResponseEntity.ok(orderRepository.findByUser(user));
     }
 
+    @GetMapping("/my-store")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Operation(summary = "List orders for the manager's store", description = "Returns orders that include products belonging to the current manager's store.")
+    public ResponseEntity<List<Order>> getMyStoreOrders(@AuthenticationPrincipal UserDetails principal) {
+        var user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+        return ResponseEntity.ok(orderRepository.findStoreOrdersByOwnerId(user.getUserId()));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get order by ID", description = "Order owner or admin only.")
     public ResponseEntity<Order> getOrder(@PathVariable Long id,
@@ -74,6 +82,12 @@ public class OrderController {
 
         if (order.getItems() != null) {
             for (OrderItem item : order.getItems()) {
+                if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                    throw new IllegalArgumentException("Item quantity must be at least 1");
+                }
+                if (item.getProduct() == null || item.getProduct().getProductId() == null) {
+                    throw new IllegalArgumentException("Each order item must include a productId");
+                }
                 Product product = productRepository.findById(
                         Objects.requireNonNull(item.getProduct().getProductId())).orElseThrow();
                 int stock = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
@@ -85,7 +99,11 @@ public class OrderController {
                 }
                 product.setStockQuantity(stock - item.getQuantity());
                 productRepository.save(product);
+                if (item.getPriceAtPurchase() == null) {
+                    item.setPriceAtPurchase(product.getBasePrice());
+                }
                 item.setOrder(order);
+                item.setProduct(product);
             }
         }
         Order saved = orderRepository.save(order);
