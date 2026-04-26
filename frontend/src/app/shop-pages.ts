@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ViewChild, ElementRef, HostListener, OnDestr
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
-import { ProductService, OrderService, AuthService, ToastService, ShipmentService } from './services';
+import { ProductService, OrderService, AuthService, ToastService, ShipmentService, CouponService } from './services';
 import { NexusLogoComponent } from './nexus-logo.component';
 import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
 import { ConsumerStandaloneTopNavComponent } from './consumer-standalone-top-nav.component';
@@ -98,8 +98,18 @@ import { CONSUMER_NAV } from './consumer-nav.paths';
 
           <!-- COUPON -->
           <div class="nx-coupon-row" *ngIf="cartItems.length > 0">
-            <input class="nx-coupon-input" placeholder="Enter coupon code..." [(ngModel)]="couponCode"/>
-            <div class="nx-coupon-btn" (click)="applyCoupon()">Apply</div>
+            <input
+              class="nx-coupon-input"
+              placeholder="Enter coupon code..."
+              [(ngModel)]="couponCode"
+              [disabled]="discountPercent > 0"
+              (keyup.enter)="applyCoupon()"
+            />
+            <div class="nx-coupon-btn" *ngIf="discountPercent === 0" (click)="applyCoupon()">Apply</div>
+            <div class="nx-coupon-btn" *ngIf="discountPercent > 0" (click)="clearCoupon()">Remove</div>
+          </div>
+          <div *ngIf="discountPercent > 0" style="margin-top:8px;font-size:11px;color:var(--text3);">
+            Coupon <span style="font-family:'JetBrains Mono',monospace;color:var(--teal2);">{{couponCode}}</span> applied (−{{discountPercent}}%).
           </div>
 
           <!-- DELIVERY METHOD -->
@@ -450,6 +460,7 @@ import { CONSUMER_NAV } from './consumer-nav.paths';
           </div>
           <div class="sc-totals">
             <div class="sc-line"><span class="sc-line-label">Subtotal</span><span class="sc-line-val">{{subtotal | currency}}</span></div>
+          <div class="sc-line" *ngIf="discount > 0"><span class="sc-line-label">Discount (−{{discountPercent}}%)</span><span class="sc-line-val green">−{{discount | currency}}</span></div>
             <div class="sc-line"><span class="sc-line-label">Shipping</span><span class="sc-line-val green">{{deliveryCost === 0 ? 'Free' : (deliveryCost | currency)}}</span></div>
             <div class="sc-line"><span class="sc-line-label">Tax (8%)</span><span class="sc-line-val">{{tax | currency}}</span></div>
             <div class="sc-total-row">
@@ -483,6 +494,7 @@ export class CartComponent implements OnInit, OnDestroy {
   subtotal = 0;
   step = 1;
   orderService = inject(OrderService);
+  couponService = inject(CouponService);
   auth = inject(AuthService);
   toast = inject(ToastService);
 
@@ -550,6 +562,9 @@ export class CartComponent implements OnInit, OnDestroy {
 
   calculateTotal() {
     this.subtotal = this.cartItems.reduce((acc, item) => acc + (item.basePrice * item.qty), 0);
+    if (this.discountPercent > 0) {
+      this.discount = this.subtotal * (this.discountPercent / 100);
+    }
   }
 
   get totalQty(): number {
@@ -565,13 +580,32 @@ export class CartComponent implements OnInit, OnDestroy {
   }
 
   applyCoupon() {
-    if (this.couponCode.toUpperCase() === 'NEXUS20') {
-      this.discountPercent = 20;
-      this.discount = this.subtotal * 0.2;
-      this.toast.show('Coupon applied! 20% off');
-    } else if (this.couponCode.trim()) {
-      this.toast.show('Invalid coupon code', 'error');
-    }
+    const code = (this.couponCode || '').trim();
+    if (!code) return;
+    this.couponService.validate(code, this.subtotal).subscribe({
+      next: (res: any) => {
+        if (res?.valid) {
+          this.couponCode = (res.code || code).toUpperCase();
+          this.discountPercent = Number(res.percentOff || 0);
+          // prefer server-calculated discount amount, but keep percent for recalculation
+          this.discount = Number(res.discountAmount || (this.subtotal * (this.discountPercent / 100)) || 0);
+          this.toast.show(res.message || 'Coupon applied!');
+        } else {
+          this.clearCoupon(false);
+          this.toast.show(res?.message || 'Invalid coupon code', 'error');
+        }
+      },
+      error: () => {
+        this.toast.show('Failed to validate coupon', 'error');
+      }
+    });
+  }
+
+  clearCoupon(showToast: boolean = true) {
+    this.discountPercent = 0;
+    this.discount = 0;
+    this.couponCode = '';
+    if (showToast) this.toast.show('Coupon removed');
   }
 
   goStep2() {
@@ -645,6 +679,11 @@ export class CartComponent implements OnInit, OnDestroy {
     const orderPayload = {
       user: { userId: user?.userId || 1 },
       totalAmount: this.grandTotal,
+      couponCode: this.discount > 0 ? (this.couponCode || '').trim() : null,
+      subtotalAmount: this.subtotal,
+      discountAmount: this.discount,
+      shippingAmount: this.deliveryCost,
+      taxAmount: this.tax,
       shippingAddress: "123 Nexus Grove, SF, CA",
       status: 'PENDING',
       items: this.cartItems.map(item => ({
@@ -1071,7 +1110,7 @@ export class ProductDetailComponent implements OnInit {
               <th style="padding:10px 12px;font-weight:500;color:var(--text3);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">Status</th>
             </tr></thead>
             <tbody>
-              <tr *ngFor="let o of myOrders" style="border-bottom:1px solid var(--border);">
+              <tr *ngFor="let o of myOrders" class="order-row" (click)="openOrderDetails(o)">
                 <td style="padding:10px 16px;font-family:'JetBrains Mono',monospace;color:var(--teal);">#ORD-{{o.orderId}}</td>
                 <td style="padding:10px 12px;color:var(--text2);">{{o.orderDate | date:'mediumDate'}}</td>
                 <td style="padding:10px 12px;font-weight:500;">{{o.totalAmount | currency}}</td>
@@ -1256,14 +1295,74 @@ export class ProductDetailComponent implements OnInit {
         </div>
       </div>
 
+      <!-- ORDER DETAILS MODAL OVERLAY -->
+      <div class="nx-orders-overlay" [class.open]="isOrderDetailsOpen" (click)="closeOrderDetailsOverlay($event)">
+        <div class="nx-orders-modal" (click)="$event.stopPropagation()">
+          <div class="nx-orders-modal-head" style="padding-bottom:16px; border-bottom:1px solid var(--border);">
+            <div>
+              <div class="nx-orders-mh-name">Order <span class="nx-ord-mono">#ORD-{{viewOrder?.orderId}}</span></div>
+              <div class="nx-orders-mh-sub">{{viewOrder?.orderDate | date:'mediumDate'}} · {{viewOrder?.items?.length || 0}} items</div>
+            </div>
+            <button type="button" class="nx-orders-close" (click)="closeOrderDetails()" aria-label="Close">×</button>
+          </div>
+
+          <div style="padding:16px 20px;">
+             <!-- items list -->
+             <div class="c-item" *ngFor="let item of viewOrder?.items" style="padding:12px 0;">
+                <div class="c-img" style="width:48px;height:48px;border-radius:8px;">
+                  <img *ngIf="item.product?.imageUrl" [src]="item.product.imageUrl" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />
+                  <svg *ngIf="!item.product?.imageUrl" width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2" stroke="var(--teal)" stroke-width="1.2" opacity="0.5"/></svg>
+                </div>
+                <div class="c-info">
+                   <div class="c-name" style="font-size:13px;margin-bottom:2px;">{{item.product?.name || item.productName || 'Unknown Product'}}</div>
+                   <div style="font-size:11px;color:var(--text3);">Qty: {{item.quantity}}</div>
+                </div>
+                <div class="c-price" style="font-size:14px;font-family:'Playfair Display',serif;">{{(item.priceAtPurchase * item.quantity) | currency}}</div>
+             </div>
+
+             <div class="summary-divider" style="margin:16px 0;"></div>
+             
+             <div class="summary-line">
+               <span class="sl-label">Status</span>
+               <span class="sl-val" style="font-size:10px;padding:3px 10px;border-radius:10px;font-weight:500;"
+                    [style.background]="viewOrder?.status === 'DELIVERED' ? 'rgba(62,201,138,0.1)' : viewOrder?.status === 'PENDING' ? 'rgba(232,169,74,0.1)' : 'rgba(107,168,200,0.1)'"
+                    [style.color]="viewOrder?.status === 'DELIVERED' ? '#3EC98A' : viewOrder?.status === 'PENDING' ? '#E8A94A' : '#6BA8C8'">
+                 {{viewOrder?.status}}
+               </span>
+             </div>
+             <div class="summary-line" *ngIf="viewOrder?.shippingAddress">
+               <span class="sl-label">Shipping Address</span>
+               <span class="sl-val" style="color:var(--text2);text-align:right;max-width:60%;">{{viewOrder.shippingAddress}}</span>
+             </div>
+             
+             <div class="summary-divider" style="margin:16px 0;"></div>
+             
+             <div class="summary-line" style="margin-bottom:0;">
+                <span class="sl-label" style="font-weight:500;">Total Amount</span>
+                <span class="total-val" style="font-size:18px;">{{viewOrder?.totalAmount | currency}}</span>
+             </div>
+          </div>
+          
+          <div class="nx-orders-modal-foot" style="padding-top:10px; padding-bottom:20px;">
+             <button type="button" class="nx-orders-submit-btn" style="background:var(--glass2);color:var(--text);border:1px solid var(--border);" (click)="closeOrderDetails()">Close</button>
+          </div>
+        </div>
+      </div>
+
     </div>
     </div>
     </div>
-  `
+  `,
+  styles: [`
+    .order-row { border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.2s; }
+    .order-row:hover { background:var(--glass2); }
+  `]
 })
 export class OrdersComponent implements OnInit {
   readonly consumerNav = CONSUMER_NAV;
   isModalOpen = false;
+  isOrderDetailsOpen = false;
+  viewOrder: any = null;
   isSuccess = false;
   isSubmitting = false;
   rating = 0;
@@ -1394,6 +1493,21 @@ export class OrdersComponent implements OnInit {
   handleOverlayClick(e: Event) {
     const el = e.target as HTMLElement;
     if (el.classList.contains('nx-orders-overlay')) this.closeModal();
+  }
+
+  openOrderDetails(order: any) {
+    this.viewOrder = order;
+    this.isOrderDetailsOpen = true;
+  }
+
+  closeOrderDetails() {
+    this.isOrderDetailsOpen = false;
+    setTimeout(() => { this.viewOrder = null; }, 300);
+  }
+
+  closeOrderDetailsOverlay(e: Event) {
+    const el = e.target as HTMLElement;
+    if (el.classList.contains('nx-orders-overlay')) this.closeOrderDetails();
   }
 
   setRating(val: number) {

@@ -27,6 +27,7 @@ public class ProductController {
     private final ProductReviewRepository reviewRepository;
     private final com.smartstore.backend.repository.UserRepository userRepository;
     private final com.smartstore.backend.repository.StoreRepository storeRepository;
+    private final com.smartstore.backend.service.DbInitializer dbInitializer;
 
     @GetMapping
     @Operation(summary = "Get all products", description = "Retrieves the product catalog, optionally paginated.")
@@ -154,6 +155,18 @@ public class ProductController {
     @Operation(summary = "Get all reviews", description = "Returns all product reviews for management.")
     public ResponseEntity<java.util.List<ProductReview>> getAllReviews() {
         return ResponseEntity.ok(reviewRepository.findAll());
+    }
+
+    @PostMapping("/seed-reviews-dev")
+    @Operation(summary = "Reseed reviews", description = "Clears and regenerates diverse reviews for all products. Used for dev/demo purposes.")
+    public ResponseEntity<String> reseedReviewsDev() {
+        dbInitializer.reseedReviews();
+        return ResponseEntity.ok("Reviews successfully reseeded with diverse sentiments.");
+    }
+
+    @GetMapping("/reviews/count-dev")
+    public ResponseEntity<Long> getReviewCountDev() {
+        return ResponseEntity.ok(reviewRepository.count());
     }
 
     @PostMapping

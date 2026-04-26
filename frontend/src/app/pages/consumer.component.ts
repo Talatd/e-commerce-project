@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -584,11 +584,11 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
         <div class="hero-right">
           <div class="hero-stat">
             <div class="hs-icon" style="background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3h10l-1.2 8H4.2L3 3Z" stroke="#3ECFB2" stroke-width="1.1" stroke-linejoin="round"/><circle cx="6" cy="13" r="1.2" fill="#3ECFB2"/><circle cx="10" cy="13" r="1.2" fill="#3ECFB2"/></svg></div>
-            <div><div class="hs-val">3</div><div class="hs-label">Items in cart</div></div>
+            <div><div class="hs-val">{{cartCount}}</div><div class="hs-label">Items in cart</div></div>
           </div>
           <div class="hero-stat">
             <div class="hs-icon" style="background:rgba(232,169,74,0.08);border:1px solid rgba(232,169,74,0.18);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L10 6H15L11 9l1.5 4.5L8 10.5 4.5 13 6 8.5 2 6H7L8 1.5Z" fill="#E8A94A" opacity="0.7"/></svg></div>
-            <div><div class="hs-val">2 <em>↓</em></div><div class="hs-label">Price drops</div></div>
+            <div><div class="hs-val">{{productsOnSaleCount}} <em>↓</em></div><div class="hs-label">Active Deals</div></div>
           </div>
           <div class="hero-stat">
             <div class="hs-icon" style="background:var(--green-dim);border:1px solid var(--green-border);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8l3.5 3.5L14 4" stroke="#3EC98A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -618,28 +618,33 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             </div>
           </div>
           <div class="fb-timer">
-            <div class="fb-unit">04</div><div class="fb-sep">:</div>
-            <div class="fb-unit">23</div><div class="fb-sep">:</div>
-            <div class="fb-unit">17</div>
+            <div class="fb-unit">{{flashSaleTime.hours}}</div><div class="fb-sep">:</div>
+            <div class="fb-unit">{{flashSaleTime.minutes}}</div><div class="fb-sep">:</div>
+            <div class="fb-unit">{{flashSaleTime.seconds}}</div>
           </div>
           <button class="fb-btn" (click)="goShopTab()">View Deals →</button>
         </div>
       </div>
 
       <!-- CONTINUE SHOPPING -->
-      <div class="continue-section" *ngIf="products.length > 0">
+      <div class="continue-section" *ngIf="recentlyViewed.length > 0">
         <div class="sec-header">
           <div><div class="sec-title">Continue Where You Left Off</div><div class="sec-sub">Recently viewed products</div></div>
           <div class="sec-link" (click)="goShopTab()">See all →</div>
         </div>
         <div class="continue-grid">
-          <div class="cs-card" *ngFor="let p of products.slice(0,4)" (click)="selectProduct(p)">
+          <div class="cs-card" *ngFor="let p of recentlyViewed" (click)="selectProduct(p)">
             <div class="cs-img" style="background:rgba(62,207,178,0.04);">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="5" width="18" height="12" rx="2.5" stroke="#3ECFB2" stroke-width="1.1" opacity="0.5"/></svg>
+              <img *ngIf="p.imageUrl" [src]="p.imageUrl" style="width:100%;height:100%;object-fit:cover;border-radius:12px;" />
+              <svg *ngIf="!p.imageUrl" width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="5" width="18" height="12" rx="2.5" stroke="#3ECFB2" stroke-width="1.1" opacity="0.5"/></svg>
             </div>
             <div style="flex:1;min-width:0;">
               <div class="cs-name">{{p.name}}</div>
-              <div style="font-size:9.5px;color:var(--text3);margin-top:2px;">{{p.basePrice | currency}} · {{p.category}}</div>
+              <div style="font-size:9.5px;color:var(--text3);margin-top:2px;display:flex;align-items:center;">
+                <span [style.color]="p.isOnSale ? 'var(--red)' : ''">{{p.basePrice | currency}}</span>
+                <span *ngIf="p.isOnSale" style="text-decoration:line-through;opacity:0.6;margin-left:4px;">{{p.originalPrice | currency}}</span>
+                <span style="margin:0 4px;">·</span>{{p.category}}
+              </div>
             </div>
           </div>
         </div>
@@ -664,6 +669,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
               <div class="pc-brand">{{p.brand}}</div>
               <div class="pc-name" style="margin-bottom:4px;">{{p.name}}</div>
               <div class="pc-badges" (click)="$event.stopPropagation()">
+                <div *ngIf="p.isOnSale" class="pc-badge b-sale" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-border);">-{{p.discountPercent}}% OFF</div>
                 <div *ngIf="p.tags?.includes('Performance')" class="pc-badge b-new" style="background:var(--red-dim);color:var(--red);">Performance</div>
                 <div *ngIf="p.tags?.includes('Aesthetic')" class="pc-badge b-new" style="background:var(--purple-dim);color:var(--purple-lit);">Aesthetic</div>
                 <div *ngIf="p.tags?.includes('Stealth')" class="pc-badge b-new" style="background:rgba(255,255,255,0.05);color:#fff;border:1px solid rgba(255,255,255,0.1);">Stealth</div>
@@ -671,7 +677,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
                 <div *ngIf="p.tags?.includes('Organic Creator')" class="pc-badge b-new" style="background:rgba(232,169,74,0.1);color:var(--amber);">Organic Creator</div>
               </div>
               <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;"><span class="pc-star">★★★★★</span><span class="pc-rcount">4.9</span></div>
-              <div class="pc-bottom"><div><span class="pc-price">{{p.basePrice | currency}}</span></div></div>
+              <div class="pc-bottom"><div><span class="pc-price">{{p.basePrice | currency}}</span><span *ngIf="p.isOnSale" class="pc-price-old">{{p.originalPrice | currency}}</span></div></div>
             </div>
           </div>
         </div>
@@ -837,12 +843,16 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
                 <div class="pc-brand">{{p.brand}}</div>
                 <div class="pc-name">{{p.name}}</div>
                 <div class="pc-badges" (click)="$event.stopPropagation()">
+                  <div *ngIf="p.isOnSale" class="pc-badge b-sale" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-border);">-{{p.discountPercent}}% OFF</div>
                   <div *ngFor="let tag of getTags(p.tags)" class="pc-badge" [ngClass]="getTagClass(tag)">{{tag}}</div>
                   <div *ngIf="p.stockQuantity > 50" class="pc-badge b-new">New</div>
                 </div>
                 <div class="pc-stars"><span class="pc-star">★★★★★</span><span class="pc-rcount">4.8</span></div>
                 <div class="pc-bottom">
-                  <div><span class="pc-price">{{p.basePrice | currency}}</span></div>
+                  <div>
+                    <span class="pc-price">{{p.basePrice | currency}}</span>
+                    <span *ngIf="p.isOnSale" class="pc-price-old">{{p.originalPrice | currency}}</span>
+                  </div>
                   <div class="pc-stock" [class.pc-instock]="p.stockQuantity > 5" [class.pc-lowstock]="p.stockQuantity <= 5 && p.stockQuantity > 0">{{p.stockQuantity > 5 ? 'In Stock' : p.stockQuantity + ' left'}}</div>
                 </div>
               </div>
@@ -883,6 +893,8 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
           </div>
           <div class="price-row">
             <div class="price">{{selectedProduct.basePrice | currency}}</div>
+            <div class="price-old" *ngIf="selectedProduct.isOnSale" style="font-size:18px;color:var(--text3);text-decoration:line-through;margin-left:12px;">{{selectedProduct.originalPrice | currency}}</div>
+            <div class="price-save" *ngIf="selectedProduct.isOnSale" style="background:var(--red-dim);color:var(--red);padding:4px 8px;border-radius:4px;font-size:12px;margin-left:12px;font-weight:600;">Save {{selectedProduct.discountPercent}}%</div>
           </div>
           <div class="stock-row-detail">
             <div class="stock-dot-detail"></div>
@@ -990,7 +1002,11 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
           <div class="wc-body">
             <div class="wc-cat">{{p.category}} · {{p.brand}}</div>
             <div class="wc-name">{{p.name}}</div>
-            <div class="wc-price-row"><div class="wc-price">{{p.basePrice | currency}}</div></div>
+            <div class="wc-price-row" style="display:flex;align-items:center;">
+              <div class="wc-price">{{p.basePrice | currency}}</div>
+              <div class="wc-price-old" *ngIf="p.isOnSale" style="font-size:12px;color:var(--text3);text-decoration:line-through;margin-left:8px;">{{p.originalPrice | currency}}</div>
+              <div class="wc-drop" *ngIf="p.isOnSale" style="font-size:11px;color:var(--red);margin-left:auto;font-weight:500;">↓ {{p.discountPercent}}%</div>
+            </div>
             <div class="wc-meta"><div class="wc-stars">★★★★★</div><div class="wc-rating">4.8</div><div class="wc-saved">Saved recently</div></div>
             <div class="wc-actions"><button class="wc-cart" (click)="addToCart(p)">Add to Cart</button><div class="wc-more" (click)="selectProduct(p)">⋯</div></div>
           </div>
@@ -1157,7 +1173,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 </div>
   `,
 })
-export class ConsumerComponent implements OnInit {
+export class ConsumerComponent implements OnInit, OnDestroy {
   readonly consumerNav = CONSUMER_NAV;
   activeTab = 'home';
   filtersOpen = true;
@@ -1182,294 +1198,351 @@ export class ConsumerComponent implements OnInit {
       checked: this.selectedBrands.includes(name)
     }));
   }
+  get productsOnSaleCount(): number {
+    return this.products ? this.products.filter(p => p.isOnSale).length : 0;
+  }
   wishlist: any[] = [];
+  recentlyViewed: any[] = [];
   qty = 1;
   isTyping = false;
-  chatSuggestions = ['Top selling products', 'Recommend a laptop for my budget', 'Order status', 'Discounted items', 'Apple vs Samsung compare'];
-  auth = inject(AuthService);
-  ai = inject(AiService);
-  productService = inject(ProductService);
-  toast = inject(ToastService);
+timerInt: any;
+flashSaleTime = { hours: '04', minutes: '23', seconds: '17' };
+chatSuggestions = ['Top selling products', 'Recommend a laptop for my budget', 'Order status', 'Discounted items', 'Apple vs Samsung compare'];
+auth = inject(AuthService);
+ai = inject(AiService);
+productService = inject(ProductService);
+toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   get cartCount(): number {
-    try {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      return cart.reduce((sum: number, i: any) => sum + (i.qty || i.quantity || 1), 0);
-    } catch { return 0; }
-  }
+  try {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    return cart.reduce((sum: number, i: any) => sum + (i.qty || i.quantity || 1), 0);
+  } catch { return 0; }
+}
 
-  onLogoGoHome = () => this.goHomeTab();
+onLogoGoHome = () => this.goHomeTab();
 
-  goHomeTab() {
-    this.selectedProduct = null;
-    this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'home' }, replaceUrl: true });
-  }
+goHomeTab() {
+  this.selectedProduct = null;
+  this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'home' }, replaceUrl: true });
+}
 
-  goShopTab() {
-    this.selectedProduct = null;
-    this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'shop' }, replaceUrl: true });
-  }
+goShopTab() {
+  this.selectedProduct = null;
+  this.router.navigate([this.consumerNav.shop], { queryParams: { tab: 'shop' }, replaceUrl: true });
+}
 
-  openAssistantTab() {
-    this.activeTab = 'assistant';
-    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
-  }
+openAssistantTab() {
+  this.activeTab = 'assistant';
+  this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+}
 
-  openWishlistTab() {
-    this.activeTab = 'wishlist';
-    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
-  }
+openWishlistTab() {
+  this.activeTab = 'wishlist';
+  this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+}
 
   private getTimeNow(): string {
-    const d = new Date();
-    return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+  const d = new Date();
+  return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+}
+
+ngOnInit() {
+  this.route.queryParamMap.subscribe(q => {
+    const t = q.get('tab');
+    if (t === 'shop') this.activeTab = 'shop';
+    else if (t === 'home') this.activeTab = 'home';
+  });
+  const snap = this.route.snapshot.queryParamMap.get('tab');
+  if (snap !== 'shop' && snap !== 'home') {
+    this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'home' }, replaceUrl: true });
   }
 
-  ngOnInit() {
-    this.route.queryParamMap.subscribe(q => {
-      const t = q.get('tab');
-      if (t === 'shop') this.activeTab = 'shop';
-      else if (t === 'home') this.activeTab = 'home';
+  const userName = this.auth.currentUserValue?.fullName || 'there';
+  this.chatMessages.push({
+    sender: 'ai',
+    text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language, and I'll analyze the database to find the best products for you.`,
+    time: this.getTimeNow()
+  });
+
+  this.productService.getProducts().subscribe(res => {
+    this.products = res.map((p: any) => {
+      // Deterministically apply discount to every 3rd or 4th product based on ID, and any product containing 'Gaming' or 'MacBook'
+      if (p.productId % 3 === 0 || p.productId % 4 === 0 || p.name.includes('Gaming')) {
+        const disc = (p.productId % 3 === 0) ? 0.8 : (p.productId % 4 === 0 ? 0.85 : 0.75);
+        p.originalPrice = p.basePrice / disc;
+        p.isOnSale = true;
+        p.discountPercent = Math.round((1 - disc) * 100);
+      } else {
+        p.isOnSale = false;
+      }
+      return p;
     });
-    const snap = this.route.snapshot.queryParamMap.get('tab');
-    if (snap !== 'shop' && snap !== 'home') {
-      this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'home' }, replaceUrl: true });
-    }
+    const cats = Array.from(new Set(this.products.map(p => p.category)));
+    this.categories = cats.map((c: any) => ({ name: c, checked: false }));
+  });
 
-    const userName = this.auth.currentUserValue?.fullName || 'there';
-    this.chatMessages.push({
-      sender: 'ai',
-      text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language, and I'll analyze the database to find the best products for you.`,
-      time: this.getTimeNow()
-    });
-
-    this.productService.getProducts().subscribe(res => {
-      this.products = res;
-      const cats = Array.from(new Set(this.products.map(p => p.category)));
-      this.categories = cats.map((c: any) => ({ name: c, checked: false }));
-    });
+  try {
+    this.recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+  } catch {
+    this.recentlyViewed = [];
   }
 
-  getTags(tagsStr: string): string[] {
-    if (!tagsStr) return [];
-    return tagsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
-  }
+  this.startFlashTimer();
+}
 
-  getTagClass(tag: string): string {
-    const t = tag.toLowerCase();
-    if (t.includes('minimal') || t.includes('aesthetic') || t.includes('design')) return 'tag-aesthetic';
-    if (t.includes('prod') || t.includes('silent') || t.includes('work')) return 'tag-productivity';
-    if (t.includes('gaming') || t.includes('perf')) return 'tag-gaming';
-    if (t.includes('audio') || t.includes('listen')) return 'tag-audio';
-    if (t.includes('nomad') || t.includes('travel')) return 'tag-productivity'; // Reusing blue for nomadic
-    return 'tag-minimal';
-  }
-
-  trackBrandByName(_index: number, b: { name: string; checked: boolean }): string {
-    return b.name;
-  }
-
-  toggleBrand(name: string) {
-    if (this.selectedBrands.includes(name)) {
-      this.selectedBrands = this.selectedBrands.filter(b => b !== name);
-    } else {
-      this.selectedBrands = [...this.selectedBrands, name];
-    }
-  }
-
-  get activeFilters() {
-    const catFilters = this.categories.filter(c => c.checked).map(c => c.name);
-    return [...this.selectedBrands, ...catFilters];
-  }
-
-  get filteredProducts() {
-    let list = this.products || [];
-    if (this.searchQuery) {
-      const q = this.searchQuery.toLowerCase();
-      list = list.filter(p => 
-        p.name.toLowerCase().includes(q) || 
-        p.category.toLowerCase().includes(q) || 
-        (p.brand && p.brand.toLowerCase().includes(q)) ||
-        (p.tags && p.tags.toLowerCase().includes(q))
-      );
-    }
-    if (this.selectedCat !== 'All') {
-      list = list.filter(p => p.category === this.selectedCat);
-    }
-    if (this.maxPrice < 3000 || this.minPrice > 0) {
-      list = list.filter(p => p.basePrice <= this.maxPrice && p.basePrice >= this.minPrice);
-    }
-    const selBrands = this.brands.filter(b => b.checked).map(b => b.name);
-    if (selBrands.length > 0) {
-      list = list.filter(p => selBrands.includes(p.brand));
-    }
-    const selCats = this.categories.filter(c => c.checked).map(c => c.name);
-    if (selCats.length > 0) {
-      list = list.filter(p => selCats.includes(p.category));
-    }
-    if (this.availability.inStock) {
-      list = list.filter(p => p.stockQuantity > 0);
-    }
-    return list;
-  }
-
-  removeChip(f: string) {
-    if (this.selectedBrands.includes(f)) {
-      this.selectedBrands = this.selectedBrands.filter(b => b !== f);
-    }
-    const cat = this.categories.find(c => c.name === f);
-    if (cat) cat.checked = false;
-  }
-
-  resetFilters() {
-    this.maxPrice = 3000;
-    this.minPrice = 0;
-    this.selectedRating = 0;
-    this.selectedCat = 'All';
-    this.selectedBrands = [];
-    this.categories.forEach(c => (c.checked = false));
-    this.availability = { inStock: false, onSale: false, newArrivals: false };
-    this.searchQuery = '';
-  }
-
-  selectProduct(p: any) {
-    this.selectedProduct = p;
-    this.activeTab = 'shop';
-    this.qty = 1;
-    this.checkSentiment(p);
-    this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'shop' }, replaceUrl: true });
-  }
-
-  checkSentiment(p: any) {
-    this.productService.getSentiment(p.productId).subscribe(res => {
-      this.sentiments[p.productId] = res;
-    });
-  }
-
-  toggleWishlist(p: any) {
-    const idx = this.wishlist.findIndex(w => w.productId === p.productId);
-    if (idx >= 0) {
-      this.wishlist.splice(idx, 1);
-    } else {
-      this.wishlist.push(p);
-    }
-  }
-
-  addToCart(p: any) {
-    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    let existing = cart.find((item: any) => item.productId === p.productId);
-    if (existing) existing.qty++;
-    else cart.push({ ...p, qty: 1 });
-    localStorage.setItem('cart', JSON.stringify(cart));
-    this.toast.show(p.name + ' added to cart');
-  }
-
-  sendSuggestion(s: string) {
-    this.prompt = s;
-    this.sendQuery();
-  }
-
-  clearChat() {
-    this.chatMessages = [];
-    this.history = [];
-    this.ai.clearSession();
-    const userName = this.auth.currentUserValue?.fullName || 'there';
-    this.chatMessages.push({
-      sender: 'ai',
-      text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language.`,
-      time: this.getTimeNow()
-    });
-  }
-
-  streamSteps: string[] = [];
-
-  private buildAltSuggestion(res: any): string | null {
-    const guardrail = (res?.guardrail || '').toString().toUpperCase();
-    const sessionStore = res?.session_store_id ? `#${res.session_store_id}` : 'your store';
-    if (guardrail.includes('CROSS_STORE')) {
-      return `Try: "Show my store (${sessionStore}) sales for this month" or "What are the top 5 products in my store this month?"`;
-    }
-    if (guardrail.includes('PROMPT_INJECTION')) {
-      return `Try: "What are the top 5 selling products this month?" or "Which products are low on stock?"`;
-    }
-    if (guardrail.includes('FILTER_BYPASS')) {
-      return `Try: "Compare this month vs last month revenue for my store (${sessionStore})"`;
-    }
-    return `Try a store-scoped question like: "Top selling products this month"`;
-  }
-
-  sendQuery() {
-    if (!this.prompt.trim()) return;
-    const userMsg = this.prompt.trim();
-    this.chatMessages.push({ sender: 'user', text: userMsg, time: this.getTimeNow() });
-    this.prompt = '';
-    this.isTyping = true;
-    this.streamSteps = [];
-    if (!this.auth.currentUserValue) {
-      this.isTyping = false;
-      this.chatMessages.push({
-        sender: 'ai',
-        text: 'Please sign in to use Nexus AI.',
-        time: this.getTimeNow(),
-      });
+startFlashTimer() {
+  let target = new Date();
+  target.setHours(23, 59, 59, 0); // end of day
+  this.timerInt = setInterval(() => {
+    const now = new Date();
+    const diff = target.getTime() - now.getTime();
+    if (diff <= 0) {
+      this.flashSaleTime = { hours: '00', minutes: '00', seconds: '00' };
+      clearInterval(this.timerInt);
       return;
     }
+    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const m = Math.floor((diff / 1000 / 60) % 60);
+    const s = Math.floor((diff / 1000) % 60);
+    this.flashSaleTime = {
+      hours: h.toString().padStart(2, '0'),
+      minutes: m.toString().padStart(2, '0'),
+      seconds: s.toString().padStart(2, '0')
+    };
+  }, 1000);
+}
 
-    this.ai.query(userMsg, this.history).subscribe({
-      next: (res: any) => {
-        this.isTyping = false;
-        this.streamSteps = [];
-        const blocked = !!res?.blocked;
-        const aiMsg: any = {
-          sender: 'ai',
-          text: res?.response || 'No response',
-          time: this.getTimeNow(),
-          blocked,
-          guardrail: res?.guardrail,
-          detectionType: res?.detection_type,
-          sessionStoreId: res?.session_store_id,
-          requestedStoreId: res?.requested_store_id,
-        };
-        if (blocked) {
-          aiMsg.altSuggestion = this.buildAltSuggestion(res);
-        } else {
-          aiMsg.steps = ['Guardrails check', 'SQL generated', 'Query executed', 'Response formatted'];
-          aiMsg.duration = '0.8s';
-          if (res.sql) aiMsg.sql = res.sql;
-          if (res.data && res.data.length > 0) aiMsg.results = res.data;
-          if (res.visualization) aiMsg.visualization = res.visualization;
-        }
-        this.chatMessages.push(aiMsg);
-        this.history.push('User: ' + userMsg, 'AI: ' + (res?.response || ''));
-        if (!blocked && res?.visualization) {
-          setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
-        }
-      },
-      error: () => {
-        this.isTyping = false;
-        this.streamSteps = [];
-        this.chatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
-      }
-    });
+ngOnDestroy() {
+  if (this.timerInt) clearInterval(this.timerInt);
+}
+
+getTags(tagsStr: string): string[] {
+  if (!tagsStr) return [];
+  return tagsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+}
+
+getTagClass(tag: string): string {
+  const t = tag.toLowerCase();
+  if (t.includes('minimal') || t.includes('aesthetic') || t.includes('design')) return 'tag-aesthetic';
+  if (t.includes('prod') || t.includes('silent') || t.includes('work')) return 'tag-productivity';
+  if (t.includes('gaming') || t.includes('perf')) return 'tag-gaming';
+  if (t.includes('audio') || t.includes('listen')) return 'tag-audio';
+  if (t.includes('nomad') || t.includes('travel')) return 'tag-productivity'; // Reusing blue for nomadic
+  return 'tag-minimal';
+}
+
+trackBrandByName(_index: number, b: { name: string; checked: boolean }): string {
+  return b.name;
+}
+
+toggleBrand(name: string) {
+  if (this.selectedBrands.includes(name)) {
+    this.selectedBrands = this.selectedBrands.filter(b => b !== name);
+  } else {
+    this.selectedBrands = [...this.selectedBrands, name];
   }
+}
+
+  get activeFilters() {
+  const catFilters = this.categories.filter(c => c.checked).map(c => c.name);
+  return [...this.selectedBrands, ...catFilters];
+}
+
+  get filteredProducts() {
+  let list = this.products || [];
+  if (this.searchQuery) {
+    const q = this.searchQuery.toLowerCase();
+    list = list.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q) ||
+      (p.brand && p.brand.toLowerCase().includes(q)) ||
+      (p.tags && p.tags.toLowerCase().includes(q))
+    );
+  }
+  if (this.selectedCat !== 'All') {
+    list = list.filter(p => p.category === this.selectedCat);
+  }
+  if (this.maxPrice < 3000 || this.minPrice > 0) {
+    list = list.filter(p => p.basePrice <= this.maxPrice && p.basePrice >= this.minPrice);
+  }
+  const selBrands = this.brands.filter(b => b.checked).map(b => b.name);
+  if (selBrands.length > 0) {
+    list = list.filter(p => selBrands.includes(p.brand));
+  }
+  const selCats = this.categories.filter(c => c.checked).map(c => c.name);
+  if (selCats.length > 0) {
+    list = list.filter(p => selCats.includes(p.category));
+  }
+  if (this.availability.inStock) {
+    list = list.filter(p => p.stockQuantity > 0);
+  }
+  return list;
+}
+
+removeChip(f: string) {
+  if (this.selectedBrands.includes(f)) {
+    this.selectedBrands = this.selectedBrands.filter(b => b !== f);
+  }
+  const cat = this.categories.find(c => c.name === f);
+  if (cat) cat.checked = false;
+}
+
+resetFilters() {
+  this.maxPrice = 3000;
+  this.minPrice = 0;
+  this.selectedRating = 0;
+  this.selectedCat = 'All';
+  this.selectedBrands = [];
+  this.categories.forEach(c => (c.checked = false));
+  this.availability = { inStock: false, onSale: false, newArrivals: false };
+  this.searchQuery = '';
+}
+
+selectProduct(p: any) {
+  this.selectedProduct = p;
+  this.activeTab = 'shop';
+  this.qty = 1;
+  this.checkSentiment(p);
+  this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'shop' }, replaceUrl: true });
+
+  // update recently viewed
+  this.recentlyViewed = this.recentlyViewed.filter(item => item.productId !== p.productId);
+  this.recentlyViewed.unshift(p);
+  if (this.recentlyViewed.length > 4) this.recentlyViewed.pop();
+  localStorage.setItem('recentlyViewed', JSON.stringify(this.recentlyViewed));
+}
+
+checkSentiment(p: any) {
+  this.productService.getSentiment(p.productId).subscribe(res => {
+    this.sentiments[p.productId] = res;
+  });
+}
+
+toggleWishlist(p: any) {
+  const idx = this.wishlist.findIndex(w => w.productId === p.productId);
+  if (idx >= 0) {
+    this.wishlist.splice(idx, 1);
+  } else {
+    this.wishlist.push(p);
+  }
+}
+
+addToCart(p: any) {
+  let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  let existing = cart.find((item: any) => item.productId === p.productId);
+  if (existing) existing.qty++;
+  else cart.push({ ...p, qty: 1 });
+  localStorage.setItem('cart', JSON.stringify(cart));
+  this.toast.show(p.name + ' added to cart');
+}
+
+sendSuggestion(s: string) {
+  this.prompt = s;
+  this.sendQuery();
+}
+
+clearChat() {
+  this.chatMessages = [];
+  this.history = [];
+  this.ai.clearSession();
+  const userName = this.auth.currentUserValue?.fullName || 'there';
+  this.chatMessages.push({
+    sender: 'ai',
+    text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language.`,
+    time: this.getTimeNow()
+  });
+}
+
+streamSteps: string[] = [];
+
+  private buildAltSuggestion(res: any): string | null {
+  const guardrail = (res?.guardrail || '').toString().toUpperCase();
+  const sessionStore = res?.session_store_id ? `#${res.session_store_id}` : 'your store';
+  if (guardrail.includes('CROSS_STORE')) {
+    return `Try: "Show my store (${sessionStore}) sales for this month" or "What are the top 5 products in my store this month?"`;
+  }
+  if (guardrail.includes('PROMPT_INJECTION')) {
+    return `Try: "What are the top 5 selling products this month?" or "Which products are low on stock?"`;
+  }
+  if (guardrail.includes('FILTER_BYPASS')) {
+    return `Try: "Compare this month vs last month revenue for my store (${sessionStore})"`;
+  }
+  return `Try a store-scoped question like: "Top selling products this month"`;
+}
+
+sendQuery() {
+  if (!this.prompt.trim()) return;
+  const userMsg = this.prompt.trim();
+  this.chatMessages.push({ sender: 'user', text: userMsg, time: this.getTimeNow() });
+  this.prompt = '';
+  this.isTyping = true;
+  this.streamSteps = [];
+  if (!this.auth.currentUserValue) {
+    this.isTyping = false;
+    this.chatMessages.push({
+      sender: 'ai',
+      text: 'Please sign in to use Nexus AI.',
+      time: this.getTimeNow(),
+    });
+    return;
+  }
+
+  this.ai.query(userMsg, this.history).subscribe({
+    next: (res: any) => {
+      this.isTyping = false;
+      this.streamSteps = [];
+      const blocked = !!res?.blocked;
+      const aiMsg: any = {
+        sender: 'ai',
+        text: res?.response || 'No response',
+        time: this.getTimeNow(),
+        blocked,
+        guardrail: res?.guardrail,
+        detectionType: res?.detection_type,
+        sessionStoreId: res?.session_store_id,
+        requestedStoreId: res?.requested_store_id,
+      };
+      if (blocked) {
+        aiMsg.altSuggestion = this.buildAltSuggestion(res);
+      } else {
+        aiMsg.steps = ['Guardrails check', 'SQL generated', 'Query executed', 'Response formatted'];
+        aiMsg.duration = '0.8s';
+        if (res.sql) aiMsg.sql = res.sql;
+        if (res.data && res.data.length > 0) aiMsg.results = res.data;
+        if (res.visualization) aiMsg.visualization = res.visualization;
+      }
+      this.chatMessages.push(aiMsg);
+      this.history.push('User: ' + userMsg, 'AI: ' + (res?.response || ''));
+      if (!blocked && res?.visualization) {
+        setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
+      }
+    },
+    error: () => {
+      this.isTyping = false;
+      this.streamSteps = [];
+      this.chatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.', time: this.getTimeNow() });
+    }
+  });
+}
 
   private renderPlotly(msgIndex: number, vizCode: string, data: any[]) {
-    const Plotly = (window as any)['Plotly'];
-    if (!Plotly) return;
-    const containerId = 'plotly-chart-' + msgIndex;
-    try {
-      const plotlyJson = JSON.parse(vizCode);
-      if (plotlyJson.data) {
-        const layout = { ...(plotlyJson.layout || {}), paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: { color: '#7A918D' } };
-        Plotly.newPlot(containerId, plotlyJson.data, layout, { responsive: true, displayModeBar: false });
-        return;
-      }
-    } catch { /* not JSON, try executing as code */ }
-    try {
-      const fn = new Function('data', 'Plotly', 'containerId', vizCode.replace('fig.to_json()', `Plotly.newPlot(containerId, fig.data, {...fig.layout, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#7A918D'}}, {responsive:true, displayModeBar:false})`));
-      fn(data, Plotly, containerId);
-    } catch { /* visualization rendering failed silently */ }
-  }
+  const Plotly = (window as any)['Plotly'];
+  if (!Plotly) return;
+  const containerId = 'plotly-chart-' + msgIndex;
+  try {
+    const plotlyJson = JSON.parse(vizCode);
+    if (plotlyJson.data) {
+      const layout = { ...(plotlyJson.layout || {}), paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: { color: '#7A918D' } };
+      Plotly.newPlot(containerId, plotlyJson.data, layout, { responsive: true, displayModeBar: false });
+      return;
+    }
+  } catch { /* not JSON, try executing as code */ }
+  try {
+    const fn = new Function('data', 'Plotly', 'containerId', vizCode.replace('fig.to_json()', `Plotly.newPlot(containerId, fig.data, {...fig.layout, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#7A918D'}}, {responsive:true, displayModeBar:false})`));
+    fn(data, Plotly, containerId);
+  } catch { /* visualization rendering failed silently */ }
+}
 }

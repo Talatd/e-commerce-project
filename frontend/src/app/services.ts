@@ -236,6 +236,16 @@ export class OrderService {
 }
 
 @Injectable({ providedIn: 'root' })
+export class CouponService {
+  private http = inject(HttpClient);
+  private apiUrl = `${API_V1}/coupons`;
+
+  validate(code: string, subtotal?: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/validate`, { code, subtotal });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
 export class StoreService {
   private http = inject(HttpClient);
   private apiUrl = `${API_V1}/stores`;

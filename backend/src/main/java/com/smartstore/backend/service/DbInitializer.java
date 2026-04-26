@@ -17,6 +17,7 @@ public class DbInitializer {
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final CouponRepository couponRepository;
     private final ProductReviewRepository reviewRepository;
     private final AuditLogRepository auditLogRepository;
     private final CustomerProfileRepository profileRepository;
@@ -34,10 +35,23 @@ public class DbInitializer {
             seedCuratedProducts();
         }
 
+        if (couponRepository.count() == 0) {
+            seedCoupons();
+        }
+
         if (orderRepository.count() == 0) {
             seedHistoricalData();
         }
         System.out.println("SEED: Initialization complete.");
+    }
+
+    private void seedCoupons() {
+        Coupon c = new Coupon();
+        c.setCode("NEXUS20");
+        c.setPercentOff(20);
+        c.setActive(true);
+        c.setExpiresAt(java.time.LocalDateTime.now().plusYears(3));
+        couponRepository.save(c);
     }
 
     @SuppressWarnings("all")
@@ -57,31 +71,102 @@ public class DbInitializer {
         auditLogRepository.save(AuditLog.builder().username("marcus@techhub.pro").action("PRODUCT_ADDED").type("INVENTORY").detail("VANGUARD Stealth-Key added to catalog").build());
     }
 
+    public void reseedReviews() {
+        reviewRepository.deleteAll();
+        seedCustomerReviews();
+    }
+
     private void seedCustomerReviews() {
         List<Product> products = productRepository.findAll();
         List<User> users = userRepository.findByRole(Role.CONSUMER);
         if (products.isEmpty() || users.isEmpty()) return;
 
-        String[] comments = {
-            "This setup literally changed my workflow. The build quality of VANGUARD is unmatched.",
-            "Absolutely stunning aesthetic. It perfectly fits my Organic Creator vibe.",
-            "A bit expensive, but the AURA kinetic pen is a masterpiece of engineering. Worth every penny.",
+        Random random = new Random();
+
+        String[] excellentComments = {
+            "This setup literally changed my workflow. The build quality is unmatched.",
+            "Absolutely stunning aesthetic. It perfectly fits my vibe.",
             "Minimalist perfection. Fast shipping and the packaging was premium too.",
-            "The noise canceling is insane. I can finally code in peace at the coffee shop.",
-            "Great connectivity on the NOVA hub. Solid build, feels very premium in hand.",
-            "The walnut finish is so warm. My desk feels alive now.",
-            "I'm obsessed with the floating desk lamp. Everyone who visits asks about it!"
+            "The best purchase I've made this year. Flawless.",
+            "Works out of the box exactly as described. Huge fan of the materials used.",
+            "Incredible attention to detail. My productivity has skyrocketed."
         };
 
-        for (int i = 0; i < 40; i++) {
-            ProductReview review = new ProductReview();
-            review.setProduct(products.get(i % products.size()));
-            review.setUser(users.get(i % users.size()));
-            review.setRating(4 + (i % 2)); // 4 or 5 stars
-            review.setComment(comments[i % comments.length]);
-            review.setSentimentScore(java.math.BigDecimal.valueOf(0.85 + (i * 0.003) % 0.15));
-            review.setCreatedAt(java.time.LocalDateTime.now().minusDays(i * 3));
-            reviewRepository.save(review);
+        String[] goodComments = {
+            "Great connectivity. Solid build, feels very premium in hand.",
+            "The finish is so warm. My desk feels alive now.",
+            "I'm obsessed with this. Everyone who visits asks about it!",
+            "Good value for the price. Would recommend to friends.",
+            "Very satisfied overall. A few minor quirks but nothing deal-breaking."
+        };
+
+        String[] mixedComments = {
+            "It's decent, but a bit overpriced for what it is.",
+            "Looks great but the functionality is just average.",
+            "I like the design, but setup was more complicated than it should be.",
+            "Middle of the road product. Not bad, not amazing.",
+            "It gets the job done, but I wish the materials were a bit more durable."
+        };
+
+        String[] badComments = {
+            "Broke after two weeks of use. Completely unacceptable.",
+            "The item doesn't look like the pictures. Very disappointed.",
+            "Customer support was unhelpful when I reported a defect.",
+            "Do not buy this. Huge waste of money and time.",
+            "Extremely poor quality control. Arrived scratched and dented."
+        };
+
+        String[] aggressiveComments = {
+            "This is absolute garbage! The company should be ashamed for selling this junk.",
+            "Worst product ever! I want my money back immediately. Total scam!",
+            "Who designed this trash? An absolute joke of a product.",
+            "Don't ever buy from this brand. They are ripping people off with this cheap plastic crap!"
+        };
+
+        String[] helpfulCriticalComments = {
+            "While the aesthetic is beautiful, the heat dissipation is poorly engineered. If you run heavy workloads, it throttles quickly. 2 stars.",
+            "I love the concept, but the firmware is buggy. If they fix the Bluetooth dropout issue in the next update, it would be a 5-star product.",
+            "The build is solid aluminum, which is great, but the included cable is too short (only 0.5m). You'll need to buy a separate extension."
+        };
+
+        for (Product p : products) {
+            // Give each product 3 to 8 reviews
+            int reviewCount = 3 + random.nextInt(6);
+            for (int i = 0; i < reviewCount; i++) {
+                ProductReview review = new ProductReview();
+                review.setProduct(p);
+                review.setUser(users.get(random.nextInt(users.size())));
+                
+                int type = random.nextInt(100);
+                if (type < 40) { // 40% Excellent
+                    review.setRating(5);
+                    review.setComment(excellentComments[random.nextInt(excellentComments.length)]);
+                    review.setSentimentScore(java.math.BigDecimal.valueOf(0.8 + random.nextDouble() * 0.2));
+                } else if (type < 70) { // 30% Good
+                    review.setRating(4);
+                    review.setComment(goodComments[random.nextInt(goodComments.length)]);
+                    review.setSentimentScore(java.math.BigDecimal.valueOf(0.6 + random.nextDouble() * 0.2));
+                } else if (type < 80) { // 10% Mixed
+                    review.setRating(3);
+                    review.setComment(mixedComments[random.nextInt(mixedComments.length)]);
+                    review.setSentimentScore(java.math.BigDecimal.valueOf(0.4 + random.nextDouble() * 0.2));
+                } else if (type < 85) { // 5% Helpful Critical
+                    review.setRating(2 + random.nextInt(2));
+                    review.setComment(helpfulCriticalComments[random.nextInt(helpfulCriticalComments.length)]);
+                    review.setSentimentScore(java.math.BigDecimal.valueOf(0.3 + random.nextDouble() * 0.2));
+                } else if (type < 95) { // 10% Bad
+                    review.setRating(1 + random.nextInt(2));
+                    review.setComment(badComments[random.nextInt(badComments.length)]);
+                    review.setSentimentScore(java.math.BigDecimal.valueOf(0.1 + random.nextDouble() * 0.2));
+                } else { // 5% Aggressive
+                    review.setRating(1);
+                    review.setComment(aggressiveComments[random.nextInt(aggressiveComments.length)]);
+                    review.setSentimentScore(java.math.BigDecimal.valueOf(0.0 + random.nextDouble() * 0.1));
+                }
+                
+                review.setCreatedAt(java.time.LocalDateTime.now().minusDays(random.nextInt(180)));
+                reviewRepository.save(review);
+            }
         }
     }
 

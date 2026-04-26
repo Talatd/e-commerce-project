@@ -30,6 +30,15 @@ public class Order {
     @Column(nullable = false)
     private BigDecimal totalAmount;
 
+    /** Optional coupon code applied to this order (normalized to upper case). */
+    private String couponCode;
+
+    /** Server-calculated breakdown (optional but useful for UI + audit). */
+    private BigDecimal subtotalAmount;
+    private BigDecimal discountAmount;
+    private BigDecimal taxAmount;
+    private BigDecimal shippingAmount;
+
     @Column(nullable = false)
     private String shippingAddress;
 

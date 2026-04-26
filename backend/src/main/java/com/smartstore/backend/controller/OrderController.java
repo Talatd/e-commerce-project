@@ -5,6 +5,8 @@ import com.smartstore.backend.model.OrderItem;
 import com.smartstore.backend.model.Product;
 import com.smartstore.backend.model.Role;
 import com.smartstore.backend.model.User;
+import com.smartstore.backend.model.Coupon;
+import com.smartstore.backend.repository.CouponRepository;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.ProductRepository;
 import com.smartstore.backend.repository.UserRepository;
@@ -22,6 +24,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -33,6 +37,7 @@ public class OrderController {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final MailService mailService;
+    private final CouponRepository couponRepository;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -80,6 +85,7 @@ public class OrderController {
         User buyer = userRepository.findByEmail(principal.getUsername()).orElseThrow();
         order.setUser(buyer);
 
+        BigDecimal subtotal = BigDecimal.ZERO;
         if (order.getItems() != null) {
             for (OrderItem item : order.getItems()) {
                 if (item.getQuantity() == null || item.getQuantity() <= 0) {
@@ -104,8 +110,45 @@ public class OrderController {
                 }
                 item.setOrder(order);
                 item.setProduct(product);
+
+                BigDecimal line = item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity()));
+                subtotal = subtotal.add(line);
             }
         }
+
+        // Normalize & apply coupon server-side (optional)
+        String rawCode = order.getCouponCode() == null ? null : order.getCouponCode().trim();
+        Coupon coupon = null;
+        if (rawCode != null && !rawCode.isEmpty()) {
+            coupon = couponRepository.findByCodeIgnoreCase(rawCode).orElse(null);
+            if (coupon == null || coupon.getActive() == null || !coupon.getActive()) {
+                throw new IllegalArgumentException("Invalid coupon code");
+            }
+            if (coupon.getExpiresAt() != null && coupon.getExpiresAt().isBefore(java.time.LocalDateTime.now())) {
+                throw new IllegalArgumentException("Coupon expired");
+            }
+            order.setCouponCode(coupon.getCode().toUpperCase());
+        } else {
+            order.setCouponCode(null);
+        }
+
+        int pct = (coupon == null || coupon.getPercentOff() == null) ? 0 : Math.max(0, Math.min(100, coupon.getPercentOff()));
+        BigDecimal discount = subtotal.multiply(BigDecimal.valueOf(pct)).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal shipping = order.getShippingAmount() == null ? BigDecimal.ZERO : order.getShippingAmount().max(BigDecimal.ZERO);
+        BigDecimal taxable = subtotal.subtract(discount).max(BigDecimal.ZERO);
+        BigDecimal tax = order.getTaxAmount();
+        if (tax == null) {
+            tax = taxable.multiply(BigDecimal.valueOf(0.08)).setScale(2, RoundingMode.HALF_UP);
+        } else {
+            tax = tax.max(BigDecimal.ZERO);
+        }
+
+        order.setSubtotalAmount(subtotal.setScale(2, RoundingMode.HALF_UP));
+        order.setDiscountAmount(discount);
+        order.setShippingAmount(shipping.setScale(2, RoundingMode.HALF_UP));
+        order.setTaxAmount(tax);
+        order.setTotalAmount(taxable.add(shipping).add(tax).setScale(2, RoundingMode.HALF_UP));
+
         Order saved = orderRepository.save(order);
         orderRepository.findDetailedById(saved.getOrderId()).ifPresent(o ->
                 mailService.sendOrderConfirmation(buyer.getEmail(), o));
