@@ -48,6 +48,49 @@ Ensure `smartstore.ai.url=http://localhost:8000` in `application.properties` so 
 
 ---
 
+## ETL seeding (JSON master-data)
+
+Core data is loaded via a simple **ETL** pipeline at startup (inside `DbInitializer`):
+
+- **Extract**: reads JSON files from `backend/src/main/resources/data/`
+  - `users.json`
+  - `stores.json`
+  - `categories.json`
+  - `products.json`
+- **Transform**:
+  - `supplierPrice` is derived from `price` (\(\approx 65\%\)).
+  - For every product, `RegionalInventory` rows are generated for **Global / Europe / Asia**.
+  - Stores are linked using `storeName` from JSON.
+  - Deterministic bundle metadata is mapped to entity fields (see below).
+- **Load**: persists the resulting entities transactionally.
+
+If you change any master-data JSON, restart the backend to re-run the ETL.
+
+---
+
+## Deterministic bundles (“Complete setup”)
+
+The “Complete setup” experience is driven by **seeded bundle metadata** (not hardcoded UI).
+
+### Product fields (seeded)
+
+In `products.json` you can control bundle behavior using:
+
+- **`bundleRole`**: `"ANCHOR"` or `"ACCESSORY"`
+- **`compatibleWith`**: list of anchor categories this accessory supports (or `"ANY"`)
+- **`bundleRankByAnchor`**: `{ "Keyboards": 10, "Audio": 20, "ANY": 999 }` (smaller wins)
+- **`seedKey`**: stable string identifier for a seeded product
+- **`bundleIncludes`**: for anchors only, an ordered list of `seedKey`s (exact bundle list)
+
+### Selection rules (backend)
+
+When the frontend requests a bundle via `GET /api/v1/bundles/complete-setup?anchorProductId=...`:
+
+1. If the anchor has `bundleIncludes`, the backend returns that list **in order** (up to 8).
+2. Otherwise it falls back to deterministic filtering by `compatibleWith` (and ordering by `bundleRankByAnchor → price → name`).
+
+---
+
 ## Frontend environments
 
 - **Development:** `frontend/src/environments/environment.ts` → `apiBaseUrl` (default `http://localhost:8080`).
@@ -74,15 +117,17 @@ The platform features a deeply enriched database designed for high-fidelity AI a
 
 ## Sample accounts (auto-seeded)
 
-On startup, `DbInitializer` syncs these users (creates them if missing):
+On startup, `DbInitializer` loads users from `backend/src/main/resources/data/users.json` (and creates the admin if missing).
 
 | Role | Email | Password | Persona |
 |------|-------|----------|---------|
-| ADMIN | `admin@smartstore.com` | `admin123` | Nexus Admin |
-| MANAGER | `james@techhub.com` | `manager123` | TechHub Manager |
-| CONSUMER | `daniel@shadow.io` | `user123` | The Shadow Coder |
-| CONSUMER | `sophia@organic.io` | `user123` | The Organic Creator |
-| CONSUMER | `elif@akdeniz.edu.tr` | `user123` | Local Discovery |
+| ADMIN | `admin@nexus.io` | `admin123` | Nexus Admin |
+| MANAGER | `marcus@techhub.pro` | `manager123` | (Manager) |
+| MANAGER | `elena@gadgetpro.co` | `manager123` | (Manager) |
+| CONSUMER | `daniel@nexus.io` | `user123` | Shadow Coder |
+| CONSUMER | `sophia@nexus.io` | `user123` | Organic Creator |
+| CONSUMER | `liam@nexus.io` | `user123` | Global Nomad |
+| CONSUMER | `maya@nexus.io` | `user123` | The Discovery |
 
 ---
 
@@ -94,6 +139,19 @@ cd frontend && npm run build
 ```
 
 ---
+
+## Smoke test (quick)
+
+```bash
+# validate master-data JSON
+python -c "import json; json.load(open(r'backend/src/main/resources/data/products.json','r',encoding='utf-8')); print('products.json OK')"
+
+# backend tests
+cd backend && mvn test
+
+# frontend build
+cd frontend && npm run build
+```
 
 ## AI Capability Highlights
 

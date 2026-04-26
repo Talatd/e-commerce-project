@@ -251,6 +251,16 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .pc-stock{font-size:10px;padding:2px 7px;border-radius:8px;}
 .pc-instock{background:var(--green-dim);color:var(--green);border:1px solid rgba(62,201,138,0.18);}
 .pc-lowstock{background:rgba(232,169,74,0.08);color:var(--amber);border:1px solid rgba(232,169,74,0.18);}
+.pc-oos{background:rgba(224,112,112,0.10);color:var(--red);border:1px solid rgba(224,112,112,0.18);}
+
+/* Out-of-stock cards: greyed out and pushed visually back */
+.pcard.oos{
+  filter: grayscale(1) saturate(0);
+  opacity: 0.85;
+}
+.pcard.oos .pc-img-photo{filter: grayscale(1) saturate(0) contrast(0.95) brightness(0.98);}
+.pcard.oos:hover{transform:none;border-color:var(--border);}
+.pcard.oos .pc-quick-btn{opacity:0.65;pointer-events:none;}
 .filter-toggle{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;font-size:12px;cursor:pointer;background:var(--glass);border:1px solid var(--border2);color:var(--text2);transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;}
 .filter-toggle:hover{color:var(--text);}
 .filter-toggle.active{background:var(--teal-dim);color:var(--teal2);border-color:rgba(62,207,178,0.2);}
@@ -470,6 +480,11 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 :host-context(html.light-mode) .sug{
   background:rgba(0,0,0,0.02);
 }
+.suggestions{padding:10px 14px 0;display:flex;flex-direction:column;gap:8px;}
+.sug-title{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);font-weight:700;padding-left:2px;}
+.sug-grid{display:flex;gap:8px;flex-wrap:wrap;}
+.sug{border:none;cursor:pointer;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--text2);padding:7px 12px;border-radius:999px;font-size:12px;transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;}
+.sug:hover{background:var(--glass2);color:var(--text);}
 .success-banner{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--green-dim);border:1px solid rgba(62,201,138,0.18);border-radius:8px;margin-bottom:10px;}
 .success-banner span{font-size:13px;color:var(--green);font-weight:500;}
 .guardrail-card{background:var(--red-dim);border:1px solid rgba(224,112,112,0.25);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
@@ -679,7 +694,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
                 <div style="display:flex;gap:1px;">
                   <svg *ngFor="let s of [1,2,3,4,5]" width="10" height="10" viewBox="0 0 13 13" [attr.fill]="(p.rating || 4.8) >= s ? '#E8A94A' : 'rgba(255,255,255,0.1)'"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg>
                 </div>
-                <span class="pc-rcount">{{p.rating || '4.8'}}</span>
+                <span class="pc-rcount">{{(p.rating || 4.8) | number:'1.1-1'}}</span>
               </div>
               <div class="pc-bottom"><div><span class="pc-price">{{p.basePrice | currency}}</span><span *ngIf="p.isOnSale" class="pc-price-old">{{p.originalPrice | currency}}</span></div></div>
             </div>
@@ -819,9 +834,9 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
           <div class="fsec">
             <div class="fsec-label">Price Range <span>▾</span></div>
             <div class="fsec-body">
-              <div class="fcheck" [class.on]="maxPrice <= 500" (click)="maxPrice = 500"><div class="fbox"><svg *ngIf="maxPrice <= 500" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="flabel">Under $500</span></div>
-              <div class="fcheck" [class.on]="maxPrice > 500 && maxPrice <= 1000" (click)="maxPrice = 1000"><div class="fbox"></div><span class="flabel">$500 – $1,000</span></div>
-              <div class="fcheck" (click)="maxPrice = 3000"><div class="fbox"></div><span class="flabel">$1,000+</span></div>
+              <div class="fcheck" [class.on]="maxPrice <= 100" (click)="maxPrice = 100"><div class="fbox"><svg *ngIf="maxPrice <= 100" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3ECFB2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="flabel">Under $100</span></div>
+              <div class="fcheck" [class.on]="maxPrice > 100 && maxPrice <= 300" (click)="maxPrice = 300"><div class="fbox"></div><span class="flabel">$100 – $300</span></div>
+              <div class="fcheck" [class.on]="maxPrice > 300" (click)="maxPrice = 3000"><div class="fbox"></div><span class="flabel">$300+</span></div>
               <div class="price-inputs"><input class="pinput" [(ngModel)]="minPrice" placeholder="Min"/><div class="psep">—</div><input class="pinput" [(ngModel)]="maxPrice" placeholder="Max"/></div>
             </div>
           </div>
@@ -877,7 +892,13 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
                 </div>
               </div>
             </ng-container>
-            <div class="pcard" *ngFor="let p of filteredProducts" (click)="selectProduct(p)" [style.display]="productsLoading ? 'none' : ''">
+            <div
+              class="pcard"
+              *ngFor="let p of filteredProducts"
+              (click)="selectProduct(p)"
+              [style.display]="productsLoading ? 'none' : ''"
+              [class.oos]="(p.stockQuantity || 0) <= 0"
+            >
               <div class="pc-img" style="background:rgba(62,207,178,0.04);">
                 <div class="pc-img-glow" style="background:radial-gradient(circle,rgba(62,207,178,0.09),transparent 70%)"></div>
                 <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="pc-img-photo" [alt]="p.name"/>
@@ -898,14 +919,19 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
                   <div style="display:flex;gap:1px;">
                     <svg *ngFor="let s of [1,2,3,4,5]" width="10" height="10" viewBox="0 0 13 13" [attr.fill]="(p.rating || 4.8) >= s ? '#E8A94A' : 'rgba(255,255,255,0.1)'"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg>
                   </div>
-                  <span class="pc-rcount">{{p.rating || '4.8'}}</span>
+                  <span class="pc-rcount">{{(p.rating || 4.8) | number:'1.1-1'}}</span>
                 </div>
                 <div class="pc-bottom">
                   <div>
                     <span class="pc-price">{{p.basePrice | currency}}</span>
                     <span *ngIf="p.isOnSale" class="pc-price-old">{{p.originalPrice | currency}}</span>
                   </div>
-                  <div class="pc-stock" [class.pc-instock]="p.stockQuantity > 5" [class.pc-lowstock]="p.stockQuantity <= 5 && p.stockQuantity > 0">{{p.stockQuantity > 5 ? 'In Stock' : p.stockQuantity + ' left'}}</div>
+                  <div
+                    class="pc-stock"
+                    [class.pc-instock]="p.stockQuantity > 5"
+                    [class.pc-lowstock]="p.stockQuantity <= 5 && p.stockQuantity > 0"
+                    [class.pc-oos]="(p.stockQuantity || 0) <= 0"
+                  >{{(p.stockQuantity || 0) <= 0 ? 'Out of Stock' : (p.stockQuantity > 5 ? 'In Stock' : p.stockQuantity + ' left')}}</div>
                 </div>
               </div>
             </div>
@@ -937,7 +963,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
             <div class="stars">
               <svg *ngFor="let s of [1,2,3,4,5]" class="star" viewBox="0 0 13 13" [attr.fill]="(selectedProduct.rating || 4.8) >= s ? '#E8A94A' : 'rgba(255,255,255,0.1)'"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg>
             </div>
-            <span class="rating-val">{{selectedProduct.rating || '4.8'}}</span>
+            <span class="rating-val">{{(selectedProduct.rating || 4.8) | number:'1.1-1'}}</span>
             <span class="rating-count">({{selectedProduct.reviewCount || 0}} reviews)</span>
           </div>
           <div class="price-row">
@@ -1119,7 +1145,7 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
               <div class="wc-stars" style="display:flex;gap:1px;">
                 <svg *ngFor="let s of [1,2,3,4,5]" width="10" height="10" viewBox="0 0 13 13" [attr.fill]="(p.rating || 4.8) >= s ? '#E8A94A' : 'rgba(255,255,255,0.1)'"><path d="M6.5 1l1.6 3.2L12 4.8l-2.75 2.68.65 3.77L6.5 9.65l-3.4 1.6.65-3.77L1 4.8l3.9-.6L6.5 1Z"/></svg>
               </div>
-              <div class="wc-rating">{{p.rating || '4.8'}}</div>
+              <div class="wc-rating">{{(p.rating || 4.8) | number:'1.1-1'}}</div>
               <div class="wc-saved">Saved recently</div>
             </div>
             <div class="wc-actions"><button class="wc-cart" (click)="addToCart(p)">Add to Cart</button><div class="wc-more" (click)="selectProduct(p)">⋯</div></div>
@@ -1277,9 +1303,12 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
           </div>
         </div>
 
-        <!-- SUGGESTIONS -->
-        <div class="suggestions">
-          <div class="sug" *ngFor="let s of chatSuggestions" (click)="sendSuggestion(s)">{{s}}</div>
+        <!-- SUGGESTED QUESTIONS -->
+        <div class="suggestions" *ngIf="showSuggestedQuestions">
+          <div class="sug-title">Suggested Questions</div>
+          <div class="sug-grid">
+            <button type="button" class="sug" *ngFor="let s of chatSuggestions" (click)="sendSuggestion(s)">{{s}}</button>
+          </div>
         </div>
 
         <!-- INPUT -->
@@ -1346,7 +1375,14 @@ export class ConsumerComponent implements OnInit, OnDestroy {
   isTyping = false;
   timerInt: any;
   flashSaleTime = { hours: '04', minutes: '23', seconds: '17' };
-  chatSuggestions = ['Top selling products', 'Recommend a laptop for my budget', 'Order status', 'Discounted items', 'Apple vs Samsung compare'];
+  chatSuggestions = [
+    'Bana bütçeme göre laptop öner',
+    'İndirimdeki ürünleri göster',
+    'En çok satan ürünler hangileri?',
+    'Stokta azalan ürün var mı?',
+    'Apple vs Samsung karşılaştır',
+    'Sipariş durumum nedir?',
+  ];
   auth = inject(AuthService);
   ai = inject(AiService);
   productService = inject(ProductService);
@@ -1359,6 +1395,16 @@ export class ConsumerComponent implements OnInit, OnDestroy {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       return cart.reduce((sum: number, i: any) => sum + (i.qty || i.quantity || 1), 0);
     } catch { return 0; }
+  }
+
+  get showSuggestedQuestions(): boolean {
+    // Show only on a fresh / empty chat so the UI doesn't feel noisy.
+    if (this.isTyping) return false;
+    const n = (this.chatMessages || []).length;
+    if (n === 0) return true;
+    // If chat has only the initial AI greeting, still show suggestions.
+    if (n === 1 && this.chatMessages[0]?.sender === 'ai') return true;
+    return false;
   }
 
   onLogoGoHome = () => this.goHomeTab();
@@ -1527,6 +1573,18 @@ export class ConsumerComponent implements OnInit, OnDestroy {
     if (this.maxPrice < 3000 || this.minPrice > 0) {
       list = list.filter(p => p.basePrice <= this.maxPrice && p.basePrice >= this.minPrice);
     }
+
+    // Rating filter (5 = exactly 5, 4/3 = threshold)
+    if (this.selectedRating >= 3) {
+      const min = this.selectedRating === 5 ? 5 : this.selectedRating;
+      const max = this.selectedRating === 5 ? 5 : Number.POSITIVE_INFINITY;
+      list = list.filter(p => {
+        const r = Number(p?.rating ?? 0);
+        if (!Number.isFinite(r)) return false;
+        return r >= min && r <= max;
+      });
+    }
+
     const selBrands = this.brands.filter(b => b.checked).map(b => b.name);
     if (selBrands.length > 0) {
       list = list.filter(p => selBrands.includes(p.brand));
@@ -1538,7 +1596,20 @@ export class ConsumerComponent implements OnInit, OnDestroy {
     if (this.availability.inStock) {
       list = list.filter(p => p.stockQuantity > 0);
     }
-    return list;
+    if (this.availability.onSale) {
+      list = list.filter(p => !!p.isOnSale);
+    }
+    if (this.availability.newArrivals) {
+      // UI uses "New" badge for high stock; reuse same heuristic.
+      list = list.filter(p => Number(p?.stockQuantity ?? 0) > 50);
+    }
+    // Always push out-of-stock items to bottom (unless filtered out).
+    return [...list].sort((a, b) => {
+      const aoos = Number(a?.stockQuantity ?? 0) <= 0 ? 1 : 0;
+      const boos = Number(b?.stockQuantity ?? 0) <= 0 ? 1 : 0;
+      if (aoos !== boos) return aoos - boos;
+      return 0;
+    });
   }
 
   onSearchChange(v: string) {

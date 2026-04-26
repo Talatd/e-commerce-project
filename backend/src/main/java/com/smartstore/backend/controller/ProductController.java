@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @RestController
-@RequestMapping("/api/v1/products")
+@RequestMapping({"/api/v1/products", "/api/products"})
 @RequiredArgsConstructor
 @Tag(name = "Products", description = "Endpoints for catalog browsing and sentiment analysis")
 public class ProductController {
@@ -31,6 +31,7 @@ public class ProductController {
     private final com.smartstore.backend.repository.StoreRepository storeRepository;
     private final com.smartstore.backend.service.DbInitializer dbInitializer;
     private final StockBroadcastService stockBroadcastService;
+    private final com.smartstore.backend.service.LowStockAlertService lowStockAlertService;
 
     @GetMapping
     @Operation(summary = "Get all products", description = "Retrieves the product catalog, optionally paginated.")
@@ -215,6 +216,7 @@ public class ProductController {
                     "admin",
                     System.currentTimeMillis()
             ));
+            lowStockAlertService.maybeAlert(saved, "admin");
         }
         return ResponseEntity.ok(saved);
     }

@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -134,6 +135,7 @@ public class DbInitializer {
             });
             List<Product> products = new ArrayList<>();
             Random random = new Random();
+            List<String> knownImages = new ArrayList<>();
 
             for (Map<String, Object> pMap : raw) {
                 Store store = storeRepository.findByName((String) pMap.get("storeName"))
@@ -210,6 +212,111 @@ public class DbInitializer {
                         .stockQuantity(50)
                         .build();
                 products.add(p);
+
+                String img = (String) pMap.get("imageUrl");
+                if (img != null && !img.isBlank()) {
+                    knownImages.add(img.trim());
+                }
+            }
+
+            // Also load any additional images from resource list (generated from frontend/public/products).
+            knownImages.addAll(loadExtraProductImages());
+
+            // If the source JSON is intentionally small, expand the catalog with deterministic synthetic items
+            // so the UI has a richer dataset in local/dev demos.
+            final int targetCount = 65;
+            if (products.size() < targetCount) {
+                List<Store> stores = storeRepository.findAll();
+                List<String> categories = categoryRepository.findAll().stream()
+                        .map(Category::getName)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+                if (categories.isEmpty()) {
+                    categories = List.of("Keyboards", "Mice", "Monitors", "Audio", "Mobility", "Accessories");
+                }
+                // Keep the UI brand filter clean: distribute across the "top 4" seeded brands.
+                List<String> brands = List.of("VANGUARD", "LOOM & LEAF", "AURA", "NOVA");
+
+                int i = 1;
+                while (products.size() < targetCount) {
+                    Store store = stores.isEmpty()
+                            ? null
+                            : stores.get(random.nextInt(stores.size()));
+                    String brand = brands.get(products.size() % brands.size());
+
+                    String imageUrl = null;
+                    if (!knownImages.isEmpty()) {
+                        imageUrl = knownImages.get(products.size() % knownImages.size());
+                    }
+
+                    // Derive name + category from the image filename when possible (keeps UI consistent).
+                    String derivedName = deriveNameFromImageUrl(imageUrl);
+                    String derivedCategory = deriveCategoryFromImageUrl(imageUrl);
+                    String category = (derivedCategory != null) ? derivedCategory : categories.get(random.nextInt(categories.size()));
+
+                    // Price ranges: keep realistic for the category.
+                    double min = switch (category.toLowerCase()) {
+                        case "keyboards" -> 89;
+                        case "mice" -> 49;
+                        case "monitors" -> 249;
+                        case "audio" -> 79;
+                        case "mobility" -> 39;
+                        default -> 29;
+                    };
+                    double max = switch (category.toLowerCase()) {
+                        case "keyboards" -> 299;
+                        case "mice" -> 199;
+                        case "monitors" -> 1499;
+                        case "audio" -> 799;
+                        case "mobility" -> 249;
+                        default -> 159;
+                    };
+                    double priceRaw = min + (random.nextDouble() * (max - min));
+                    BigDecimal price = BigDecimal.valueOf(Math.round(priceRaw * 100.0) / 100.0);
+
+                    Product p = Product.builder()
+                            .name((derivedName != null && !derivedName.isBlank())
+                                    ? derivedName
+                                    : String.format("%s %s %02d", brand, category, i++))
+                            .category(category)
+                            .brand(brand)
+                            .basePrice(price)
+                            .supplierPrice(price.multiply(BigDecimal.valueOf(0.65)))
+                            .description("A premium " + category + " item designed for modern setups.")
+                            .imageUrl(imageUrl)
+                            .tags("Seeded,Synthetic")
+                            .bundleRole("ACCESSORY")
+                            .compatibleWith("ANY")
+                            .store(store)
+                            .stockQuantity(25 + random.nextInt(150))
+                            .build();
+                    products.add(p);
+                }
+            }
+
+            // Normalize all products to the top-4 brands so the sidebar doesn't get noisy.
+            // (Existing JSON products already use these brands, but synthetic ones might not.)
+            List<String> allowedBrands = List.of("VANGUARD", "LOOM & LEAF", "AURA", "NOVA");
+            for (int idx = 0; idx < products.size(); idx++) {
+                Product p = products.get(idx);
+                String b = p.getBrand();
+                if (b == null || b.isBlank() || allowedBrands.stream().noneMatch(x -> x.equalsIgnoreCase(b.trim()))) {
+                    p.setBrand(allowedBrands.get(idx % allowedBrands.size()));
+                } else {
+                    // Ensure consistent casing in UI
+                    String normalized = allowedBrands.stream().filter(x -> x.equalsIgnoreCase(b.trim())).findFirst().orElse(b);
+                    p.setBrand(normalized);
+                }
+            }
+
+            // Force a few items to be out of stock for UX/demo and to validate filters.
+            // Pick stable indices so the result is deterministic across restarts.
+            int[] oosIdx = new int[] { 3, 17, 42 };
+            for (int idx : oosIdx) {
+                if (idx >= 0 && idx < products.size()) {
+                    products.get(idx).setStockQuantity(0);
+                }
             }
 
             List<Product> saved = productRepository.saveAll(products);
@@ -219,6 +326,61 @@ public class DbInitializer {
         } catch (Exception e) {
             System.err.println("ETL ERROR (Products): " + e.getMessage());
         }
+    }
+
+    private List<String> loadExtraProductImages() {
+        try (InputStream is = getClass().getResourceAsStream("/data/product_images.txt")) {
+            if (is == null) return List.of();
+            String raw = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            return raw.lines()
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .distinct()
+                    .toList();
+        } catch (Exception ignore) {
+            return List.of();
+        }
+    }
+
+    private static String deriveNameFromImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) return null;
+        String s = imageUrl.trim();
+        int slash = s.lastIndexOf('/');
+        String file = slash >= 0 ? s.substring(slash + 1) : s;
+        file = file.replaceAll("\\.(png|jpg|jpeg|webp|svg)$", "");
+
+        // Normalize separators and repeated tokens.
+        file = file.replace('_', ' ').replace('-', ' ').trim();
+        file = file.replaceAll("\\s+", " ");
+        file = file.replaceAll("(?i)\\bedc\\s+edc\\b", "EDC");
+
+        // Title-case with a few common acronyms.
+        Set<String> keepUpper = Set.of("SSD", "EDC", "RGB", "OLED", "USB", "ANC", "VU", "GAN");
+        StringBuilder out = new StringBuilder();
+        for (String part : file.split(" ")) {
+            if (part.isBlank()) continue;
+            String up = part.toUpperCase(Locale.ROOT);
+            String token;
+            if (keepUpper.contains(up)) token = up;
+            else token = part.substring(0, 1).toUpperCase(Locale.ROOT) + part.substring(1).toLowerCase(Locale.ROOT);
+            if (!out.isEmpty()) out.append(' ');
+            out.append(token);
+        }
+        return out.toString();
+    }
+
+    private static String deriveCategoryFromImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) return null;
+        String s = imageUrl.toLowerCase(Locale.ROOT);
+        if (s.contains("keyboard") || s.contains("keycaps") || s.contains("board")) return "Keyboards";
+        if (s.contains("mouse")) return "Mice";
+        if (s.contains("monitor") || s.contains("oled") || s.contains("display")) return "Monitors";
+        if (s.contains("headphone") || s.contains("speaker") || s.contains("mic") || s.contains("audio")
+                || s.contains("vu-meter") || s.contains("music")) return "Audio";
+        if (s.contains("pouch") || s.contains("backpack") || s.contains("sleeve") || s.contains("power-bank")
+                || s.contains("adapter") || s.contains("charger")) return "Mobility";
+        // Everything else is accessories / desk gear.
+        return "Accessories";
     }
 
     public void seedReviews() {
@@ -435,6 +597,12 @@ public class DbInitializer {
                 .toList();
         List<Product> products = productRepository.findAll();
         Random random = new Random();
+
+        if (customers.isEmpty() || products.isEmpty()) {
+            System.out.println("SEED: Skipping historical analytics generation (customers=" + customers.size()
+                    + ", products=" + products.size() + ").");
+            return;
+        }
 
         for (int i = 0; i < 50; i++) {
             User customer = customers.get(random.nextInt(customers.size()));

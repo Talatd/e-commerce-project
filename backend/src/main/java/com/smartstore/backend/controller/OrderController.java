@@ -41,6 +41,7 @@ public class OrderController {
     private final MailService mailService;
     private final CouponRepository couponRepository;
     private final StockBroadcastService stockBroadcastService;
+    private final com.smartstore.backend.service.LowStockAlertService lowStockAlertService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -117,6 +118,7 @@ public class OrderController {
                         buyer.getEmail(),
                         System.currentTimeMillis()
                 ));
+                lowStockAlertService.maybeAlert(product, buyer.getEmail());
                 if (item.getPriceAtPurchase() == null) {
                     item.setPriceAtPurchase(product.getBasePrice());
                 }

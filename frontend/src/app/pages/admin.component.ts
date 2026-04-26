@@ -97,6 +97,16 @@ import { Chart } from './chart-register';
 .sp-green-a { background:var(--green-dim); color:var(--green); }
 .sp-blue-a { background:rgba(107,168,200,0.1); color:var(--blue); }
 .sp-amber-a { background:rgba(232,169,74,0.1); color:var(--amber); }
+.sp-red-a { background:var(--red-dim); color:var(--red); border:1px solid var(--red-border); }
+.audit-filters{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.af-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.af-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;}
+.af-input{padding:8px 12px;border-radius:12px;border:1px solid var(--border);background:var(--glass);color:var(--text);font-size:12px;min-width:220px;outline:none;}
+.af-input::placeholder{color:var(--text3);}
+.af-select{padding:8px 12px;border-radius:12px;border:1px solid var(--border);background:var(--glass);color:var(--text);font-size:12px;outline:none;}
+.af-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:var(--glass2);color:var(--text2);font-size:11px;cursor:pointer;user-select:none;transition:all 0.15s;}
+.af-chip.active{background:var(--red-dim);border-color:var(--red-border);color:var(--red);}
+.af-chip:hover{color:var(--text);border-color:var(--text3);}
 
 .store-grid-a { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
 .store-card-a { background:var(--glass); border:1px solid var(--border); border-radius:14px; padding:20px; transition:all 0.3s; }
@@ -607,14 +617,32 @@ import { Chart } from './chart-register';
       <div class="panel-a" [class.active]="tab === 'auditlogs'">
         <div class="top-bar-a"><div><div class="page-title-a">Audit Logs</div><div class="page-sub-a">Platform activity monitoring.</div></div></div>
         <div class="table-card-a">
+          <div class="audit-filters">
+            <div class="af-left">
+              <input class="af-input" placeholder="Search user / action / detail…" [(ngModel)]="auditQuery" />
+              <select class="af-select" [(ngModel)]="auditAction">
+                <option value="">All actions</option>
+                <option *ngFor="let a of auditActionOptions" [value]="a">{{a}}</option>
+              </select>
+            </div>
+            <div class="af-right">
+              <div class="af-chip" [class.active]="auditOnlyLowStock" (click)="auditOnlyLowStock = !auditOnlyLowStock">
+                ● LOW_STOCK_ALERT only
+              </div>
+              <button class="tbtn-a tbtn-ghost-a" style="padding:7px 14px;" (click)="loadAuditLogs()">Refresh</button>
+            </div>
+          </div>
           <table class="tbl-a">
             <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
             <tbody>
-              <tr *ngFor="let log of auditLogs">
+              <tr *ngFor="let log of filteredAuditLogs">
                 <td style="font-family:'JetBrains Mono',monospace;font-size:10px;">{{log.time}}</td>
                 <td class="td-name-a">{{log.user}}</td>
-                <td><span class="spill-a" [class.sp-green-a]="log.type==='success'" [class.sp-blue-a]="log.type==='info'" [class.sp-amber-a]="log.type==='warning'">{{log.action}}</span></td>
+                <td><span class="spill-a" [ngClass]="auditBadgeClass(log)">{{log.action}}</span></td>
                 <td style="color:var(--text3);font-size:11px;">{{log.detail}}</td>
+              </tr>
+              <tr *ngIf="filteredAuditLogs.length === 0">
+                <td colspan="4" style="text-align:center;color:var(--text3);padding:32px;">No matching logs.</td>
               </tr>
             </tbody>
           </table>
@@ -736,6 +764,9 @@ export class AdminComponent implements OnInit, AfterViewInit {
   storeComparison: any[] = [];
   categories: any[] = [];
   auditLogs: any[] = [];
+  auditQuery = '';
+  auditAction = '';
+  auditOnlyLowStock = false;
   aiPrompt = '';
   aiBusy = false;
   aiChatMessages: any[] = [
@@ -781,6 +812,33 @@ export class AdminComponent implements OnInit, AfterViewInit {
       })),
       error: () => { }
     });
+  }
+
+  get auditActionOptions(): string[] {
+    const s = new Set<string>();
+    (this.auditLogs || []).forEach(l => { if (l?.action) s.add(String(l.action)); });
+    return Array.from(s).sort();
+  }
+
+  get filteredAuditLogs(): any[] {
+    const q = (this.auditQuery || '').trim().toLowerCase();
+    const action = (this.auditAction || '').trim();
+    return (this.auditLogs || []).filter(l => {
+      if (this.auditOnlyLowStock && String(l?.action || '') !== 'LOW_STOCK_ALERT') return false;
+      if (action && String(l?.action || '') !== action) return false;
+      if (!q) return true;
+      const hay = `${l?.user || ''} ${l?.action || ''} ${l?.type || ''} ${l?.detail || ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  auditBadgeClass(log: any): any {
+    const action = String(log?.action || '');
+    const type = String(log?.type || '');
+    if (action === 'LOW_STOCK_ALERT') return { 'sp-red-a': true };
+    if (type.toUpperCase().includes('INVENTORY')) return { 'sp-amber-a': true };
+    if (type.toUpperCase().includes('SYSTEM')) return { 'sp-blue-a': true };
+    return { 'sp-blue-a': true };
   }
 
   logAudit(action: string, type: string, detail: string) {

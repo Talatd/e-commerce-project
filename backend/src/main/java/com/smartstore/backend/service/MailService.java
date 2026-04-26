@@ -2,6 +2,7 @@ package com.smartstore.backend.service;
 
 import com.smartstore.backend.model.Order;
 import com.smartstore.backend.model.OrderItem;
+import com.smartstore.backend.model.Product;
 import com.smartstore.backend.model.Shipment;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +76,19 @@ public class MailService {
                 + "You can track your package from your orders page in Nexus.\n\n"
                 + "— Nexus";
         sendPlain(toEmail, "Your order has shipped" + (orderId != null ? " (#" + orderId + ")" : ""), body);
+    }
+
+    public void sendLowStockAlert(String toEmail, Product product, int threshold) {
+        String name = product != null && product.getName() != null ? product.getName() : "Product";
+        Integer stock = product != null ? product.getStockQuantity() : null;
+        String body = "Hello,\n\n"
+                + "Low stock alert for your product.\n\n"
+                + "Product: " + name + "\n"
+                + "Current stock: " + (stock != null ? stock : "—") + "\n"
+                + "Threshold: " + threshold + "\n\n"
+                + "Consider replenishing inventory to avoid missed sales.\n\n"
+                + "— Nexus";
+        sendPlain(toEmail, "Low stock alert — " + name, body);
     }
 
     private void sendPlain(String to, String subject, String text) {

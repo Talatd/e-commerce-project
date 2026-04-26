@@ -68,8 +68,11 @@
         </div>
         
         <div class="user-chip" (click)="auth.logout()" *ngIf="auth.currentUser$ | async as user">
-          <div class="av">{{user.fullName.substring(0, 2).toUpperCase()}}</div>
-          <div><div class="uname">{{user.fullName}}</div><div class="urole">{{user.role.toLowerCase()}}</div></div>
+          <div class="av">{{ initialsFor(user) }}</div>
+          <div>
+            <div class="uname">{{ displayNameFor(user) }}</div>
+            <div class="urole">{{ (user.role || '').toLowerCase() }}</div>
+          </div>
         </div>
       </div>
     </div>

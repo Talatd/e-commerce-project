@@ -7,4 +7,6 @@ import java.util.List;
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findTop100ByOrderByCreatedAtDesc();
     List<AuditLog> findByUsernameOrderByCreatedAtDesc(String username);
+
+    java.util.Optional<AuditLog> findTop1ByActionAndDetailContainingIgnoreCaseOrderByCreatedAtDesc(String action, String detailPart);
 }

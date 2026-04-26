@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Objects;
 
 @RestController
-@RequestMapping("/api/v1/categories")
+@RequestMapping({"/api/v1/categories", "/api/categories"})
 @RequiredArgsConstructor
 @Tag(name = "Categories", description = "Product category management")
 public class CategoryController {

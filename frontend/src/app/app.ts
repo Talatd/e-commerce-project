@@ -23,6 +23,30 @@ export class AppComponent implements OnInit {
   private allProducts: any[] = [];
   activeToasts: any[] = [];
 
+  initialsFor(user: any): string {
+    const name = String(user?.fullName ?? user?.name ?? '').trim();
+    if (name) {
+      return name
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(p => p[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+    }
+    const email = String(user?.email ?? '').trim();
+    if (email) return email.slice(0, 2).toUpperCase();
+    return 'ME';
+  }
+
+  displayNameFor(user: any): string {
+    const n = String(user?.fullName ?? '').trim();
+    if (n) return n;
+    const e = String(user?.email ?? '').trim();
+    if (e) return e;
+    return 'Account';
+  }
+
   /** True when the main shell (glow navbar + optional sidebar) should wrap the outlet. */
   get usesMainAppShell(): boolean {
     return !isFullpageStandalonePath(this.router.url);
