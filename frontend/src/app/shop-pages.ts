@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ViewChild, ElementRef, HostListener, OnDestr
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
-import { ProductService, OrderService, AuthService, ToastService, ShipmentService, CouponService, StockSocketService } from './services';
+import { ProductService, OrderService, AuthService, ToastService, ShipmentService, CouponService, StockSocketService, BundleService } from './services';
 import { NexusLogoComponent } from './nexus-logo.component';
 import { NexusThemeToggleComponent } from './nexus-theme-toggle.component';
 import { ConsumerStandaloneTopNavComponent } from './consumer-standalone-top-nav.component';
@@ -63,6 +63,23 @@ import { CONSUMER_NAV } from './consumer-nav.paths';
             <h1 class="nx-cart-heading">Your cart <span class="nx-cart-count">({{totalQty}})</span></h1>
             <p class="nx-cart-sub" *ngIf="cartItems.length > 0">Review items, delivery, and pay securely.</p>
           </header>
+
+          <div *ngIf="cartItems.length > 0 && hasMacbookInCart" class="gcard" style="padding:16px 16px;border-radius:16px;margin:0 0 14px;background:linear-gradient(135deg,rgba(62,207,178,0.08),rgba(62,207,178,0.02));border-color:rgba(62,207,178,0.22);">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:40px;border-radius:12px;background:rgba(62,207,178,0.12);border:1px solid rgba(62,207,178,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 5.5v7L9 16l7-3.5v-7L9 2Z" stroke="var(--teal)" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 2v7M2 5.5l7 3.5 7-3.5" stroke="var(--teal)" stroke-width="1.2" opacity="0.8"/></svg>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--teal);margin-bottom:6px;display:flex;align-items:center;gap:7px;">
+                  <span style="width:5px;height:5px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px rgba(62,207,178,0.22);"></span>
+                  AI-Powered Bundle
+                </div>
+              <div style="font-family:'Playfair Display',serif;font-size:18px;line-height:1.1;color:var(--text);">Complete your <em style="font-style:italic;color:var(--teal2);">setup</em></div>
+                <div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.55;">Recommended accessories picked for your exact model. Add them as a discounted bundle.</div>
+              </div>
+              <a class="ripple-btn primary" [routerLink]="'/complete-setup'" style="text-decoration:none;white-space:nowrap;">Open →</a>
+            </div>
+          </div>
 
           <div class="nx-line-list" *ngIf="cartItems.length > 0">
             <article class="nx-line-card" *ngFor="let item of cartItems; let i = index">
@@ -525,6 +542,10 @@ export class CartComponent implements OnInit, OnDestroy {
   isProcessing = false;
   paySuccess = false;
   orderId = Math.floor(1000 + Math.random() * 9000);
+
+  get hasMacbookInCart(): boolean {
+    return (this.cartItems || []).some(i => (i?.name || '').toString().toLowerCase().includes('macbook'));
+  }
 
   get estimatedDelivery(): string {
     const d = new Date();
@@ -1848,5 +1869,526 @@ export class OrdersComponent implements OnInit {
         this.toast.show('Failed to submit review', 'error');
       }
     });
+  }
+}
+
+@Component({
+  selector: 'app-complete-setup',
+  standalone: true,
+  imports: [CommonModule, RouterModule, NexusThemeToggleComponent, ConsumerStandaloneTopNavComponent],
+  template: `
+    <div class="cs-page">
+      <app-consumer-standalone-top-nav>
+        <app-nexus-theme-toggle></app-nexus-theme-toggle>
+        <a class="nx-nbtn" [routerLink]="consumerNav.cart">← Back to Cart</a>
+      </app-consumer-standalone-top-nav>
+
+      <section class="cs-section">
+        <div class="cs-header">
+          <div class="cs-hl">
+            <div class="cs-eyebrow">
+              <span class="cs-pulse"></span>
+              AI-Powered Bundle
+            </div>
+            <div class="cs-title">Complete your<br><em>{{anchorName}} setup.</em></div>
+            <div class="cs-sub">
+              Our AI picked {{cards.length}} accessories that are perfectly compatible — used together by 94% of similar buyers.
+            </div>
+          </div>
+          <div class="cs-hr">
+            <div class="cs-badge">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L9 5.5H13.5L10 8.5l1.3 4L7 10.5 3.7 12.5 5 8.5 1.5 5.5H6L7 1Z" fill="currentColor" opacity="0.9"/></svg>
+              Bundle discount available
+            </div>
+            <div class="cs-save-k">Save up to</div>
+            <div class="cs-save-v">{{maxSaveDisplay | currency:'USD':'symbol':'1.0-0'}}</div>
+          </div>
+        </div>
+
+        <div class="cs-anchor">
+          <div class="cs-anchor-img" aria-hidden="true">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none"><rect x="4" y="10" width="36" height="22" rx="4" stroke="currentColor" stroke-width="1.3" opacity="0.35"/><rect x="18" y="32" width="8" height="2.5" rx="1.25" fill="currentColor" opacity="0.15"/><rect x="8" y="14" width="28" height="14" rx="2" fill="currentColor" opacity="0.06"/></svg>
+          </div>
+          <div class="cs-anchor-info">
+            <div class="cs-anchor-label">✓ Already in your cart</div>
+            <div class="cs-anchor-name">{{anchorName}}</div>
+            <div class="cs-anchor-price">Anchor product · <strong>{{basePrice | currency}}</strong></div>
+          </div>
+          <div class="cs-anchor-r">
+            <div class="cs-anchor-check" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 8l3.5 3.5 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="cs-anchor-note">94% buyers add accessories</div>
+          </div>
+        </div>
+
+        <div class="cs-compat" *ngIf="compatBadges.length">
+          <div class="cs-compat-item" *ngFor="let b of compatBadges"><span class="cs-compat-dot"></span>{{b}}</div>
+        </div>
+
+        <div class="cs-gesture">
+          <span class="cs-gesture-ic" aria-hidden="true">👆</span>
+          <span>Swipe to browse or drag cards — tap to add to bundle</span>
+          <div class="cs-keys" aria-hidden="true"><span class="cs-key">←</span><span class="cs-key">→</span></div>
+        </div>
+
+        <div class="cs-nav">
+          <div class="cs-dots">
+            <div class="cs-dot" *ngFor="let _ of dotCountArr; let i = index" [class.active]="i === dotIndex"></div>
+          </div>
+          <div class="cs-arrows">
+            <button class="cs-arrow" type="button" (click)="slide(-1)" [disabled]="offset === 0" aria-label="Previous">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6l4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="cs-arrow" type="button" (click)="slide(1)" [disabled]="offset >= maxSlide" aria-label="Next">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6l-4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="cs-carousel" #wrap>
+          <div
+            class="cs-track"
+            #track
+            [style.transform]="'translateX(-' + (offset * cardStepPx) + 'px)'"
+            [class.grabbing]="isDragging"
+            (pointerdown)="onPointerDown($event)"
+            (pointermove)="onPointerMove($event)"
+            (pointerup)="onPointerUp($event)"
+            (pointercancel)="onPointerUp($event)"
+            (pointerleave)="onPointerUp($event)"
+          >
+            <div class="cs-card" *ngFor="let c of cards; let i = index" [class.added]="added.has(i)" [attr.data-i]="i">
+              <div class="cs-rank">{{ (i+1).toString().padStart(2,'0') }}</div>
+              <button class="cs-fab" type="button" (click)="toggleAdd(i); $event.stopPropagation()">
+                <span *ngIf="!added.has(i)">+</span>
+                <span *ngIf="added.has(i)">✓</span>
+              </button>
+              <div class="cs-img" [style.background]="c.bg">
+                <div class="cs-img-glow" [style.background]="c.glow"></div>
+                <div class="cs-icon" aria-hidden="true" [innerHTML]="c.icon"></div>
+              </div>
+              <div class="cs-body" (click)="toggleAdd(i)">
+                <div class="cs-cat">{{c.cat}}</div>
+                <div class="cs-name">{{c.name}}</div>
+                <div class="cs-why">{{c.why}}</div>
+                <div class="cs-rating">
+                  <span class="cs-stars">{{c.stars}}</span>
+                  <span class="cs-rc">{{c.rc}}</span>
+                </div>
+                <div class="cs-price-row">
+                  <div class="cs-price">{{c.price | currency}}</div>
+                  <div class="cs-old" *ngIf="c.oldPrice">{{c.oldPrice | currency}}</div>
+                </div>
+                <div class="cs-compat-badge">{{c.compat}}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cs-bundle">
+          <div class="cs-bb-items" aria-hidden="true">
+            <div class="cs-bb-img cs-bb-base">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2.5" stroke="currentColor" stroke-width="1.1" opacity="0.45"/></svg>
+            </div>
+            <div class="cs-bb-img" *ngFor="let c of addedCards.slice(0,3)" [style.background]="c.bg" [style.borderColor]="c.border">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1" opacity="0.6"/></svg>
+            </div>
+            <div class="cs-bb-plus" *ngIf="addedCount > 3">+{{addedCount - 3}}</div>
+          </div>
+          <div class="cs-bb-info">
+            <div class="cs-bb-count">{{anchorName}} + {{addedCount}} accessories</div>
+            <div class="cs-bb-total">{{finalTotal | currency}}</div>
+            <div class="cs-bb-save" *ngIf="saved > 0">You save {{saved | currency}} ({{discPct}}% bundle discount)</div>
+          </div>
+          <button class="cs-bb-btn" type="button" (click)="addBundleToCart($event)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h1.5l1.8 6.5h5.4l1.3-4H4.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10" cy="11" r="1.2" fill="currentColor"/></svg>
+            <span *ngIf="!adding && !addedSuccess">Add Bundle to Cart</span>
+            <span *ngIf="adding" class="cs-spin">Adding…</span>
+            <span *ngIf="addedSuccess">✓ Bundle added!</span>
+          </button>
+        </div>
+
+        <div class="cs-skip">
+          <a class="cs-skip-link" [routerLink]="consumerNav.cart">Skip — just keep {{anchorName}}</a>
+          <span class="cs-mid">·</span>
+          <a class="cs-skip-link" [routerLink]="consumerNav.shop" [queryParams]="{ tab: 'shop' }">View all compatible accessories →</a>
+        </div>
+      </section>
+    </div>
+  `,
+  styles: [`
+    :host{display:block;}
+    .cs-page{min-height:100vh;background:var(--bg);color:var(--text);}
+    .cs-section{padding:28px 24px 32px;}
+
+    .cs-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+    .cs-eyebrow{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+    .cs-pulse{width:5px;height:5px;border-radius:50%;background:var(--teal);animation:csPulse 2s infinite;}
+    @keyframes csPulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+    .cs-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:400;color:var(--text);line-height:1.1;margin-bottom:6px;}
+    .cs-title em{font-style:italic;color:var(--teal2);}
+    .cs-sub{font-size:13px;color:var(--text2);font-weight:300;max-width:520px;line-height:1.65;}
+    .cs-hr{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto;}
+    .cs-badge{display:flex;align-items:center;gap:6px;background:rgba(62,201,138,0.08);border:1px solid rgba(62,201,138,0.2);border-radius:20px;padding:6px 14px;font-size:12px;color:var(--green);}
+    .cs-save-k{font-size:12px;color:var(--text3);}
+    .cs-save-v{font-family:'Playfair Display',serif;font-size:18px;color:var(--green);}
+
+    .cs-anchor{background:linear-gradient(135deg,rgba(62,207,178,0.07) 0%,rgba(62,207,178,0.02) 100%);border:1px solid rgba(62,207,178,0.2);border-radius:14px;padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;gap:18px;position:relative;overflow:hidden;}
+    .cs-anchor::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(62,207,178,0.4),transparent);}
+    .cs-anchor-img{width:72px;height:72px;border-radius:12px;background:rgba(62,207,178,0.05);border:1px solid rgba(62,207,178,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--teal);}
+    .cs-anchor-info{flex:1;min-width:0;}
+    .cs-anchor-label{font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:5px;}
+    .cs-anchor-name{font-family:'Playfair Display',serif;font-size:20px;color:var(--text);margin-bottom:4px;}
+    .cs-anchor-price{font-size:13px;color:var(--text2);}
+    .cs-anchor-price strong{color:var(--teal2);font-weight:600;}
+    .cs-anchor-r{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+    .cs-anchor-check{width:32px;height:32px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--bg);}
+    .cs-anchor-note{font-size:10px;color:var(--teal2);}
+
+    .cs-compat{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+    .cs-compat-item{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--glass);border:1px solid var(--border);font-size:11.5px;color:var(--text2);}
+    .cs-compat-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 4px rgba(62,201,138,0.4);}
+
+    .cs-gesture{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-bottom:18px;font-size:12px;color:var(--text3);}
+    .cs-gesture-ic{font-size:16px;animation:csSwipe 2s ease-in-out infinite;}
+    @keyframes csSwipe{0%,100%{transform:translateX(0);}40%{transform:translateX(6px);}60%{transform:translateX(-2px);}}
+    .cs-keys{display:flex;gap:5px;margin-left:auto;}
+    .cs-key{background:var(--glass2);border:1px solid var(--border2);border-radius:5px;padding:2px 8px;font-size:10.5px;color:var(--text3);font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+
+    .cs-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .cs-dots{display:flex;gap:5px;}
+    .cs-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);transition:all 0.25s;}
+    .cs-dot.active{background:var(--teal);width:18px;border-radius:3px;}
+    .cs-arrows{display:flex;gap:6px;}
+    .cs-arrow{width:32px;height:32px;border-radius:50%;background:var(--glass);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;color:var(--text2);}
+    .cs-arrow:hover{background:var(--glass2);color:var(--text);border-color:var(--border2);}
+    .cs-arrow:disabled{opacity:0.3;pointer-events:none;}
+
+    .cs-carousel{position:relative;overflow:hidden;margin-bottom:20px;touch-action:pan-y;}
+    .cs-track{display:flex;gap:12px;transition:transform 0.5s cubic-bezier(0.4,0,0.2,1);cursor:grab;user-select:none;will-change:transform;}
+    .cs-track.grabbing{cursor:grabbing;}
+
+    .cs-card{min-width:200px;width:200px;background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;flex-shrink:0;transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s;position:relative;}
+    .cs-card:hover{border-color:rgba(62,207,178,0.18);transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,0.3);}
+    .cs-card.added{border-color:rgba(62,201,138,0.3);background:rgba(62,201,138,0.04);}
+    .cs-rank{position:absolute;top:10px;left:10px;z-index:2;width:22px;height:22px;border-radius:50%;background:rgba(8,8,8,0.8);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;color:var(--text3);}
+    :host-context(html.light-mode) .cs-rank{background:rgba(255,255,255,0.78);}
+    .cs-fab{position:absolute;top:10px;right:10px;z-index:2;width:28px;height:28px;border-radius:50%;background:rgba(8,8,8,0.8);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text3);cursor:pointer;transition:all 0.15s;opacity:0;}
+    :host-context(html.light-mode) .cs-fab{background:rgba(255,255,255,0.78);}
+    .cs-card:hover .cs-fab{opacity:1;}
+    .cs-fab:hover{background:var(--teal);color:var(--bg);border-color:var(--teal);}
+    .cs-card.added .cs-fab{opacity:1;background:rgba(62,201,138,0.14);border-color:rgba(62,201,138,0.22);color:var(--green);font-size:12px;}
+
+    .cs-img{height:110px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+    .cs-img-glow{position:absolute;inset:0;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+    .cs-card:hover .cs-img-glow{opacity:1;}
+    .cs-icon{position:relative;z-index:1;color:rgba(230,240,238,0.82);}
+    :host-context(html.light-mode) .cs-icon{color:rgba(20,30,28,0.75);}
+
+    .cs-body{padding:12px;cursor:pointer;}
+    .cs-cat{font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:3px;}
+    .cs-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:5px;line-height:1.3;}
+    .cs-why{font-size:11px;color:var(--teal2);margin-bottom:8px;line-height:1.4;}
+    .cs-rating{display:flex;align-items:center;gap:5px;margin-bottom:8px;}
+    .cs-stars{font-size:10px;color:var(--amber);}
+    .cs-rc{font-size:10px;color:var(--text3);}
+    .cs-price-row{display:flex;align-items:baseline;gap:6px;}
+    .cs-price{font-family:'Playfair Display',serif;font-size:16px;color:var(--text);}
+    .cs-old{font-size:11px;color:var(--text3);text-decoration:line-through;}
+    .cs-compat-badge{font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(62,201,138,0.08);color:var(--green);border:1px solid rgba(62,201,138,0.2);margin-top:5px;display:inline-block;}
+
+    .cs-bundle{background:rgba(12,12,12,0.95);border:1px solid var(--border2);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;}
+    :host-context(html.light-mode) .cs-bundle{background:rgba(255,255,255,0.78);}
+    .cs-bundle::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(62,207,178,0.2),transparent);}
+    .cs-bb-items{display:flex;align-items:center;gap:-6px;flex:1;min-width:0;}
+    .cs-bb-img{width:36px;height:36px;border-radius:8px;background:var(--glass);border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;margin-right:-8px;flex-shrink:0;color:var(--teal2);}
+    .cs-bb-base{background:rgba(62,207,178,0.04);border-color:rgba(62,207,178,0.2);}
+    .cs-bb-plus{width:28px;height:28px;border-radius:50%;background:var(--glass2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);margin-left:12px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;flex-shrink:0;}
+    .cs-bb-info{flex:1;min-width:0;}
+    .cs-bb-count{font-size:12px;color:var(--text2);margin-bottom:3px;}
+    .cs-bb-total{font-family:'Playfair Display',serif;font-size:20px;color:var(--text);}
+    .cs-bb-save{font-size:11px;color:var(--green);margin-top:2px;}
+    .cs-bb-btn{padding:11px 24px;border-radius:22px;background:var(--teal);color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all 0.2s;display:flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0;}
+    .cs-bb-btn:hover{background:var(--teal2);transform:translateY(-1px);box-shadow:0 8px 22px rgba(62,207,178,0.2);}
+    .cs-spin{display:inline-block;position:relative;padding-left:14px;}
+    .cs-spin::before{content:'';position:absolute;left:0;top:50%;width:10px;height:10px;border-radius:50%;border:2px solid rgba(8,8,8,0.25);border-top-color:rgba(8,8,8,0.85);transform:translateY(-50%);animation:csSpin 1s linear infinite;}
+    @keyframes csSpin{from{transform:translateY(-50%) rotate(0)}to{transform:translateY(-50%) rotate(360deg)}}
+
+    .cs-skip{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap;}
+    .cs-skip-link{font-size:12px;color:var(--text3);cursor:pointer;transition:color 0.15s;text-decoration:none;}
+    .cs-skip-link:hover{color:var(--text2);}
+    .cs-mid{color:var(--border2);}
+
+    @keyframes csPop{0%{transform:scale(1);}50%{transform:scale(1.03);}100%{transform:scale(1);}}
+    .cs-card.cs-pop{animation:csPop 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+
+    @media (max-width: 860px){
+      .cs-section{padding:22px 16px 26px;}
+      .cs-title{font-size:24px;}
+      .cs-hr{align-items:flex-start;}
+      .cs-bundle{flex-wrap:wrap;gap:10px;}
+      .cs-bb-btn{width:100%;justify-content:center;}
+    }
+  `]
+})
+export class CompleteSetupComponent implements OnInit, OnDestroy {
+  readonly consumerNav = CONSUMER_NAV;
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
+  private readonly bundles = inject(BundleService);
+
+  @ViewChild('wrap') wrapRef?: ElementRef<HTMLElement>;
+
+  loading = true;
+  basePrice = 0;
+  anchorName = 'Your item';
+  anchorNote = 'Frequently paired with accessories';
+  anchorPriceLabel = '';
+  cards: any[] = [];
+  compatBadges: string[] = [];
+  maxSave = 0;
+
+  added = new Set<number>();
+
+  // carousel
+  offset = 0;
+  visible = 4;
+  readonly cardStepPx = 212; // 200 + 12 gap
+  isDragging = false;
+  private dragStartX = 0;
+  private dragHappened = false;
+
+  // add-to-cart UI
+  adding = false;
+  addedSuccess = false;
+  private successTimer: any;
+
+  ngOnInit() {
+    this.syncVisible();
+    const anchorId = this.pickAnchorProductIdFromCart();
+    if (!anchorId) {
+      this.loading = false;
+      this.toast.show('Add a product to cart to see setup recommendations', 'info');
+      return;
+    }
+
+    this.bundles.completeSetup(anchorId).subscribe({
+      next: (res: any) => {
+        this.basePrice = Number(res?.anchorPrice) || 0;
+        this.anchorName = res?.anchorName || 'Your item';
+        this.anchorPriceLabel = this.basePrice ? `$${Math.round(this.basePrice).toLocaleString()}` : '';
+        this.compatBadges = Array.isArray(res?.compatBadges) ? res.compatBadges : [];
+        this.maxSave = Number(res?.maxSave) || 0;
+
+        const acc = Array.isArray(res?.accessories) ? res.accessories : [];
+        this.cards = acc.map((a: any) => {
+          const accent = (a?.accent || 'teal').toString();
+          const palette: any = {
+            purple: { bg: 'rgba(167,139,204,0.04)', glow: 'radial-gradient(circle,rgba(167,139,204,0.09),transparent 70%)', border: 'rgba(167,139,204,0.25)' },
+            amber:  { bg: 'rgba(232,169,74,0.04)', glow: 'radial-gradient(circle,rgba(232,169,74,0.08),transparent 70%)', border: 'rgba(232,169,74,0.25)' },
+            teal:   { bg: 'rgba(62,207,178,0.04)', glow: 'radial-gradient(circle,rgba(62,207,178,0.08),transparent 70%)', border: 'rgba(62,207,178,0.25)' },
+            blue:   { bg: 'rgba(107,168,200,0.04)', glow: 'radial-gradient(circle,rgba(107,168,200,0.08),transparent 70%)', border: 'rgba(107,168,200,0.25)' },
+            green:  { bg: 'rgba(62,201,138,0.04)', glow: 'radial-gradient(circle,rgba(62,201,138,0.07),transparent 70%)', border: 'rgba(62,201,138,0.25)' },
+          };
+          const p = palette[accent] || palette.teal;
+          return {
+            productId: a?.productId,
+            imageUrl: a?.imageUrl || null,
+            cat: `${a?.category || 'Accessory'} · ${a?.brand || ''}`.trim().replace(/\s·\s$/, ''),
+            name: a?.name || 'Accessory',
+            why: a?.why || '✦ Recommended add-on',
+            rc: '',
+            stars: '★★★★★',
+            price: Number(a?.basePrice) || 0,
+            oldPrice: a?.oldPrice != null ? Number(a.oldPrice) : null,
+            compat: a?.compatBadge || 'Compatible',
+            ...p,
+            icon: `<svg width="60" height="60" viewBox="0 0 60 60" fill="none"><circle cx="30" cy="30" r="16" stroke="currentColor" stroke-width="1.3" opacity="0.35"/><circle cx="30" cy="30" r="6" fill="currentColor" opacity="0.12"/></svg>`
+          };
+        });
+
+        this.loading = false;
+        this.syncVisible();
+      },
+      error: () => {
+        this.loading = false;
+        this.toast.show('Failed to load setup bundle', 'error');
+      }
+    });
+  }
+
+  private pickAnchorProductIdFromCart(): number | null {
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (!Array.isArray(cart) || cart.length === 0) return null;
+
+      // Prefer items that have a productId (seeded catalog items).
+      const withId = cart.filter((i: any) => i?.productId != null && Number.isFinite(Number(i.productId)));
+      const pool = withId.length ? withId : cart;
+
+      // Choose the most "anchor-like": highest price item.
+      pool.sort((a: any, b: any) => Number(b?.basePrice || 0) - Number(a?.basePrice || 0));
+      const best = pool[0];
+      const pid = Number(best?.productId);
+      return Number.isFinite(pid) ? pid : null;
+    } catch {
+      return null;
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.successTimer) clearTimeout(this.successTimer);
+  }
+
+  @HostListener('window:resize')
+  onResize() {
+    this.syncVisible();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(e: KeyboardEvent) {
+    if (e.key === 'ArrowLeft') this.slide(-1);
+    if (e.key === 'ArrowRight') this.slide(1);
+  }
+
+  private syncVisible() {
+    const w = this.wrapRef?.nativeElement?.clientWidth || 0;
+    const v = w >= 880 ? 4 : w >= 660 ? 3 : w >= 440 ? 2 : 1;
+    this.visible = v;
+    this.offset = Math.max(0, Math.min(this.maxSlide, this.offset));
+  }
+
+  get maxSlide(): number {
+    return Math.max(0, this.cards.length - this.visible);
+  }
+
+  get dotCountArr(): any[] {
+    const pages = Math.max(1, Math.ceil((this.maxSlide + 1) / 2));
+    return Array.from({ length: pages });
+  }
+
+  get dotIndex(): number {
+    return Math.floor(this.offset / 2);
+  }
+
+  slide(dir: number) {
+    this.offset = Math.max(0, Math.min(this.maxSlide, this.offset + dir));
+  }
+
+  onPointerDown(e: PointerEvent) {
+    this.isDragging = true;
+    this.dragStartX = e.clientX;
+    this.dragHappened = false;
+    try { (e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId); } catch {}
+  }
+
+  onPointerMove(e: PointerEvent) {
+    if (!this.isDragging) return;
+    const dx = this.dragStartX - e.clientX;
+    if (Math.abs(dx) > 60) {
+      this.dragHappened = true;
+      this.slide(dx > 0 ? 1 : -1);
+      this.isDragging = false;
+    }
+  }
+
+  onPointerUp(_e: PointerEvent) {
+    this.isDragging = false;
+  }
+
+  toggleAdd(i: number) {
+    if (this.added.has(i)) {
+      this.added.delete(i);
+      return;
+    }
+    this.added.add(i);
+    // pop animation (closest card element)
+    const el = document.querySelector(`.cs-card[data-i="${i}"]`) as HTMLElement | null;
+    if (el) {
+      el.classList.remove('cs-pop');
+      void el.offsetWidth;
+      el.classList.add('cs-pop');
+    }
+  }
+
+  get addedCount(): number {
+    return this.added.size;
+  }
+
+  get addedCards(): any[] {
+    return [...this.added].map(i => this.cards[i]).filter(Boolean);
+  }
+
+  private get discountRate(): number {
+    const n = this.addedCount;
+    if (n >= 6) return 0.15;
+    if (n >= 4) return 0.10;
+    if (n >= 2) return 0.05;
+    return 0;
+  }
+
+  get discPct(): number {
+    return Math.round(this.discountRate * 100);
+  }
+
+  get totalBeforeDiscount(): number {
+    const sum = this.addedCards.reduce((acc, c) => acc + (Number(c.price) || 0), 0);
+    return this.basePrice + sum;
+  }
+
+  get saved(): number {
+    const accessories = Math.max(0, this.totalBeforeDiscount - this.basePrice);
+    return Math.round(accessories * this.discountRate);
+  }
+
+  get finalTotal(): number {
+    return this.totalBeforeDiscount - this.saved;
+  }
+
+  get maxSaveDisplay(): number {
+    return Number.isFinite(Number(this.maxSave)) ? Math.round(Number(this.maxSave)) : 0;
+  }
+
+  addBundleToCart(_e: Event) {
+    if (this.adding) return;
+    if (this.addedCount === 0) {
+      this.toast.show('Select accessories first', 'info');
+      return;
+    }
+
+    this.adding = true;
+    this.addedSuccess = false;
+
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const next = Array.isArray(cart) ? [...cart] : [];
+      this.addedCards.forEach((c: any) => {
+        const name = String(c?.name || 'Accessory');
+        const existing = next.find((i: any) => String(i?.name || '').toLowerCase() === name.toLowerCase());
+        if (existing) {
+          existing.qty = (existing.qty || 1) + 1;
+        } else {
+          next.push({
+            productId: c?.productId ?? null,
+            name,
+            category: (c?.cat || 'Accessory').split('·')[0]?.trim() || 'Accessory',
+            basePrice: Number(c?.price) || 0,
+            qty: 1,
+            imageUrl: c?.imageUrl || null
+          });
+        }
+      });
+      localStorage.setItem('cart', JSON.stringify(next));
+    } catch {}
+
+    setTimeout(() => {
+      this.adding = false;
+      this.addedSuccess = true;
+      this.toast.show('Bundle added to cart!');
+      this.successTimer = setTimeout(() => {
+        this.router.navigate(['/cart']);
+      }, 550);
+    }, 900);
   }
 }

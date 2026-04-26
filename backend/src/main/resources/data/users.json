@@ -1,0 +1,84 @@
+[
+  {
+    "fullName": "Nexus Admin",
+    "email": "admin@nexus.io",
+    "password": "admin123",
+    "role": "ADMIN"
+  },
+  {
+    "fullName": "Marcus Chen",
+    "email": "marcus@techhub.pro",
+    "password": "manager123",
+    "role": "MANAGER"
+  },
+  {
+    "fullName": "Elena Rodriguez",
+    "email": "elena@gadgetpro.co",
+    "password": "manager123",
+    "role": "MANAGER"
+  },
+  {
+    "fullName": "Daniel Smith",
+    "email": "daniel@nexus.io",
+    "password": "user123",
+    "role": "CONSUMER",
+    "profile": {
+      "persona": "Shadow Coder",
+      "bio": "Dark, matte setups with high-performance mechanics.",
+      "ageRange": "25-34",
+      "city": "San Francisco",
+      "occupation": "Senior Software Engineer",
+      "interests": "Mechanical Keyboards, Dark Mode Aesthetics, Vim",
+      "membershipType": "Gold",
+      "history": "2024-01-10: Bronze to Silver (Initial purchases); 2024-03-15: Silver to Gold (Consistent high-value orders)"
+    }
+  },
+  {
+    "fullName": "Sophia Chen",
+    "email": "sophia@nexus.io",
+    "password": "user123",
+    "role": "CONSUMER",
+    "profile": {
+      "persona": "Organic Creator",
+      "bio": "Natural textures, warm lighting, and acoustic perfection.",
+      "ageRange": "18-24",
+      "city": "Seattle",
+      "occupation": "Digital Content Creator",
+      "interests": "Walnut Accessories, Studio Lighting, Audiophile Gear",
+      "membershipType": "Silver",
+      "history": "2024-02-05: Joined Bronze; 2024-04-20: Silver (Reached spend threshold)"
+    }
+  },
+  {
+    "fullName": "Liam Wright",
+    "email": "liam@nexus.io",
+    "password": "user123",
+    "role": "CONSUMER",
+    "profile": {
+      "persona": "Global Nomad",
+      "bio": "High-efficiency gadgets that fit in a single tech pouch.",
+      "ageRange": "35-44",
+      "city": "Austin",
+      "occupation": "Technical Product Manager",
+      "interests": "EDC, Solar Tech, Minimalist Travel, Noise Cancelling",
+      "membershipType": "Bronze",
+      "history": "2024-05-01: Joined Bronze"
+    }
+  },
+  {
+    "fullName": "Maya Rossi",
+    "email": "maya@nexus.io",
+    "password": "user123",
+    "role": "CONSUMER",
+    "profile": {
+      "persona": "The Discovery",
+      "bio": "Unique, experimental gadgets that defy common physics.",
+      "ageRange": "25-34",
+      "city": "New York",
+      "occupation": "UX Designer",
+      "interests": "Futuristic Lighting, Kinetic Art, Transparent Tech",
+      "membershipType": "Gold",
+      "history": "2023-11-15: Bronze; 2024-02-12: Gold (Special Promotion Reward)"
+    }
+  }
+]

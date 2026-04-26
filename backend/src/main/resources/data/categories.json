@@ -1,0 +1,10 @@
+[
+  {"name": "Keyboards", "description": "Mechanical and minimalist typing tools."},
+  {"name": "Mice", "description": "Precision tracking devices."},
+  {"name": "Monitors", "description": "High-resolution displays."},
+  {"name": "Audio", "description": "Audiophile grade sound equipment."},
+  {"name": "Accessories", "description": "Essential workspace tools."},
+  {"name": "Lifestyle", "description": "Aesthetic and unique workspace finds."},
+  {"name": "Mobility", "description": "Travel and portable power solutions."},
+  {"name": "Aesthetic", "description": "Visual and decorative workspace elements."}
+]

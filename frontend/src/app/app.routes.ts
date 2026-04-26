@@ -21,6 +21,7 @@ export const routes: Routes = [
   { path: 'consumer', loadComponent: () => import('./pages').then(m => m.ConsumerComponent), canActivate: [authGuard] },
   { path: 'settings', loadComponent: () => import('./pages').then(m => m.SettingsComponent), canActivate: [authGuard] },
   { path: 'cart', loadComponent: () => import('./shop-pages').then(m => m.CartComponent), canActivate: [authGuard] },
+  { path: 'complete-setup', loadComponent: () => import('./shop-pages').then(m => m.CompleteSetupComponent), canActivate: [authGuard] },
   { path: 'product/:id', loadComponent: () => import('./shop-pages').then(m => m.ProductDetailComponent), canActivate: [authGuard] },
   { path: 'orders', loadComponent: () => import('./shop-pages').then(m => m.OrdersComponent), canActivate: [authGuard] },
   { path: '404', loadComponent: () => import('./pages/not-found.component').then(m => m.NotFoundComponent) },

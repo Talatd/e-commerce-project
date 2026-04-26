@@ -290,6 +290,16 @@ export class ProductService {
 }
 
 @Injectable({ providedIn: 'root' })
+export class BundleService {
+  private http = inject(HttpClient);
+  private apiUrl = `${API_V1}/bundles`;
+
+  completeSetup(anchorProductId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/complete-setup`, { params: { anchorProductId } });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
 export class OrderService {
   private http = inject(HttpClient);
   private apiUrl = `${API_V1}/orders`;

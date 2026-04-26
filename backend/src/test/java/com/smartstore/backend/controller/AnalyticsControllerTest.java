@@ -2,6 +2,7 @@ package com.smartstore.backend.controller;
 
 import com.smartstore.backend.model.Order;
 import com.smartstore.backend.model.Store;
+import com.smartstore.backend.dto.StoreAdminView;
 import com.smartstore.backend.repository.CustomerProfileRepository;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.StoreRepository;
@@ -65,11 +66,17 @@ class AnalyticsControllerTest {
 
     @Test
     void getStoreComparison_ReturnsSortedStores() {
-        Store s1 = Store.builder().id(1L).name("Alpha").ownerName("Owner1")
-                .totalRevenue(5000.0).orderCount(20).rating(4.5).status("OPEN").build();
-        Store s2 = Store.builder().id(2L).name("Beta").ownerName("Owner2")
-                .totalRevenue(8000.0).orderCount(30).rating(4.2).status("OPEN").build();
-        when(storeRepository.findAll()).thenReturn(List.of(s1, s2));
+        StoreAdminView s1 = new StoreAdminView(
+                1L, "Alpha", "Owner1",
+                11L, 4.5, "OPEN",
+                java.math.BigDecimal.valueOf(5000.0), 20L
+        );
+        StoreAdminView s2 = new StoreAdminView(
+                2L, "Beta", "Owner2",
+                22L, 4.2, "OPEN",
+                java.math.BigDecimal.valueOf(8000.0), 30L
+        );
+        when(storeRepository.findAllAdminViews()).thenReturn(List.of(s1, s2));
 
         ResponseEntity<List<Map<String, Object>>> response = controller.getStoreComparison();
 

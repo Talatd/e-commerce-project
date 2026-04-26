@@ -51,6 +51,29 @@ public class Product {
     private Integer stockQuantity = 0;
     private String tags;
 
+    /**
+     * Deterministic bundle system fields (seeded via ETL).
+     * - bundleRole: "ANCHOR" or "ACCESSORY"
+     * - compatibleWith: comma-separated list of anchor categories this product complements (or "ANY")
+     */
+    private String bundleRole;
+    private String compatibleWith;
+    /**
+     * Optional deterministic ordering for bundle suggestions.
+     * Smaller rank is higher priority. If bundleRankByAnchor is set, it can override bundleRank per anchor category.
+     */
+    private Integer bundleRank;
+    /** JSON map: {"Keyboards": 10, "Audio": 20, "ANY": 999} */
+    private String bundleRankByAnchor;
+
+    /**
+     * Stable key used by ETL to define deterministic bundles.
+     * - seedKey: unique string identifier per seeded product (e.g. "kbd_stealth_tkl")
+     * - bundleIncludes: comma-separated seedKeys in desired order (only meaningful for ANCHOR products)
+     */
+    private String seedKey;
+    private String bundleIncludes;
+
     @Builder.Default
     private Double rating = 0.0;
     

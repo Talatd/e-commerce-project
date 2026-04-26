@@ -160,11 +160,10 @@ public class ProductController {
         return ResponseEntity.ok(reviewRepository.findAll());
     }
 
-    @PostMapping("/seed-reviews-dev")
-    @Operation(summary = "Reseed reviews", description = "Clears and regenerates diverse reviews for all products. Used for dev/demo purposes.")
-    public ResponseEntity<String> reseedReviewsDev() {
-        dbInitializer.reseedReviews();
-        return ResponseEntity.ok("Reviews successfully reseeded with diverse sentiments.");
+    @PostMapping("/reseed-reviews")
+    public ResponseEntity<String> reseedReviews() {
+        dbInitializer.seedReviews();
+        return ResponseEntity.ok("Reviews reseeded successfully");
     }
 
     @PostMapping("/seed-specs-dev")

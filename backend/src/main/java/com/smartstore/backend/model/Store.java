@@ -19,6 +19,7 @@ public class Store {
     private Long ownerId; // Link to user_id
     private Double totalRevenue;
     private Integer orderCount;
+    private String description;
     private Double rating;
     private String status; // OPEN, CLOSED
 }
