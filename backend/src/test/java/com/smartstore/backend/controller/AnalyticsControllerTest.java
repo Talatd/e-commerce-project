@@ -91,7 +91,22 @@ class AnalyticsControllerTest {
     void getCustomerSegments_EmptyProfiles_ReturnsDefaults() {
         when(profileRepository.findAll()).thenReturn(List.of());
 
-        ResponseEntity<Map<String, Object>> response = controller.getCustomerSegments();
+        org.springframework.security.core.userdetails.UserDetails principal =
+                org.springframework.security.core.userdetails.User.withUsername("admin@nexus.io")
+                        .password("")
+                        .roles("ADMIN")
+                        .build();
+        com.smartstore.backend.model.User admin = com.smartstore.backend.model.User.builder()
+                .userId(1L)
+                .email("admin@nexus.io")
+                .fullName("Admin")
+                .passwordHash("x")
+                .role(com.smartstore.backend.model.Role.ADMIN)
+                .enabled(true)
+                .build();
+        when(userRepository.findByEmail("admin@nexus.io")).thenReturn(java.util.Optional.of(admin));
+
+        ResponseEntity<Map<String, Object>> response = controller.getCustomerSegments(principal);
 
         assertEquals(200, response.getStatusCode().value());
         Map<String, Object> body = response.getBody();

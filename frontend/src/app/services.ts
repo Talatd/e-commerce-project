@@ -313,6 +313,11 @@ export class ProductService {
     return this.http.get<any[]>(`${this.apiUrl}/reviews/all`);
   }
 
+  /** Manager/Admin: reviews for my store (manager-scoped). */
+  getMyStoreReviews(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/reviews/my-store`);
+  }
+
   respondToReview(reviewId: number, response: string): Observable<any> {
     return this.http.patch(`${this.apiUrl}/reviews/${reviewId}/respond`, { response });
   }
@@ -450,6 +455,11 @@ export class ShipmentService {
     return this.http.get<any[]>(this.apiUrl);
   }
 
+  /** Manager/Admin: shipments for my store (manager-scoped). */
+  getMyStore(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/my-store`);
+  }
+
   getByOrder(orderId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/order/${orderId}`);
   }
@@ -460,6 +470,11 @@ export class ShipmentService {
 
   updateStatus(id: number, status: string): Observable<any> {
     return this.http.patch(`${this.apiUrl}/${id}/status`, { status });
+  }
+
+  /** Manager/Admin: create shipment for an order (server will fill defaults). */
+  createForOrder(orderId: number): Observable<any> {
+    return this.http.post(this.apiUrl, { order: { orderId } });
   }
 }
 

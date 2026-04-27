@@ -6,6 +6,7 @@ import com.smartstore.backend.model.Shipment;
 import com.smartstore.backend.model.User;
 import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.ShipmentRepository;
+import com.smartstore.backend.repository.StoreRepository;
 import com.smartstore.backend.repository.UserRepository;
 import com.smartstore.backend.service.MailService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +34,7 @@ public class ShipmentController {
     private final ShipmentRepository shipmentRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+    private final StoreRepository storeRepository;
     private final MailService mailService;
 
     private User currentUser(UserDetails principal) {
@@ -40,17 +42,46 @@ public class ShipmentController {
     }
 
     private boolean mayViewOrder(Order order, User viewer) {
-        if (viewer.getRole() == Role.ADMIN || viewer.getRole() == Role.MANAGER) {
+        if (viewer.getRole() == Role.ADMIN) {
             return true;
+        }
+        if (viewer.getRole() == Role.MANAGER) {
+            var storeOpt = storeRepository.findByOwnerId(viewer.getUserId());
+            if (storeOpt.isEmpty()) {
+                storeOpt = storeRepository.findByName(viewer.getFullName().contains("Marcus") ? "TechHub Performance" : "GadgetPro Lifestyle");
+            }
+            if (storeOpt.isEmpty() || storeOpt.get().getId() == null) return false;
+            Long storeId = storeOpt.get().getId();
+            return order.getItems() != null && order.getItems().stream().anyMatch(it ->
+                    it != null
+                            && it.getProduct() != null
+                            && it.getProduct().getStore() != null
+                            && storeId.equals(it.getProduct().getStore().getId()));
         }
         return order.getUser().getUserId().equals(viewer.getUserId());
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "List all shipments")
     public ResponseEntity<List<Shipment>> getAll() {
         return ResponseEntity.ok(shipmentRepository.findAll());
+    }
+
+    @GetMapping("/my-store")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Operation(summary = "List shipments for my store", description = "Managers see only shipments for orders containing their store products.")
+    public ResponseEntity<List<Shipment>> getMyStore(@AuthenticationPrincipal UserDetails principal) {
+        User viewer = currentUser(principal);
+        if (viewer.getRole() == Role.ADMIN) {
+            return ResponseEntity.ok(shipmentRepository.findAll());
+        }
+        var storeOpt = storeRepository.findByOwnerId(viewer.getUserId());
+        if (storeOpt.isEmpty()) {
+            storeOpt = storeRepository.findByName(viewer.getFullName().contains("Marcus") ? "TechHub Performance" : "GadgetPro Lifestyle");
+        }
+        if (storeOpt.isEmpty() || storeOpt.get().getId() == null) return ResponseEntity.ok(List.of());
+        return ResponseEntity.ok(shipmentRepository.findByStoreId(storeOpt.get().getId()));
     }
 
     @GetMapping("/{id}")
@@ -102,7 +133,35 @@ public class ShipmentController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Create a shipment for an order")
-    public ResponseEntity<Shipment> create(@RequestBody Shipment shipment) {
+    public ResponseEntity<Shipment> create(@RequestBody Shipment shipment,
+                                           @AuthenticationPrincipal UserDetails principal) {
+        User viewer = currentUser(principal);
+        if (shipment == null || shipment.getOrder() == null || shipment.getOrder().getOrderId() == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+        // Enforce managers can only create shipments for orders in their scope.
+        Order order = orderRepository.findDetailedById(shipment.getOrder().getOrderId()).orElseThrow();
+        if (!mayViewOrder(order, viewer)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        shipment.setOrder(order);
+
+        // Ensure required fields exist (MVP defaults).
+        if (shipment.getWarehouseBlock() == null || shipment.getWarehouseBlock().isBlank()) {
+            shipment.setWarehouseBlock("A-14");
+        }
+        if (shipment.getModeOfShipment() == null || shipment.getModeOfShipment().isBlank()) {
+            shipment.setModeOfShipment("Road");
+        }
+        if (shipment.getCarrier() == null || shipment.getCarrier().isBlank()) {
+            shipment.setCarrier("Nexus Logistics");
+        }
+        if (shipment.getStatus() == null) {
+            shipment.setStatus(Shipment.ShipmentStatus.PREPARING);
+        }
+        if (shipment.getEstimatedDelivery() == null) {
+            shipment.setEstimatedDelivery(java.time.LocalDateTime.now().plusDays(3));
+        }
         if (shipment.getTrackingNumber() == null || shipment.getTrackingNumber().isBlank()) {
             shipment.setTrackingNumber("FX-" + System.currentTimeMillis());
         }
@@ -119,8 +178,14 @@ public class ShipmentController {
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Update shipment status")
-    public ResponseEntity<Shipment> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<Shipment> updateStatus(@PathVariable Long id,
+                                                 @RequestBody Map<String, String> body,
+                                                 @AuthenticationPrincipal UserDetails principal) {
         Shipment shipment = shipmentRepository.findById(Objects.requireNonNull(id)).orElseThrow();
+        User viewer = currentUser(principal);
+        if (!mayViewOrder(shipment.getOrder(), viewer)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         Shipment.ShipmentStatus previous = shipment.getStatus();
         String newStatus = body.get("status");
         if (newStatus == null || newStatus.isBlank()) {

@@ -2,7 +2,7 @@ import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef } from 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { ProductService, OrderService, AdminService, AuthService, ToastService, AiService } from '../services';
+import { ProductService, OrderService, AdminService, AuthService, ToastService, AiService, ShipmentService } from '../services';
 import { NexusLogoComponent } from '../nexus-logo.component';
 import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
 import { Chart } from './chart-register';
@@ -464,7 +464,7 @@ import { Chart } from './chart-register';
           <div class="mta"><div class="mtbtn mtbg">Export</div></div>
         </div>
         <div class="mtc">
-          <table class="mt"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
+          <table class="mt"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th><th>Shipment</th></tr></thead>
           <tbody>
             <tr *ngFor="let o of storeOrders">
               <td class="mtm">#ORD-{{o.orderId}}</td>
@@ -472,9 +472,78 @@ import { Chart } from './chart-register';
               <td>{{o.items?.length || 0}}</td>
               <td class="mtp">{{o.totalAmount | currency}}</td>
               <td>{{o.orderDate | date:'mediumDate'}}</td>
-              <td><span class="msp" [class.mspg]="o.status === 'DELIVERED'" [class.mspb]="o.status === 'SHIPPED' || o.status === 'PROCESSING'" [class.mspa]="o.status === 'PENDING'">{{o.status}}</span></td>
+              <td>
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                  <span class="msp"
+                        [class.mspg]="(orderStatusDraft[o.orderId] || o.status) === 'DELIVERED'"
+                        [class.mspb]="(orderStatusDraft[o.orderId] || o.status) === 'SHIPPED' || (orderStatusDraft[o.orderId] || o.status) === 'PROCESSING'"
+                        [class.mspa]="(orderStatusDraft[o.orderId] || o.status) === 'PENDING'">
+                    {{orderStatusDraft[o.orderId] || o.status}}
+                  </span>
+                  <select class="ue-select"
+                          style="max-width:160px;padding:8px 10px;font-size:11px;"
+                          [ngModel]="orderStatusDraft[o.orderId] || o.status"
+                          (ngModelChange)="orderStatusDraft[o.orderId] = $event"
+                          [disabled]="!canUpdateOrderStatus(o)">
+                    <option *ngFor="let s of orderStatusOptions" [value]="s">{{s}}</option>
+                  </select>
+                  <button class="sc-btn-a"
+                          style="padding:4px 10px;font-size:10px;"
+                          (click)="saveOrderStatus(o)"
+                          [disabled]="orderSaving[o.orderId] || !canUpdateOrderStatus(o) || ((orderStatusDraft[o.orderId] || o.status) === o.status)">
+                    {{orderSaving[o.orderId] ? 'Saving…' : 'Save'}}
+                  </button>
+                  <button class="sc-btn-a"
+                          style="padding:4px 10px;font-size:10px;"
+                          (click)="resetOrderStatus(o)"
+                          [disabled]="orderSaving[o.orderId] || orderStatusDraft[o.orderId] == null">
+                    Reset
+                  </button>
+                </div>
+              </td>
+              <td>
+                <ng-container *ngIf="shipmentsByOrderId[o.orderId] as sh; else noSh">
+                  <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                    <span style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;">
+                      {{sh.trackingNumber || '—'}}
+                    </span>
+                    <span class="msp"
+                          [class.mspg]="(shipmentStatusDraft[o.orderId] || sh.status) === 'DELIVERED'"
+                          [class.mspb]="(shipmentStatusDraft[o.orderId] || sh.status) === 'SHIPPED' || (shipmentStatusDraft[o.orderId] || sh.status) === 'IN_TRANSIT'"
+                          [class.mspa]="(shipmentStatusDraft[o.orderId] || sh.status) === 'PREPARING'">
+                      {{shipmentStatusDraft[o.orderId] || sh.status}}
+                    </span>
+                    <select class="ue-select"
+                            style="max-width:160px;padding:8px 10px;font-size:11px;"
+                            [ngModel]="shipmentStatusDraft[o.orderId] || sh.status"
+                            (ngModelChange)="shipmentStatusDraft[o.orderId] = $event">
+                      <option *ngFor="let s of shipmentStatusOptions" [value]="s">{{s}}</option>
+                    </select>
+                    <button class="sc-btn-a"
+                            style="padding:4px 10px;font-size:10px;"
+                            (click)="saveShipmentStatus(o)"
+                            [disabled]="shipmentSaving[o.orderId] || ((shipmentStatusDraft[o.orderId] || sh.status) === sh.status)">
+                      {{shipmentSaving[o.orderId] ? 'Saving…' : 'Save'}}
+                    </button>
+                    <button class="sc-btn-a"
+                            style="padding:4px 10px;font-size:10px;"
+                            (click)="resetShipmentStatus(o)"
+                            [disabled]="shipmentSaving[o.orderId] || shipmentStatusDraft[o.orderId] == null">
+                      Reset
+                    </button>
+                  </div>
+                </ng-container>
+                <ng-template #noSh>
+                  <button class="sc-btn-a"
+                          style="padding:4px 10px;font-size:10px;"
+                          (click)="createShipmentForOrder(o)"
+                          [disabled]="shipmentCreating[o.orderId] || !canCreateShipment(o)">
+                    {{!canCreateShipment(o) ? '—' : (shipmentCreating[o.orderId] ? 'Creating…' : 'Create')}}
+                  </button>
+                </ng-template>
+              </td>
             </tr>
-            <tr *ngIf="storeOrders.length === 0"><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">No orders yet.</td></tr>
+            <tr *ngIf="storeOrders.length === 0"><td colspan="7" style="text-align:center;color:var(--text3);padding:32px;">No orders yet.</td></tr>
           </tbody></table>
         </div>
       </ng-container>
@@ -677,6 +746,14 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   products: any[] = [];
   storeOrders: any[] = [];
   reviews: any[] = [];
+  orderStatusDraft: Record<number, string> = {};
+  orderSaving: Record<number, boolean> = {};
+  orderStatusOptions: string[] = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
+  shipmentsByOrderId: Record<number, any> = {};
+  shipmentStatusDraft: Record<number, string> = {};
+  shipmentSaving: Record<number, boolean> = {};
+  shipmentCreating: Record<number, boolean> = {};
+  shipmentStatusOptions: string[] = ['PREPARING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'RETURNED'];
   activePanel = 'dashboard';
   newProd: any = { name: '', brand: '', basePrice: 0, stockQuantity: 10, category: 'Electronics', description: '' };
   storeSettings = { open: true, acceptOrders: true, autoConfirm: false, newOrderAlerts: true, lowStockWarnings: true };
@@ -698,6 +775,7 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   auth = inject(AuthService);
   toast = inject(ToastService);
   ai = inject(AiService);
+  shipmentService = inject(ShipmentService);
   router = inject(Router);
 
   @ViewChild('mgrRevenueChart') revenueCanvas!: ElementRef<HTMLCanvasElement>;
@@ -727,8 +805,10 @@ export class ManagerComponent implements OnInit, AfterViewInit {
       if (this.activePanel === 'analytics') {
         this.scheduleAnalyticsCharts();
       }
+      // Ensure shipment column can render immediately (not only after clicking Orders tab).
+      this.loadMyStoreShipments();
     });
-    this.productService.getAllReviews().subscribe(res => this.reviews = res);
+    this.productService.getMyStoreReviews().subscribe(res => this.reviews = res);
   }
 
   ngAfterViewInit() {
@@ -751,9 +831,129 @@ export class ManagerComponent implements OnInit, AfterViewInit {
       this.loadSegments();
     }
 
+    if (panel === 'orders') {
+      this.loadMyStoreShipments();
+    }
+
     if (panel === 'analytics') {
       this.scheduleAnalyticsCharts();
     }
+  }
+
+  private loadMyStoreShipments() {
+    this.shipmentService.getMyStore().subscribe({
+      next: (list: any[]) => {
+        const by: Record<number, any> = {};
+        (Array.isArray(list) ? list : []).forEach((sh: any) => {
+          const oid = Number(sh?.order?.orderId);
+          if (oid) by[oid] = sh;
+        });
+        this.shipmentsByOrderId = by;
+      },
+      error: () => { /* keep silent */ }
+    });
+  }
+
+  canCreateShipment(o: any): boolean {
+    const st = String(o?.status || '').toUpperCase();
+    // don't create shipment for cancelled/pending; returned usually implies shipment already existed
+    if (!st || st === 'PENDING' || st === 'CANCELLED') return false;
+    return true;
+  }
+
+  createShipmentForOrder(o: any) {
+    const oid = Number(o?.orderId);
+    if (!oid) return;
+    if (this.shipmentsByOrderId[oid]) return;
+    if (!this.canCreateShipment(o)) {
+      this.toast.show('Shipment cannot be created for this order status', 'error');
+      return;
+    }
+    this.shipmentCreating[oid] = true;
+    this.shipmentService.createForOrder(oid).subscribe({
+      next: (sh: any) => {
+        this.shipmentCreating[oid] = false;
+        this.shipmentsByOrderId[oid] = sh;
+        this.toast.show('Shipment created');
+      },
+      error: (e) => {
+        this.shipmentCreating[oid] = false;
+        this.toast.show(e.error?.message || 'Failed to create shipment', 'error');
+      }
+    });
+  }
+
+  saveShipmentStatus(o: any) {
+    const oid = Number(o?.orderId);
+    if (!oid) return;
+    const sh = this.shipmentsByOrderId[oid];
+    const sid = Number(sh?.shipmentId);
+    if (!sid) return;
+    const next = String(this.shipmentStatusDraft[oid] || sh?.status || '').trim().toUpperCase();
+    if (!next || next === String(sh?.status || '').toUpperCase()) return;
+    if (!this.shipmentStatusOptions.includes(next)) {
+      this.toast.show('Invalid shipment status', 'error');
+      return;
+    }
+    this.shipmentSaving[oid] = true;
+    this.shipmentService.updateStatus(sid, next).subscribe({
+      next: (updated: any) => {
+        this.shipmentSaving[oid] = false;
+        this.shipmentsByOrderId[oid] = updated;
+        delete this.shipmentStatusDraft[oid];
+        this.toast.show('Shipment status updated');
+      },
+      error: (e) => {
+        this.shipmentSaving[oid] = false;
+        this.toast.show(e.error?.message || 'Failed to update shipment', 'error');
+      }
+    });
+  }
+
+  resetShipmentStatus(o: any) {
+    const oid = Number(o?.orderId);
+    if (!oid) return;
+    delete this.shipmentStatusDraft[oid];
+  }
+
+  resetOrderStatus(o: any) {
+    const oid = Number(o?.orderId);
+    if (!oid) return;
+    delete this.orderStatusDraft[oid];
+  }
+
+  canUpdateOrderStatus(o: any): boolean {
+    const st = String(o?.status || '').toUpperCase();
+    // In this MVP: manager progresses order lifecycle; returns/cancels handled elsewhere.
+    if (!st) return false;
+    if (st === 'CANCELLED' || st === 'RETURNED') return false;
+    return true;
+  }
+
+  saveOrderStatus(o: any) {
+    const oid = Number(o?.orderId);
+    if (!oid) return;
+    if (!this.canUpdateOrderStatus(o)) return;
+    const next = String(this.orderStatusDraft[oid] || o?.status || '').trim().toUpperCase();
+    const cur = String(o?.status || '').trim().toUpperCase();
+    if (!next || next === cur) return;
+    if (!this.orderStatusOptions.includes(next)) {
+      this.toast.show('Invalid order status', 'error');
+      return;
+    }
+    this.orderSaving[oid] = true;
+    this.orderService.updateStatus(oid, next).subscribe({
+      next: (updated: any) => {
+        this.orderSaving[oid] = false;
+        o.status = updated?.status || next;
+        delete this.orderStatusDraft[oid];
+        this.toast.show('Order status updated');
+      },
+      error: (e) => {
+        this.orderSaving[oid] = false;
+        this.toast.show(e.error?.message || 'Failed to update order status', 'error');
+      }
+    });
   }
 
   private scheduleAnalyticsCharts() {

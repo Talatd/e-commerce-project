@@ -69,7 +69,6 @@ public class ChatController {
         }
         User user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
         Long sessionStoreId = resolveSessionStoreId(user);
-        String query = payload != null && payload.get("query") != null ? payload.get("query").toString() : "";
 
         Map<String, Object> safePayload = payload != null ? payload : Map.of();
 
@@ -212,6 +211,7 @@ public class ChatController {
         return LocalDateTime.now().minusDays(90);
     }
 
+    @SuppressWarnings("unused")
     private Map<String, Object> tryAnswerFromBackendDb(User user, Long sessionStoreId, String query) {
         boolean isTopProducts = looksLikeTopProducts(query);
         boolean isAllStoresRevenue = looksLikeAllStoresRevenue(query);

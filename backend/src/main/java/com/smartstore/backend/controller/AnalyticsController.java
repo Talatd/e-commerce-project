@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -120,10 +122,27 @@ public class AnalyticsController {
     @GetMapping("/customer-segments")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Customer segmentation", description = "Aggregates customer profiles by membership type, city, and spending tiers.")
-    public ResponseEntity<Map<String, Object>> getCustomerSegments() {
+    public ResponseEntity<Map<String, Object>> getCustomerSegments(@AuthenticationPrincipal UserDetails principal) {
         Map<String, Object> segments = new HashMap<>();
 
         var profiles = profileRepository.findAll();
+        var user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+
+        // Manager should only see customers who bought from their store.
+        if (user.getRole() == com.smartstore.backend.model.Role.MANAGER) {
+            var storeOpt = storeRepository.findByOwnerId(user.getUserId());
+            if (storeOpt.isEmpty()) {
+                storeOpt = storeRepository.findByName(user.getFullName().contains("Marcus") ? "TechHub Performance" : "GadgetPro Lifestyle");
+            }
+            if (storeOpt.isPresent() && storeOpt.get().getId() != null) {
+                var customerIds = new java.util.HashSet<>(orderRepository.findDistinctCustomerIdsByStoreId(storeOpt.get().getId()));
+                profiles = profiles.stream()
+                        .filter(p -> p != null && p.getUser() != null && p.getUser().getUserId() != null && customerIds.contains(p.getUser().getUserId()))
+                        .toList();
+            } else {
+                profiles = List.of();
+            }
+        }
 
         Map<String, Integer> byMembership = new HashMap<>();
         Map<String, Integer> byCity = new HashMap<>();

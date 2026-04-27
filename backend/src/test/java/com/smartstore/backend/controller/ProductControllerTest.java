@@ -73,9 +73,27 @@ class ProductControllerTest {
     void createProduct_SavesAndReturns() {
         Product p = new Product();
         p.setName("New Product");
+        com.smartstore.backend.model.Store store = com.smartstore.backend.model.Store.builder().id(1L).name("S").ownerId(1L).build();
+        p.setStore(store);
         when(productRepository.save(any())).thenReturn(p);
+        when(storeRepository.findById(1L)).thenReturn(java.util.Optional.of(store));
 
-        ResponseEntity<Product> response = controller.createProduct(p);
+        org.springframework.security.core.userdetails.UserDetails principal =
+                org.springframework.security.core.userdetails.User.withUsername("admin@nexus.io")
+                        .password("")
+                        .roles("ADMIN")
+                        .build();
+        com.smartstore.backend.model.User admin = com.smartstore.backend.model.User.builder()
+                .userId(1L)
+                .email("admin@nexus.io")
+                .fullName("Admin")
+                .passwordHash("x")
+                .role(com.smartstore.backend.model.Role.ADMIN)
+                .enabled(true)
+                .build();
+        when(userRepository.findByEmail("admin@nexus.io")).thenReturn(java.util.Optional.of(admin));
+
+        ResponseEntity<Product> response = controller.createProduct(p, principal);
 
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
@@ -85,8 +103,29 @@ class ProductControllerTest {
 
     @Test
     void deleteProduct_CallsRepository() {
+        Product p = new Product();
+        p.setProductId(10L);
+        com.smartstore.backend.model.Store store = com.smartstore.backend.model.Store.builder().id(1L).name("S").ownerId(1L).build();
+        p.setStore(store);
+        when(productRepository.findById(10L)).thenReturn(java.util.Optional.of(p));
         doNothing().when(productRepository).deleteById(10L);
-        ResponseEntity<Void> response = controller.deleteProduct(10L);
+
+        org.springframework.security.core.userdetails.UserDetails principal =
+                org.springframework.security.core.userdetails.User.withUsername("admin@nexus.io")
+                        .password("")
+                        .roles("ADMIN")
+                        .build();
+        com.smartstore.backend.model.User admin = com.smartstore.backend.model.User.builder()
+                .userId(1L)
+                .email("admin@nexus.io")
+                .fullName("Admin")
+                .passwordHash("x")
+                .role(com.smartstore.backend.model.Role.ADMIN)
+                .enabled(true)
+                .build();
+        when(userRepository.findByEmail("admin@nexus.io")).thenReturn(java.util.Optional.of(admin));
+
+        ResponseEntity<Void> response = controller.deleteProduct(10L, principal);
         assertEquals(200, response.getStatusCode().value());
         verify(productRepository).deleteById(10L);
     }

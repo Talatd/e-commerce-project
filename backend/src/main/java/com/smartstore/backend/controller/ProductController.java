@@ -2,6 +2,7 @@ package com.smartstore.backend.controller;
 
 import com.smartstore.backend.model.Product;
 import com.smartstore.backend.model.ProductReview;
+import com.smartstore.backend.model.Role;
 import com.smartstore.backend.repository.ProductRepository;
 import com.smartstore.backend.repository.ProductReviewRepository;
 import com.smartstore.backend.ws.StockBroadcastService;
@@ -32,6 +33,31 @@ public class ProductController {
     private final com.smartstore.backend.service.DbInitializer dbInitializer;
     private final StockBroadcastService stockBroadcastService;
     private final com.smartstore.backend.service.LowStockAlertService lowStockAlertService;
+
+    private com.smartstore.backend.model.User currentUser(UserDetails principal) {
+        if (principal == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        return userRepository.findByEmail(principal.getUsername()).orElseThrow();
+    }
+
+    private com.smartstore.backend.model.Store resolveManagerStore(com.smartstore.backend.model.User user) {
+        var storeOpt = storeRepository.findByOwnerId(user.getUserId());
+        if (storeOpt.isEmpty()) {
+            storeOpt = storeRepository.findByName(user.getFullName().contains("Marcus") ? "TechHub Performance" : "GadgetPro Lifestyle");
+        }
+        return storeOpt.orElse(null);
+    }
+
+    private void requireManagerOwnsProduct(com.smartstore.backend.model.User user, Product product) {
+        if (user.getRole() != Role.MANAGER) return;
+        Long ownerId = product != null && product.getStore() != null ? product.getStore().getOwnerId() : null;
+        if (ownerId == null || !ownerId.equals(user.getUserId())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Managers may only manage their own store products");
+        }
+    }
 
     @GetMapping
     @Operation(summary = "Get all products", description = "Retrieves the product catalog, optionally paginated.")
@@ -153,18 +179,34 @@ public class ProductController {
     @Operation(summary = "Respond to a review", description = "Store owner responds to a customer review.")
     public ResponseEntity<ProductReview> respondToReview(
             @PathVariable Long reviewId,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails principal) {
+        var user = currentUser(principal);
         ProductReview review = reviewRepository.findById(Objects.requireNonNull(reviewId)).orElseThrow();
+        requireManagerOwnsProduct(user, review.getProduct());
         review.setStoreResponse(body.get("response"));
         review.setRespondedAt(java.time.LocalDateTime.now());
         return ResponseEntity.ok(reviewRepository.save(review));
     }
 
     @GetMapping("/reviews/all")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get all reviews", description = "Returns all product reviews for management.")
     public ResponseEntity<java.util.List<ProductReview>> getAllReviews() {
         return ResponseEntity.ok(reviewRepository.findAll());
+    }
+
+    @GetMapping("/reviews/my-store")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Operation(summary = "Get reviews for my store", description = "Managers see only their store's reviews; admin can also use this endpoint by store owner mapping.")
+    public ResponseEntity<java.util.List<ProductReview>> getMyStoreReviews(@AuthenticationPrincipal UserDetails principal) {
+        var user = currentUser(principal);
+        if (user.getRole() == Role.ADMIN) {
+            return ResponseEntity.ok(reviewRepository.findAll());
+        }
+        var store = resolveManagerStore(user);
+        if (store == null || store.getId() == null) return ResponseEntity.ok(List.of());
+        return ResponseEntity.ok(reviewRepository.findByStoreId(store.getId()));
     }
 
     @PostMapping("/reseed-reviews")
@@ -195,15 +237,36 @@ public class ProductController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Add a new product", description = "Creates a new electronics product in the catalog.")
-    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
+    public ResponseEntity<Product> createProduct(@RequestBody Product product,
+                                                 @AuthenticationPrincipal UserDetails principal) {
+        var user = currentUser(principal);
+        if (user.getRole() == Role.MANAGER) {
+            var store = resolveManagerStore(user);
+            if (store == null) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.CONFLICT, "Manager has no store assigned");
+            }
+            product.setStore(store);
+        } else if (user.getRole() == Role.ADMIN) {
+            if (product.getStore() == null || product.getStore().getId() == null) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST, "Product.store.id is required for admin create");
+            }
+            // Attach managed reference
+            var store = storeRepository.findById(Objects.requireNonNull(product.getStore().getId())).orElseThrow();
+            product.setStore(store);
+        }
         return ResponseEntity.ok(productRepository.save(Objects.requireNonNull(product)));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Update product", description = "Updates an existing product's details and stock.")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product productDetails) {
+    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product productDetails,
+                                                 @AuthenticationPrincipal UserDetails principal) {
+        var user = currentUser(principal);
         Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
+        requireManagerOwnsProduct(user, product);
         Integer prevStock = product.getStockQuantity();
         product.setName(productDetails.getName());
         product.setDescription(productDetails.getDescription());
@@ -230,7 +293,11 @@ public class ProductController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Delete product", description = "Removes a product from the catalog.")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id,
+                                              @AuthenticationPrincipal UserDetails principal) {
+        var user = currentUser(principal);
+        Product product = productRepository.findById(Objects.requireNonNull(id)).orElseThrow();
+        requireManagerOwnsProduct(user, product);
         productRepository.deleteById(Objects.requireNonNull(id));
         return ResponseEntity.ok().build();
     }

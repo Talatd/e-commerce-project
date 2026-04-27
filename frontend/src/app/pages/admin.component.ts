@@ -552,7 +552,7 @@ import { Chart } from './chart-register';
       <div class="panel-a active" *ngIf="tab === 'products'">
         <div class="top-bar-a">
           <div><div class="page-title-a">Product Catalog</div><div class="page-sub-a">Manage all store products.</div></div>
-          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a">+ Add Product</button></div>
+          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a" (click)="openProductAdd()">+ Add Product</button></div>
         </div>
         <div *ngFor="let g of productGroups" style="margin-bottom:18px;">
           <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px;">
@@ -587,6 +587,63 @@ import { Chart } from './chart-register';
                   <button class="sc-btn-a danger">Delete</button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRODUCT ADD MODAL -->
+      <div *ngIf="productAddOpen" style="position:fixed; inset:0; z-index:12000; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(8,8,8,0.72); backdrop-filter:blur(10px);">
+        <div style="width:min(720px, 96vw); background:var(--bg); border:1px solid var(--border2); border-radius:16px; overflow:hidden; box-shadow:0 20px 70px rgba(0,0,0,0.5);">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border);">
+            <div style="min-width:0;">
+              <div style="font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Add product (admin)</div>
+              <div style="font-size:16px; font-weight:700; color:var(--text);">New product</div>
+              <div style="font-size:12px; color:var(--text3); margin-top:2px;">Select store and fill minimal fields</div>
+            </div>
+            <button class="sc-btn-a" style="max-width:120px;" (click)="closeProductAdd()">Close</button>
+          </div>
+          <div style="padding:16px 18px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Store</div>
+                <select [(ngModel)]="productAddModel.storeId" class="ue-select">
+                  <option [ngValue]="null">Select store…</option>
+                  <option *ngFor="let s of stores" [ngValue]="s.id">{{s.name}}</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Category</div>
+                <input [(ngModel)]="productAddModel.category" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="e.g. Keyboards"/>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Name</div>
+                <input [(ngModel)]="productAddModel.name" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="Product name"/>
+              </div>
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Brand</div>
+                <input [(ngModel)]="productAddModel.brand" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="Brand"/>
+              </div>
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Price</div>
+                <input [(ngModel)]="productAddModel.basePrice" type="number" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="0"/>
+              </div>
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Stock</div>
+                <input [(ngModel)]="productAddModel.stockQuantity" type="number" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="0"/>
+              </div>
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Image URL</div>
+                <input [(ngModel)]="productAddModel.imageUrl" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="https://..."/>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Description</div>
+                <textarea [(ngModel)]="productAddModel.description" rows="3" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text); resize:none;" placeholder="Short description..."></textarea>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <button class="tbtn-a tbtn-primary-a" style="flex:1;" (click)="saveProductAdd()" [disabled]="productAddSaving">Create</button>
+              <button class="tbtn-a tbtn-ghost-a" style="flex:1;" (click)="closeProductAdd()">Cancel</button>
             </div>
           </div>
         </div>
@@ -858,6 +915,19 @@ export class AdminComponent implements OnInit, AfterViewInit {
   userEditOpen = false;
   userEditSaving = false;
   userEditModel: any = { userId: null, fullName: '', email: '', role: 'CONSUMER', enabled: true };
+
+  productAddOpen = false;
+  productAddSaving = false;
+  productAddModel: any = {
+    storeId: null,
+    name: '',
+    brand: '',
+    basePrice: 0,
+    stockQuantity: 10,
+    category: 'Accessories',
+    description: '',
+    imageUrl: ''
+  };
 
   sysSettings = {
     maintenance: false,
@@ -1354,6 +1424,64 @@ export class AdminComponent implements OnInit, AfterViewInit {
         this.logAudit('Delete Category', 'warning', c.name);
       },
       error: () => this.toast.show('Failed to delete category', 'error')
+    });
+  }
+
+  openProductAdd() {
+    this.productAddModel = {
+      storeId: null,
+      name: '',
+      brand: '',
+      basePrice: 0,
+      stockQuantity: 10,
+      category: 'Accessories',
+      description: '',
+      imageUrl: ''
+    };
+    this.productAddSaving = false;
+    this.productAddOpen = true;
+  }
+
+  closeProductAdd() {
+    this.productAddOpen = false;
+    this.productAddSaving = false;
+  }
+
+  saveProductAdd() {
+    const m = this.productAddModel || {};
+    const storeId = Number(m.storeId);
+    if (!storeId) {
+      this.toast.show('Please select a store', 'error');
+      return;
+    }
+    const name = String(m.name || '').trim();
+    if (!name) {
+      this.toast.show('Product name is required', 'error');
+      return;
+    }
+    const payload: any = {
+      name,
+      brand: String(m.brand || '').trim(),
+      basePrice: Number(m.basePrice || 0),
+      stockQuantity: Number.isFinite(Number(m.stockQuantity)) ? Number(m.stockQuantity) : 0,
+      category: String(m.category || '').trim() || 'Accessories',
+      description: String(m.description || '').trim(),
+      imageUrl: String(m.imageUrl || '').trim(),
+      store: { id: storeId }
+    };
+    this.productAddSaving = true;
+    this.productService.createProduct(payload).subscribe({
+      next: () => {
+        this.productAddSaving = false;
+        this.productAddOpen = false;
+        this.toast.show('Product created');
+        this.logAudit('Create Product', 'success', `${payload.name} storeId=${storeId}`);
+        this.refreshData();
+      },
+      error: (e) => {
+        this.productAddSaving = false;
+        this.toast.show(e.error?.message || 'Failed to create product', 'error');
+      }
     });
   }
 

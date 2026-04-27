@@ -266,12 +266,35 @@ public class OrderController {
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Update order status", description = "Admin or store manager.")
-    public ResponseEntity<Order> updateStatus(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
-        Order order = orderRepository.findById(Objects.requireNonNull(id)).orElseThrow();
+    public ResponseEntity<Order> updateStatus(@PathVariable Long id,
+                                              @RequestBody java.util.Map<String, String> body,
+                                              @AuthenticationPrincipal UserDetails principal) {
+        User current = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+        Order order = orderRepository.findDetailedById(Objects.requireNonNull(id)).orElseThrow();
         String newStatus = body.get("status");
         if (newStatus == null || newStatus.isBlank()) {
             throw new IllegalArgumentException("Status is required");
         }
+
+        if (current.getRole() == Role.MANAGER) {
+            var storeOpt = storeRepository.findByOwnerId(current.getUserId());
+            if (storeOpt.isEmpty()) {
+                storeOpt = storeRepository.findByName(current.getFullName().contains("Marcus") ? "TechHub Performance" : "GadgetPro Lifestyle");
+            }
+            if (storeOpt.isEmpty() || storeOpt.get().getId() == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            Long storeId = storeOpt.get().getId();
+            boolean hasOwnItem = order.getItems() != null && order.getItems().stream().anyMatch(it ->
+                    it != null
+                            && it.getProduct() != null
+                            && it.getProduct().getStore() != null
+                            && storeId.equals(it.getProduct().getStore().getId()));
+            if (!hasOwnItem) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+
         order.setStatus(Order.OrderStatus.valueOf(newStatus.toUpperCase()));
         return ResponseEntity.ok(orderRepository.save(order));
     }
