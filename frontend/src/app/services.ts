@@ -126,7 +126,14 @@ export class AiService {
     const body = JSON.stringify({
       query: prompt, history, session_id: this.sessionId
     });
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = (() => {
+      if (typeof localStorage === 'undefined') return null;
+      // Prefer explicit token; fall back to stored user session.
+      return localStorage.getItem('token')
+        || (() => {
+          try { return JSON.parse(localStorage.getItem('user') || 'null')?.token || null; } catch { return null; }
+        })();
+    })();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -134,7 +141,21 @@ export class AiService {
       method: 'POST',
       headers,
       body,
+      mode: 'cors',
+      credentials: 'include',
     }).then(async (response) => {
+      if (!response.ok) {
+        let text = '';
+        try { text = await response.text(); } catch {}
+        // If streaming is forbidden/unavailable, fall back to the non-stream endpoint so the user still gets an answer.
+        const msg = `HTTP ${response.status} ${response.statusText}${text ? ` — ${text}` : ''}`;
+        onError(msg);
+        this.query(prompt, history).subscribe({
+          next: (res: any) => onFinal({ type: 'final', ...res }),
+          error: () => { /* swallow: onError already surfaced */ }
+        });
+        return;
+      }
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       if (!reader) { onError('No response stream'); return; }
@@ -160,7 +181,15 @@ export class AiService {
           }
         }
       }
-    }).catch(err => onError(err.message || 'Stream failed'));
+    }).catch(err => {
+      const msg = err?.message || 'Stream failed';
+      onError(msg);
+      // Network/CORS issues: try non-stream path as a best-effort fallback.
+      this.query(prompt, history).subscribe({
+        next: (res: any) => onFinal({ type: 'final', ...res }),
+        error: () => { /* swallow */ }
+      });
+    });
   }
 
   clearSession() {

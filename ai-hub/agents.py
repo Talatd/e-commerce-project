@@ -1,7 +1,7 @@
 import os
 import json
 import sqlparse
-from typing import TypedDict, List, Annotated, Union
+from typing import TypedDict, List, Annotated, Union, Optional
 from langgraph.graph import StateGraph, END, START
 import google.generativeai as genai
 from sqlalchemy import create_engine, text
@@ -21,6 +21,7 @@ class AgentState(TypedDict):
     session_id: str
     user_id: int
     user_role: str
+    session_store_id: Optional[int]
     sql_query: str
     results: List[dict]
     response: str
@@ -43,7 +44,7 @@ SCHEMA_DESCRIPTION = """
 DATABASE SCHEMA (MySQL):
 - users (user_id INT PK, email, password_hash, full_name, role ENUM('ADMIN','MANAGER','CONSUMER'), enabled, created_at)
 - stores (id INT PK, name, owner_name, owner_id FK->users.user_id, total_revenue, order_count, rating, status ENUM('OPEN','CLOSED','PENDING'))
-- products (product_id INT PK, name, description, brand, category, base_price, image_url, stock_quantity)
+- products (product_id INT PK, store_id FK->stores.id, name, description, brand, category, base_price, image_url, stock_quantity)
 - regional_inventory (inventory_id INT PK, product_id FK->products.product_id, region, stock_quantity)
 - shipping_info (id INT PK, product_id FK->products.product_id, carrier_name, estimated_days, shipping_cost, shipping_region, is_free_shipping)
 - product_specifications (id INT PK, product_id FK->products.product_id, spec_key, spec_value)
@@ -86,25 +87,36 @@ def guardrails_agent(state: AgentState):
     q = state["query"].strip().lower()
     if any(g in q for g in GREETINGS) and len(q) < 15:
         return {**state, "is_in_scope": False, "response": "Hello! I am your SmartStore AI Assistant. How can I help you with your data today?", "next_step": "end"}
-    
-    prompt = f"Is the following query related to e-commerce data (sales, products, users, reviews, etc)? Query: '{state['query']}'. Answer with ONLY 'YES' or 'NO'."
-    model = genai.GenerativeModel("gemini-flash-latest")
-    resp = model.generate_content(prompt).text.strip().upper()
-    
-    if "NO" in resp:
-        return {**state, "is_in_scope": False, "response": "I can only assist with e-commerce data analysis queries.", "next_step": "end"}
+
+    # Lightweight heuristic (no LLM call) to avoid burning quota.
+    keywords = [
+        "order", "sipariş", "siparis", "revenue", "ciro", "sales", "gelir",
+        "product", "ürün", "urun", "stock", "stok", "customer", "müşteri", "musteri",
+        "shipment", "kargo", "shipping", "review", "yorum", "category", "kategori",
+        "store", "mağaza", "magaza", "user", "kullanıcı", "kullanici",
+    ]
+    if not any(k in q for k in keywords):
+        return {**state, "is_in_scope": False, "response": "I can only assist with SmartStore e-commerce data analysis questions.", "next_step": "end"}
+
     return {**state, "is_in_scope": True, "next_step": "sql"}
 
 def sql_agent(state: AgentState):
     """Generates SQL query based on user role."""
     role = state.get("user_role", "CONSUMER")
     uid = state.get("user_id", 0)
+    sid = state.get("session_store_id")
     
     role_clause = ""
     if role == "CONSUMER":
-        role_clause = f"IMPORTANT: User (ID: {uid}) can only see their OWN data. Filter by user_id = {uid}."
+        role_clause = f"IMPORTANT: User (ID: {uid}) can only see their OWN data. Filter by orders.user_id = {uid} (or user_id where applicable)."
     elif role == "MANAGER":
-        role_clause = f"IMPORTANT: Manager (ID: {uid}) can only see their STORE data. Join stores and filter by stores.owner_id = {uid}."
+        # Prefer server-provided session store id when available; otherwise fall back to owner_id join.
+        if sid is not None:
+            role_clause = f"IMPORTANT: Manager can only see their STORE data. Always filter by products.store_id = {sid} (or stores.id = {sid})."
+        else:
+            role_clause = f"IMPORTANT: Manager can only see their STORE data. Join stores and filter by stores.owner_id = {uid}."
+    elif role == "ADMIN":
+        role_clause = "IMPORTANT: Admin can query platform-wide analytics. Prefer efficient aggregates."
 
     prompt = f"""
     You are a MySQL expert. 
@@ -141,31 +153,31 @@ def execution_agent(state: AgentState):
 
 def error_agent(state: AgentState):
     """Fixes SQL errors."""
-    if state.get("iteration_count", 0) >= MAX_RETRIES:
-        return {**state, "next_step": "end", "response": f"Error: {state['error']}"}
-    
-    prompt = f"The SQL '{state['sql_query']}' failed with error: {state['error']}. Fix it for MySQL based on this schema: {SCHEMA_DESCRIPTION}. Return ONLY SQL."
-    model = genai.GenerativeModel("gemini-flash-latest")
-    fixed_sql = model.generate_content(prompt).text.strip().replace("```sql", "").replace("```", "").strip()
-    return {**state, "sql_query": fixed_sql, "iteration_count": state.get("iteration_count", 0) + 1, "next_step": "execute"}
+    # Avoid additional LLM calls to save quota; ask user to refine instead.
+    return {**state, "next_step": "end", "response": f"I couldn't run the generated SQL due to: {state['error']}. Try rephrasing your question with a time range and metric."}
 
 def analysis_agent(state: AgentState):
     """Explains results in natural language."""
-    data_str = json.dumps(state["results"][:10], indent=2)
-    prompt = f"Analyze these results for the user query '{state['query']}':\n{data_str}\nProvide a professional and concise summary."
-    model = genai.GenerativeModel("gemini-flash-latest")
-    resp = model.generate_content(prompt).text
-    return {**state, "response": resp, "next_step": "visualize"}
+    rows = state.get("results") or []
+    q = (state.get("query") or "").lower()
+
+    is_tr = any(x in q for x in ["ç", "ğ", "ı", "ö", "ş", "ü", "sipariş", "urun", "ürün", "mağaza", "musteri", "müşteri"])
+    if not rows:
+        msg = "Eşleşen veri bulunamadı. Tarih aralığını genişletmeyi deneyin." if is_tr else "No matching data was returned. Try widening the date range."
+        return {**state, "response": msg, "next_step": "end"}
+
+    # Simple deterministic summary: show row count + top keys + first few rows.
+    keys = list(rows[0].keys()) if isinstance(rows[0], dict) else []
+    preview = rows[:5]
+    if is_tr:
+        resp = f"{len(rows)} satır döndü. Alanlar: {', '.join(keys[:8])}.\nÖrnek:\n" + json.dumps(preview, ensure_ascii=False, indent=2, default=str)
+    else:
+        resp = f"Returned {len(rows)} rows. Fields: {', '.join(keys[:8])}.\nPreview:\n" + json.dumps(preview, indent=2, default=str)
+    return {**state, "response": resp, "next_step": "end"}
 
 def visualization_agent(state: AgentState):
-    """Creates charts if needed."""
-    if not state["results"] or len(state["results"]) < 2:
-        return {**state, "next_step": "end"}
-        
-    prompt = f"Generate Plotly Python code to visualize this data for the query '{state['query']}': {state['results'][:5]}. Variable 'data' is the full result list. Return ONLY code producing 'fig.to_json()'."
-    model = genai.GenerativeModel("gemini-flash-latest")
-    code = model.generate_content(prompt).text.strip().replace("```python", "").replace("```", "").strip()
-    return {**state, "visualization_code": code, "next_step": "end"}
+    """Visualization intentionally disabled for reliability/quota."""
+    return {**state, "next_step": "end", "visualization_code": ""}
 
 # Build Graph
 builder = StateGraph(AgentState)
@@ -181,7 +193,5 @@ builder.add_conditional_edges("guardrails", lambda x: "sql" if x["is_in_scope"] 
 builder.add_edge("sql", "execute")
 builder.add_conditional_edges("execute", lambda x: "error" if x["error"] else "analyze")
 builder.add_conditional_edges("error", lambda x: "execute" if x["next_step"] == "execute" else END)
-builder.add_edge("analyze", "visualize")
-builder.add_edge("visualize", END)
-
+builder.add_edge("analyze", END)
 ai_graph = builder.compile()

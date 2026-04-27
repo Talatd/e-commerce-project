@@ -698,7 +698,6 @@ import { Chart } from './chart-register';
             <button class="tbtn-a tbtn-ghost-a" (click)="clearAiChat()">New Chat</button>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1.25fr 0.75fr;gap:14px;align-items:stretch;">
         <div class="chat-shell-a" style="min-height:560px;">
           <div class="chat-head-a">
             <div>
@@ -729,10 +728,7 @@ import { Chart } from './chart-register';
                     <div class="t">No data / Next steps</div>
                     <div>{{m.noDataHint}}</div>
                   </div>
-                  <div *ngIf="m.sql" style="margin-top:10px;">
-                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">SQL</div>
-                    <div style="background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text3);white-space:pre-wrap;">{{m.sql}}</div>
-                  </div>
+                  <!-- SQL intentionally hidden in the UI for non-demo use -->
                 </div>
               </div>
             </ng-container>
@@ -754,47 +750,6 @@ import { Chart } from './chart-register';
               </button>
             </div>
           </div>
-        </div>
-
-        <!-- Explainable AI panel -->
-        <div class="gcard-a" style="min-height:560px;display:flex;flex-direction:column;">
-          <div class="gc-head-a">
-            <div class="gc-title-a">Explainable AI</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <span class="spill-a sp-blue-a" style="font-size:10px;">rows: {{aiTrace.rowCount}}</span>
-              <span class="spill-a" [class.sp-green-a]="aiTrace.confidence>=0.8" [class.sp-amber-a]="aiTrace.confidence<0.8 && aiTrace.confidence>=0.5" [class.sp-red-a]="aiTrace.confidence<0.5">confidence: {{(aiTrace.confidence*100).toFixed(0)}}%</span>
-            </div>
-          </div>
-          <div class="gc-body-a" style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;overflow:auto;">
-            <div>
-              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Trace</div>
-              <div *ngIf="aiTrace.steps.length===0" style="color:var(--text3);font-size:12px;line-height:1.6;">No steps yet. Run a query to see what the agent did.</div>
-              <div *ngFor="let s of aiTrace.steps" style="padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:var(--glass);margin-bottom:8px;">
-                <div style="display:flex;justify-content:space-between;gap:10px;">
-                  <div style="font-size:11px;color:var(--text2);font-weight:650;">{{s.agent || 'agent'}}</div>
-                  <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;">{{s.at}}</div>
-                </div>
-                <div style="font-size:11px;color:var(--text3);margin-top:4px;">{{s.action || 'step'}}</div>
-                <div *ngIf="s.detail" style="font-size:11.5px;color:var(--text2);margin-top:6px;white-space:pre-wrap;">{{s.detail}}</div>
-              </div>
-            </div>
-
-            <div>
-              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">SQL</div>
-              <div style="background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text3);white-space:pre-wrap;min-height:64px;">
-                {{aiTrace.sql || '—'}}
-              </div>
-            </div>
-
-            <div>
-              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Guardrails</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <span class="spill-a" [class.sp-red-a]="aiTrace.blocked" [class.sp-green-a]="!aiTrace.blocked">{{aiTrace.blocked ? 'BLOCKED' : 'OK'}}</span>
-                <span class="spill-a sp-gray-a" style="font-size:10px;">server-side scope enforced</span>
-              </div>
-            </div>
-          </div>
-        </div>
         </div>
       </div>
 
@@ -852,13 +807,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
   auditOnlyLowStock = false;
   aiPrompt = '';
   aiBusy = false;
-  aiTrace = {
-    steps: [] as Array<{ at: string; agent?: string; action?: string; detail?: string }>,
-    sql: '' as string,
-    rowCount: 0 as number,
-    confidence: 0 as number,
-    blocked: false as boolean,
-  };
+  // Streaming/trace/SQL panels intentionally removed for non-demo use.
   aiChatMessages: any[] = [
     { sender: 'ai', text: 'Ask me anything about platform analytics. I will generate SQL and summarize results.' }
   ];
@@ -1157,7 +1106,6 @@ export class AdminComponent implements OnInit, AfterViewInit {
     this.aiBusy = false;
     // AiService has session support; reset it if available.
     this.ai.sessionId = null;
-    this.aiTrace = { steps: [], sql: '', rowCount: 0, confidence: 0, blocked: false };
     this.aiChatMessages = [
       { sender: 'ai', text: 'New session started. Try: “Compare total revenue of all stores”.' }
     ];
@@ -1174,58 +1122,30 @@ export class AdminComponent implements OnInit, AfterViewInit {
     if (!q || this.aiBusy) return;
     this.aiPrompt = '';
     this.aiBusy = true;
-    this.aiTrace = { steps: [], sql: '', rowCount: 0, confidence: 0, blocked: false };
     this.aiChatMessages.push({ sender: 'user', text: q });
 
-    const now = () => new Date().toISOString().replace('T', ' ').slice(0, 19);
-
-    this.ai.queryStream(
-      q,
-      this.aiHistory,
-      (step: any) => {
-        const agent = step?.agent || step?.name || step?.tool || step?.source;
-        const action = step?.action || step?.type || 'step';
-        const detail = step?.detail || step?.message || step?.text || '';
-        this.aiTrace.steps.push({ at: now(), agent, action, detail });
-      },
-      (final: any) => {
-        const res = final?.result ?? final; // tolerate both shapes
+    this.ai.query(q, this.aiHistory).subscribe({
+      next: (res: any) => {
         const cleaned = this.cleanAiResponse(res?.response);
-        const dataLen = Array.isArray(res?.data) ? res.data.length : 0;
-        const blocked = !!res?.blocked;
-        const sql = (res?.sql || '').toString();
-
-        this.aiTrace.blocked = blocked;
-        this.aiTrace.sql = sql;
-        this.aiTrace.rowCount = dataLen;
-        this.aiTrace.confidence = this.computeConfidenceScore(blocked, sql, dataLen);
-
         const noDataHint = this.buildNoDataHintIfNeeded(q, res);
         this.aiChatMessages.push({
           sender: 'ai',
           text: cleaned || 'No response',
-          blocked,
+          blocked: !!res?.blocked,
           detection_type: res?.detection_type,
           guardrail: res?.guardrail,
           requested_store_id: res?.requested_store_id,
-          sql,
           noDataHint,
         });
         this.aiHistory.push('User: ' + q, 'AI: ' + (cleaned || ''));
         this.aiBusy = false;
       },
-      () => {
-        this.aiChatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.' });
+      error: (e) => {
+        const msg = e?.error?.message || e?.message || 'Request failed';
+        this.aiChatMessages.push({ sender: 'ai', text: `Sorry, something went wrong: ${msg}` });
         this.aiBusy = false;
       }
-    );
-  }
-
-  private computeConfidenceScore(blocked: boolean, sql: string, rowCount: number): number {
-    if (blocked) return 0;
-    const hasSql = !!(sql || '').trim();
-    if (rowCount <= 0) return hasSql ? 0.55 : 0.45;
-    return hasSql ? 0.85 : 0.7;
+    });
   }
 
   private cleanAiResponse(v: any): string {

@@ -87,7 +87,19 @@ public class SecurityConfig {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
-        configuration.setAllowedOrigins(origins.isEmpty() ? java.util.List.of("http://localhost:4200") : origins);
+        // Prefer origin patterns so localhost variants (127.0.0.1, custom ports) work in dev.
+        // If explicit origins are provided via config, they still work.
+        if (origins.isEmpty()) {
+            configuration.setAllowedOriginPatterns(java.util.List.of(
+                    "http://localhost:*",
+                    "http://127.0.0.1:*",
+                    "http://[::1]:*"
+            ));
+        } else if (origins.stream().anyMatch(o -> o.contains("*"))) {
+            configuration.setAllowedOriginPatterns(origins);
+        } else {
+            configuration.setAllowedOrigins(origins);
+        }
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         // Be permissive for browser-driven requests (Angular adds headers like Accept, X-Requested-With, etc.)
         configuration.setAllowedHeaders(java.util.List.of("*"));

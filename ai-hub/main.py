@@ -60,13 +60,14 @@ class ChatRequest(BaseModel):
 def health_check():
     return {"status": "healthy"}
 
-def _build_initial_state(query, history, session_id, user_id, role):
+def _build_initial_state(query, history, session_id, user_id, role, session_store_id: Optional[int] = None):
     return {
         "query": query,
         "history": history,
         "session_id": session_id,
         "user_id": user_id,
         "user_role": role,
+        "session_store_id": session_store_id,
         "sql_query": "",
         "results": [],
         "response": "",
@@ -246,7 +247,7 @@ async def process_query(request: ChatRequest):
         )
 
     initial_state = _build_initial_state(
-        request.query, session["history"], sid, request.user_id, request.role
+        request.query, session["history"], sid, request.user_id, request.role, request.session_store_id
     )
 
     try:
@@ -288,7 +289,7 @@ async def process_query_stream(request: ChatRequest):
             sid = session["id"]
 
         initial_state = _build_initial_state(
-            request.query, session["history"], sid, request.user_id, request.role
+            request.query, session["history"], sid, request.user_id, request.role, request.session_store_id
         )
 
         step_messages = {
@@ -345,7 +346,30 @@ async def process_query_stream(request: ChatRequest):
                     asyncio.run_coroutine_threadsafe(q.put({"kind": "final", "state": current_state}), loop)
             except Exception as e:
                 traceback.print_exc()
-                asyncio.run_coroutine_threadsafe(q.put({"kind": "error", "message": str(e)}), loop)
+                # Quota / provider errors should degrade gracefully: emit an SSE error event
+                # and then return a deterministic demo response so the UI doesn't look broken.
+                msg = str(e) or "Unknown error"
+                retry_after_s: Optional[int] = None
+                try:
+                    import re
+                    m = re.search(r"Please retry in\\s+([0-9]+)", msg)
+                    if m:
+                        retry_after_s = int(m.group(1))
+                except Exception:
+                    retry_after_s = None
+
+                err_payload: Dict[str, Any] = {"message": msg}
+                if retry_after_s is not None:
+                    err_payload["retry_after_seconds"] = retry_after_s
+                asyncio.run_coroutine_threadsafe(q.put({"kind": "error", **err_payload}), loop)
+
+                try:
+                    demo_state = _demo_response_for(request.query, request.session_store_id)
+                    if isinstance(demo_state, dict):
+                        current_state = _merge_state(current_state, demo_state)
+                    asyncio.run_coroutine_threadsafe(q.put({"kind": "final", "state": current_state}), loop)
+                except Exception:
+                    pass
             finally:
                 asyncio.run_coroutine_threadsafe(q.put(stop_sentinel), loop)
 
@@ -363,7 +387,10 @@ async def process_query_stream(request: ChatRequest):
                 continue
 
             if isinstance(item, dict) and item.get("kind") == "error":
-                yield _sse({"type": "error", "message": item.get("message", "Unknown error")})
+                out = {"type": "error", "message": item.get("message", "Unknown error")}
+                if item.get("retry_after_seconds") is not None:
+                    out["retry_after_seconds"] = item.get("retry_after_seconds")
+                yield _sse(out)
                 continue
 
             if isinstance(item, dict) and item.get("kind") == "final":
