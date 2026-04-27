@@ -320,6 +320,36 @@ public class DbInitializer {
             }
 
             List<Product> saved = productRepository.saveAll(products);
+
+            // Guard: ensure products are distributed across all seeded stores (demo UX expects 2 stores).
+            // If an upstream seed mismatch maps everything to the first store, rebalance deterministically.
+            List<Store> allStores = storeRepository.findAll();
+            if (allStores.size() >= 2) {
+                Map<Long, Integer> counts = new HashMap<>();
+                for (Product p : saved) {
+                    Long sid = (p.getStore() != null) ? p.getStore().getId() : null;
+                    if (sid != null) counts.put(sid, counts.getOrDefault(sid, 0) + 1);
+                }
+
+                // Find stores that have zero products.
+                List<Store> emptyStores = allStores.stream()
+                        .filter(s -> s != null && s.getId() != null && counts.getOrDefault(s.getId(), 0) == 0)
+                        .toList();
+
+                if (!emptyStores.isEmpty()) {
+                    // Reassign every other product to empty stores (round-robin) so each store has a catalog.
+                    int idx = 0;
+                    for (int i = 0; i < saved.size(); i++) {
+                        if (i % 2 == 1) {
+                            Store target = emptyStores.get(idx % emptyStores.size());
+                            saved.get(i).setStore(target);
+                            idx++;
+                        }
+                    }
+                    saved = productRepository.saveAll(saved);
+                }
+            }
+
             for (Product p : saved) {
                 seedInventory(p, random);
             }
@@ -606,20 +636,41 @@ public class DbInitializer {
 
         for (int i = 0; i < 50; i++) {
             User customer = customers.get(random.nextInt(customers.size()));
-            Product product = products.get(random.nextInt(products.size()));
 
             Order order = new Order();
             order.setUser(customer);
             order.setOrderDate(LocalDateTime.now().minusDays(random.nextInt(30)));
-            BigDecimal base = product.getBasePrice();
-            order.setSubtotalAmount(base);
-            order.setTaxAmount(base.multiply(BigDecimal.valueOf(0.1)));
+            
+            // Seed 1–3 order items so Orders UI can render details.
+            int itemCount = 1 + random.nextInt(3);
+            List<OrderItem> items = new ArrayList<>();
+            BigDecimal subtotal = BigDecimal.ZERO;
+            for (int k = 0; k < itemCount; k++) {
+                Product product = products.get(random.nextInt(products.size()));
+                int qty = 1 + random.nextInt(2);
+                BigDecimal price = product.getBasePrice();
+                OrderItem it = new OrderItem();
+                it.setOrder(order);
+                it.setProduct(product);
+                it.setQuantity(qty);
+                it.setPriceAtPurchase(price);
+                items.add(it);
+                subtotal = subtotal.add(price.multiply(BigDecimal.valueOf(qty)));
+            }
+            order.setItems(items);
+            order.setSubtotalAmount(subtotal);
+            order.setTaxAmount(subtotal.multiply(BigDecimal.valueOf(0.1)));
             order.setShippingAmount(BigDecimal.valueOf(15.0));
             order.setTotalAmount(order.getSubtotalAmount().add(order.getTaxAmount()).add(order.getShippingAmount()));
             order.setShippingAddress(customer.getFullName() + "'s Home, " + new String[] { "San Francisco", "Seattle", "Austin", "New York" }[random.nextInt(4)]);
 
             OrderStatus[] statuses = OrderStatus.values();
-            order.setStatus(statuses[random.nextInt(statuses.length)]);
+            // Ensure at least one visible PENDING order in the demo list.
+            if (i == 0) {
+                order.setStatus(OrderStatus.PENDING);
+            } else {
+                order.setStatus(statuses[random.nextInt(statuses.length)]);
+            }
 
             Order savedOrder = orderRepository.save(order);
             seedOrderEvents(savedOrder);

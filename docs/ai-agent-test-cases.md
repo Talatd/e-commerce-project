@@ -155,6 +155,64 @@ This document provides functional question scenarios and security test cases (pr
   - UI returns an “AI service is temporarily unavailable” message.
   - App does not crash; user is prompted to retry later.
 
+## Admin UI stability / data consistency tests (non-AI)
+
+These test cases cover regressions we’ve seen in the Admin screens: UI freezes, incorrect store grouping, and seed/persistence behavior.
+
+### AU-01 — Admin tabs must not freeze the UI (initial render)
+- **Precondition**: Admin user can access `/admin`; catalog has 50+ products, 20+ users, 20+ orders.
+- **Steps**:
+  - Login as ADMIN, navigate to `/admin`.
+  - Click through tabs: Dashboard → Users → Products → Orders → Audit Logs.
+- **Expected**:
+  - UI remains responsive (no “frozen” state / no unclickable overlay).
+  - No long main-thread blocking when switching tabs.
+  - Only the active tab content is rendered (inactive panels are not in the DOM).
+
+### AU-02 — Products tab must not recompute expensive grouping on every change detection
+- **Precondition**: 50+ products.
+- **Steps**:
+  - Open Admin → Products.
+  - Interact with the page (scroll, click sidebar items, open/close modals if any).
+- **Expected**:
+  - No visible stutter from repeated group/sort computation.
+  - Product grouping is computed once per data refresh (not on every UI tick).
+
+### AU-03 — Admin Products groups must show all stores (even if a store has 0 products)
+- **Precondition**: At least 2 stores exist.
+- **Steps**:
+  - Open Admin → Stores, confirm two stores are listed.
+  - Open Admin → Products.
+- **Expected**:
+  - A group header exists for each store.
+  - Stores with 0 products show “0 products” rather than disappearing.
+
+### AU-04 — Status badge color mapping is complete and consistent
+- **Precondition**: Orders include statuses: `PENDING`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`, `RETURNED`.
+- **Steps**:
+  - Open Admin → Orders.
+- **Expected**:
+  - Each status renders with a distinct, accessible badge color.
+  - No status falls back to a misleading color (e.g., CANCELLED not shown as “info”).
+
+### DS-01 — Seed/persistence behavior is explicit (restart safety)
+- **Goal**: Ensure “demo seed” doesn’t silently wipe real data.
+- **Steps**:
+  - Create a new user (register), place an order, and create an audit log entry.
+  - Restart the backend.
+- **Expected** (pick the intended policy and enforce it):
+  - **Dev-only seed policy**: seed runs only in dev profile; prod/staging never wipes data.
+  - **Idempotent seed policy**: seed runs only when DB is empty; otherwise it leaves data intact.
+  - In either case, the policy is documented and testable.
+
+### DS-02 — Store/product distribution is guaranteed in demo dataset
+- **Precondition**: At least 2 stores exist.
+- **Steps**:
+  - Fetch `GET /api/v1/products` and inspect product `store` field distribution.
+- **Expected**:
+  - Products are distributed across stores (not all tied to a single store unless explicitly intended).
+  - Admin → Products grouping reflects the same distribution.
+
 ## Logging / observability checks (for every security test)
 
 This project already has `AuditLog` support (fields: `username`, `action`, `type`, `detail`, `createdAt`).

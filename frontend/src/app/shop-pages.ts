@@ -1392,17 +1392,17 @@ export class ProductDetailComponent implements OnInit, OnDestroy {
         <div class="nx-orders-modal nx-od-modal" (click)="$event.stopPropagation()">
           <div class="nx-od-head">
             <div class="nx-od-head-left">
-              <div class="nx-od-title">Order <span class="nx-ord-mono">#ORD-{{viewOrder?.orderId}}</span></div>
+              <div class="nx-od-top">
+                <div class="nx-od-title">Order <span class="nx-ord-mono">#ORD-{{viewOrder?.orderId}}</span></div>
+                <span class="nx-od-status-pill" [ngStyle]="getStatusStyles(viewOrder?.status)">● {{viewOrder?.status}}</span>
+              </div>
               <div class="nx-od-meta">
                 <span>Placed {{viewOrder?.orderDate | date:'mediumDate'}}</span>
                 <span class="nx-od-sep"></span>
                 <span>{{viewOrder?.items?.length || 0}} items</span>
               </div>
             </div>
-            <div class="nx-od-head-right">
-              <span class="nx-od-status" [ngStyle]="getStatusStyles(viewOrder?.status)">● {{viewOrder?.status}}</span>
-              <button type="button" class="nx-orders-close" (click)="closeOrderDetails()" aria-label="Close">×</button>
-            </div>
+            <button type="button" class="nx-orders-close" (click)="closeOrderDetails()" aria-label="Close">×</button>
           </div>
 
           <div class="nx-od-actions">
@@ -1417,6 +1417,14 @@ export class ProductDetailComponent implements OnInit, OnDestroy {
             <button type="button" class="nx-od-act">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5Z" stroke="currentColor" stroke-width="1.1"/><path d="M6 4v2.5L7.5 8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
               Contact Support
+            </button>
+            <button type="button" class="nx-od-act amber" [disabled]="!canReturn(viewOrder)" (click)="returnOrder(viewOrder)">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              Return / Refund
+            </button>
+            <button type="button" class="nx-od-act red" [disabled]="!canCancel(viewOrder)" (click)="cancelOrder(viewOrder)">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L1.5 10.5h9L6 1Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 5v2.5M6 9.5v.1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              Cancel Order
             </button>
           </div>
 
@@ -1566,23 +1574,53 @@ export class ProductDetailComponent implements OnInit, OnDestroy {
     .order-row:hover { background:var(--glass2); }
 
     /* Order detail modal (light/dark token-based) */
-    .nx-od-modal{max-width:1040px;width:calc(100vw - 32px);}
-    .nx-od-head{padding:18px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
-    .nx-od-title{font-family:'Playfair Display',serif;font-size:18px;font-style:italic;color:var(--text);margin-bottom:4px;}
-    .nx-od-meta{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text3);}
+    .nx-od-modal{
+      max-width:1040px;
+      width:calc(100vw - 32px);
+      background:color-mix(in srgb,var(--bg) 82%,transparent);
+      border:1px solid color-mix(in srgb,var(--border2) 65%, transparent);
+      box-shadow:0 40px 110px rgba(0,0,0,0.55);
+      backdrop-filter:blur(20px);
+      -webkit-backdrop-filter:blur(20px);
+    }
+    .nx-od-modal::before{
+      content:'';
+      position:absolute;
+      top:0;left:18%;right:18%;
+      height:1px;
+      background:linear-gradient(90deg,transparent,rgba(62,207,178,0.18),transparent);
+      pointer-events:none;
+    }
+    .nx-od-head{padding:20px 22px 12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
+    .nx-od-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
+    .nx-od-title{font-family:'Playfair Display',serif;font-size:22px;font-style:italic;color:var(--text);}
+    .nx-od-status-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:4px 12px;border-radius:999px;font-weight:600;white-space:nowrap;}
+    .nx-od-meta{display:flex;align-items:center;gap:14px;font-size:12px;color:var(--text3);}
     .nx-od-sep{width:1px;height:10px;background:var(--border);opacity:0.9;}
-    .nx-od-head-right{display:flex;align-items:center;gap:10px;}
-    .nx-od-status{font-size:10px;padding:4px 12px;border-radius:20px;font-weight:600;white-space:nowrap;}
-    .nx-od-actions{padding:12px 20px;display:flex;gap:8px;flex-wrap:wrap;}
-    .nx-od-act{padding:8px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.15s;display:flex;align-items:center;gap:6px;border:1px solid var(--border2);background:var(--glass);color:var(--text2);}
-    .nx-od-act:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
+    .nx-od-actions{padding:12px 22px;display:flex;gap:8px;flex-wrap:wrap;}
+    .nx-od-act{
+      padding:8px 16px;border-radius:999px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;
+      transition:all 0.15s;display:flex;align-items:center;gap:6px;
+      border:1px solid var(--border2);background:var(--glass);color:var(--text2);
+    }
+    .nx-od-act:hover{color:var(--text);border-color:rgba(255,255,255,0.2);transform:translateY(-1px);}
     .nx-od-act.teal{background:var(--teal-dim);border-color:rgba(62,207,178,0.2);color:var(--teal2);}
     .nx-od-act.teal:hover{background:var(--teal);color:#080808;border-color:var(--teal);}
-    .nx-od-act:disabled{opacity:0.35;pointer-events:none;}
+    .nx-od-act.amber{background:rgba(232,169,74,0.08);border-color:rgba(232,169,74,0.2);color:var(--amber);}
+    .nx-od-act.amber:hover{background:rgba(232,169,74,0.12);}
+    .nx-od-act.red{background:rgba(224,112,112,0.08);border-color:rgba(224,112,112,0.2);color:var(--red);}
+    .nx-od-act.red:hover{background:rgba(224,112,112,0.12);}
+    .nx-od-act:disabled{opacity:0.35;pointer-events:none;transform:none;}
 
-    .nx-od-grid{display:grid;grid-template-columns:1fr 320px;gap:14px;padding:0 20px 16px;}
+    .nx-od-grid{display:grid;grid-template-columns:1fr 280px;gap:14px;padding:14px 22px 18px;}
     .nx-od-left,.nx-od-right{display:flex;flex-direction:column;gap:12px;min-width:0;}
-    .nx-od-card{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+    .nx-od-card{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative;}
+    .nx-od-card::before{
+      content:'';
+      position:absolute;top:0;left:20%;right:20%;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(62,207,178,0.12),transparent);
+      pointer-events:none;
+    }
     .nx-od-card-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
     .nx-od-card-k{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text2);font-weight:600;}
     .nx-od-card-sub{font-size:11px;color:var(--text3);}
@@ -1638,7 +1676,7 @@ export class ProductDetailComponent implements OnInit, OnDestroy {
     .nx-od-pay-num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);}
     .nx-od-pay-sub{font-size:10.5px;color:var(--text3);}
 
-    .nx-od-foot{padding-top:10px;padding-bottom:20px;}
+    .nx-od-foot{padding-top:8px;padding-bottom:22px;display:flex;justify-content:center;}
 
     @media (max-width: 980px){
       .nx-od-grid{grid-template-columns:1fr;}
@@ -1836,6 +1874,48 @@ export class OrdersComponent implements OnInit {
   closeOrderDetailsOverlay(e: Event) {
     const el = e.target as HTMLElement;
     if (el.classList.contains('nx-orders-overlay')) this.closeOrderDetails();
+  }
+
+  canCancel(order: any): boolean {
+    const s = String(order?.status || '').toUpperCase();
+    return !!order?.orderId && (s === 'PENDING' || s === 'PROCESSING');
+  }
+
+  canReturn(order: any): boolean {
+    const s = String(order?.status || '').toUpperCase();
+    return !!order?.orderId && s === 'DELIVERED';
+  }
+
+  cancelOrder(order: any) {
+    const id = Number(order?.orderId);
+    if (!Number.isFinite(id)) return;
+    this.orderService.cancelMyOrder(id).subscribe({
+      next: (updated: any) => {
+        this.toast.show('Order cancelled');
+        this.patchOrderInLists(updated);
+      },
+      error: () => this.toast.show('Cancel failed', 'error'),
+    });
+  }
+
+  returnOrder(order: any) {
+    const id = Number(order?.orderId);
+    if (!Number.isFinite(id)) return;
+    this.orderService.returnMyOrder(id).subscribe({
+      next: (updated: any) => {
+        this.toast.show('Return requested');
+        this.patchOrderInLists(updated);
+      },
+      error: () => this.toast.show('Return failed', 'error'),
+    });
+  }
+
+  private patchOrderInLists(updated: any) {
+    if (!updated?.orderId) return;
+    const oid = updated.orderId;
+    this.myOrders = (this.myOrders || []).map(o => (o?.orderId === oid ? { ...o, ...updated } : o));
+    if (this.selectedOrder?.orderId === oid) this.selectedOrder = { ...this.selectedOrder, ...updated };
+    if (this.viewOrder?.orderId === oid) this.viewOrder = { ...this.viewOrder, ...updated };
   }
 
   setRating(val: number) {

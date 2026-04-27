@@ -54,7 +54,8 @@ public class OrderController {
     @Operation(summary = "List orders for the current user")
     public ResponseEntity<List<Order>> getMyOrders(@AuthenticationPrincipal UserDetails principal) {
         var user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
-        return ResponseEntity.ok(orderRepository.findByUser(user));
+        // Return a detailed view (items + products) so the SPA can render order details.
+        return ResponseEntity.ok(orderRepository.findByUserIdWithItemsAndProducts(user.getUserId()));
     }
 
     @GetMapping("/my-store")
@@ -69,7 +70,7 @@ public class OrderController {
     @Operation(summary = "Get order by ID", description = "Order owner or admin only.")
     public ResponseEntity<Order> getOrder(@PathVariable Long id,
                                           @AuthenticationPrincipal UserDetails principal) {
-        Optional<Order> found = orderRepository.findById(Objects.requireNonNull(id));
+        Optional<Order> found = orderRepository.findDetailedById(Objects.requireNonNull(id));
         if (found.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -80,6 +81,92 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         return ResponseEntity.ok(order);
+    }
+
+    @PatchMapping("/{id}/cancel")
+    @Operation(summary = "Cancel my order", description = "Order owner can cancel when not shipped/delivered.")
+    public ResponseEntity<Order> cancelMyOrder(@PathVariable Long id,
+                                               @AuthenticationPrincipal UserDetails principal) {
+        User current = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+        Order order = orderRepository.findDetailedById(Objects.requireNonNull(id)).orElseThrow();
+        if (current.getRole() != Role.ADMIN && !order.getUser().getUserId().equals(current.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (order.getStatus() == Order.OrderStatus.CANCELLED || order.getStatus() == Order.OrderStatus.RETURNED) {
+            return ResponseEntity.ok(order);
+        }
+        if (order.getStatus() == Order.OrderStatus.SHIPPED || order.getStatus() == Order.OrderStatus.DELIVERED) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
+        // Restock items
+        if (order.getItems() != null) {
+            for (OrderItem item : order.getItems()) {
+                Product product = item.getProduct();
+                if (product == null || product.getProductId() == null) continue;
+                Product db = productRepository.findById(Objects.requireNonNull(product.getProductId())).orElse(null);
+                if (db == null) continue;
+                int stock = db.getStockQuantity() != null ? db.getStockQuantity() : 0;
+                int qty = item.getQuantity() != null ? item.getQuantity() : 0;
+                int newStock = stock + Math.max(0, qty);
+                db.setStockQuantity(newStock);
+                productRepository.save(db);
+                stockBroadcastService.publish(new StockEvent(
+                        db.getProductId(),
+                        newStock,
+                        Math.max(0, qty),
+                        "cancel",
+                        current.getEmail(),
+                        System.currentTimeMillis()
+                ));
+            }
+        }
+
+        order.setStatus(Order.OrderStatus.CANCELLED);
+        return ResponseEntity.ok(orderRepository.save(order));
+    }
+
+    @PatchMapping("/{id}/return")
+    @Operation(summary = "Return my order", description = "Order owner can request return after delivery.")
+    public ResponseEntity<Order> returnMyOrder(@PathVariable Long id,
+                                               @AuthenticationPrincipal UserDetails principal) {
+        User current = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+        Order order = orderRepository.findDetailedById(Objects.requireNonNull(id)).orElseThrow();
+        if (current.getRole() != Role.ADMIN && !order.getUser().getUserId().equals(current.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (order.getStatus() == Order.OrderStatus.RETURNED) {
+            return ResponseEntity.ok(order);
+        }
+        if (order.getStatus() != Order.OrderStatus.DELIVERED) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
+        // Restock items (simple policy for this MVP)
+        if (order.getItems() != null) {
+            for (OrderItem item : order.getItems()) {
+                Product product = item.getProduct();
+                if (product == null || product.getProductId() == null) continue;
+                Product db = productRepository.findById(Objects.requireNonNull(product.getProductId())).orElse(null);
+                if (db == null) continue;
+                int stock = db.getStockQuantity() != null ? db.getStockQuantity() : 0;
+                int qty = item.getQuantity() != null ? item.getQuantity() : 0;
+                int newStock = stock + Math.max(0, qty);
+                db.setStockQuantity(newStock);
+                productRepository.save(db);
+                stockBroadcastService.publish(new StockEvent(
+                        db.getProductId(),
+                        newStock,
+                        Math.max(0, qty),
+                        "return",
+                        current.getEmail(),
+                        System.currentTimeMillis()
+                ));
+            }
+        }
+
+        order.setStatus(Order.OrderStatus.RETURNED);
+        return ResponseEntity.ok(orderRepository.save(order));
     }
 
     @PostMapping

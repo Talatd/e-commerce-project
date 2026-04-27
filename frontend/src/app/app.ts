@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { AfterViewInit, Component, HostListener, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterModule, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, ProductService, ToastService } from './services';
@@ -13,7 +13,7 @@ import { ConsumerNavPillsComponent } from './consumer-nav-pills.component';
   imports: [RouterOutlet, RouterModule, CommonModule, NexusLogoComponent, ConsumerNavPillsComponent],
   templateUrl: './app.html'
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, AfterViewInit {
   readonly consumerNav = CONSUMER_NAV;
   auth = inject(AuthService);
   router = inject(Router);
@@ -93,68 +93,6 @@ export class AppComponent implements OnInit {
       }
     });
 
-    // Cursor Logic
-    const cursor = document.getElementById('cursor');
-    const ring = document.getElementById('cursor-ring');
-    let mx = 0, my = 0;
-    let rx = 0, ry = 0;
-
-    document.addEventListener('mousemove', e => {
-      mx = e.clientX;
-      my = e.clientY;
-      
-      const target = e.target as HTMLElement;
-      const isPointer = target.closest('button, .mag-pill, .npill, .nx-npill, a.nx-npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link, .res-cat');
-      const computedPointer = getComputedStyle(target).cursor === 'pointer' || (target.parentElement && getComputedStyle(target.parentElement).cursor === 'pointer');
-      
-      if (isPointer || computedPointer) {
-         cursor?.classList.add('hover');
-         ring?.classList.add('hover');
-      } else {
-         cursor?.classList.remove('hover');
-         ring?.classList.remove('hover');
-      }
-
-      const pill = target.closest('.mag-pill') as HTMLElement | null;
-      if (pill) {
-        const r = pill.getBoundingClientRect();
-        const x = ((e.clientX - r.left) / r.width) * 100;
-        const y = ((e.clientY - r.top) / r.height) * 100;
-        pill.style.setProperty('--mx', x + '%');
-        pill.style.setProperty('--my', y + '%');
-      }
-    });
-    
-    document.addEventListener('mousedown', e => {
-       cursor?.classList.add('click');
-       ring?.classList.add('click');
-       setTimeout(() => {
-         cursor?.classList.remove('click');
-         ring?.classList.remove('click');
-       }, 200);
-
-       const target = e.target as HTMLElement;
-       const btn = target.closest('.ripple-btn') as HTMLElement;
-       if (btn) {
-         const r = document.createElement('span');
-         r.className = 'ripple';
-         const rect = btn.getBoundingClientRect();
-         const size = Math.max(rect.width, rect.height);
-         r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size/2}px;top:${e.clientY - rect.top - size/2}px`;
-         btn.appendChild(r);
-         setTimeout(() => r.remove(), 600);
-       }
-    });
-
-    const loop = () => {
-      rx += (mx - rx) * 0.12;
-      ry += (my - ry) * 0.12;
-      if(cursor) { cursor.style.left = mx + 'px'; cursor.style.top = my + 'px'; }
-      if(ring) { ring.style.left = rx + 'px'; ring.style.top = ry + 'px'; }
-      requestAnimationFrame(loop);
-    };
-    loop();
-
     this.toastService.toasts$.subscribe(t => {
       const id = Date.now();
       this.activeToasts.push({ ...t, id });
@@ -162,6 +100,119 @@ export class AppComponent implements OnInit {
         this.activeToasts = this.activeToasts.filter(x => x.id !== id);
       }, 5000);
     });
+  }
+
+  ngAfterViewInit(): void {
+    this.initCustomCursor();
+  }
+
+  /**
+   * Custom cursor: runs after the root template (including #cursor / #cursor-ring) is in the DOM.
+   * Guarded with try/catch so a single bad target node cannot break all pointer input.
+   */
+  private initCustomCursor(): void {
+    const cursor = document.getElementById('cursor');
+    const ring = document.getElementById('cursor-ring');
+    let mx = 0, my = 0;
+    let rx = 0, ry = 0;
+
+    const onMove = (e: MouseEvent) => {
+      try {
+        mx = e.clientX;
+        my = e.clientY;
+
+        const raw = e.target;
+        if (!(raw instanceof Element)) {
+          cursor?.classList.remove('hover');
+          ring?.classList.remove('hover');
+          return;
+        }
+        const target = raw as HTMLElement;
+        const isPointer = !!target.closest(
+          'button, .mag-pill, .npill, .nx-npill, a.nx-npill, .nitem, .sitem-admin, .sitem, .tbtn, .gcard, .c-item, .prod-card, .fancy-link, .res-cat, .sitem-a'
+        );
+        const cs = getComputedStyle(target);
+        const parentCs = target.parentElement ? getComputedStyle(target.parentElement) : null;
+        const computedPointer = cs.cursor === 'pointer' || (!!parentCs && parentCs.cursor === 'pointer');
+
+        if (isPointer || computedPointer) {
+          cursor?.classList.add('hover');
+          ring?.classList.add('hover');
+        } else {
+          cursor?.classList.remove('hover');
+          ring?.classList.remove('hover');
+        }
+
+        const pill = target.closest('.mag-pill') as HTMLElement | null;
+        if (pill) {
+          const r = pill.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) {
+            const x = ((e.clientX - r.left) / r.width) * 100;
+            const y = ((e.clientY - r.top) / r.height) * 100;
+            pill.style.setProperty('--mx', x + '%');
+            pill.style.setProperty('--my', y + '%');
+          }
+        }
+      } catch {
+        // Never let cursor styling take down the whole app.
+      }
+    };
+
+    const onDown = (e: MouseEvent) => {
+      try {
+        cursor?.classList.add('click');
+        ring?.classList.add('click');
+        window.setTimeout(() => {
+          cursor?.classList.remove('click');
+          ring?.classList.remove('click');
+        }, 200);
+
+        const raw = e.target;
+        if (!(raw instanceof Element)) return;
+        const target = raw as HTMLElement;
+        const btn = target.closest('.ripple-btn') as HTMLElement | null;
+        if (btn) {
+          const r = document.createElement('span');
+          r.className = 'ripple';
+          const rect = btn.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height);
+          r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size / 2}px;top:${e.clientY - rect.top - size / 2}px`;
+          btn.appendChild(r);
+          window.setTimeout(() => r.remove(), 600);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    document.addEventListener('mousemove', onMove, { passive: true });
+    document.addEventListener('mousedown', onDown);
+
+    const loop = () => {
+      try {
+        rx += (mx - rx) * 0.12;
+        ry += (my - ry) * 0.12;
+        if (cursor) {
+          cursor.style.left = `${mx}px`;
+          cursor.style.top = `${my}px`;
+        }
+        if (ring) {
+          ring.style.left = `${rx}px`;
+          ring.style.top = `${ry}px`;
+        }
+      } catch {
+        // ignore
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(ev: KeyboardEvent): void {
+    if (ev.key === 'Escape' && this.isSearchOpen) {
+      this.closeSearch();
+    }
   }
 
   toggleTheme() {

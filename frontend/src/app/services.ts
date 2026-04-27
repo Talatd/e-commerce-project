@@ -316,6 +316,14 @@ export class OrderService {
     return this.http.get<any[]>(`${this.apiUrl}/my`);
   }
 
+  cancelMyOrder(orderId: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${orderId}/cancel`, {});
+  }
+
+  returnMyOrder(orderId: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${orderId}/return`, {});
+  }
+
   /** Manager/Admin: orders that include products from the current manager's store. */
   getMyStoreOrders(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/my-store`);

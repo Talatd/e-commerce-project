@@ -18,6 +18,7 @@ import com.smartstore.backend.repository.OrderRepository;
 import com.smartstore.backend.repository.ProductRepository;
 import com.smartstore.backend.repository.StoreRepository;
 import com.smartstore.backend.model.User;
+import com.smartstore.backend.security.AiResponseGuardrail;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -55,6 +56,17 @@ public class ChatController {
             @RequestBody Map<String, Object> payload,
             @AuthenticationPrincipal UserDetails principal) {
 
+        if (principal == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "success", false,
+                    "blocked", true,
+                    "detection_type", "authorization",
+                    "guardrail", "AUTH_REQUIRED",
+                    "response", "Authentication required.",
+                    "sql", "",
+                    "data", List.of()
+            ));
+        }
         User user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
         Long sessionStoreId = resolveSessionStoreId(user);
         String query = payload != null && payload.get("query") != null ? payload.get("query").toString() : "";
@@ -87,6 +99,7 @@ public class ChatController {
             Map<String, Object> response = restTemplate.postForObject(
                     aiServiceUrl + "/api/v1/chatbot/query", aiRequest, Map.class);
             Map<String, Object> safeResponse = response != null ? response : Map.of("error", "Empty response");
+            safeResponse = AiResponseGuardrail.enforce(user.getRole(), sessionStoreId, safeResponse);
             recordGuardrailEventIfAny(principal.getUsername(), user.getUserId(), sessionStoreId, payload, safeResponse);
             return ResponseEntity.ok(safeResponse);
         } catch (Exception e) {
@@ -327,9 +340,13 @@ public class ChatController {
         if (isLaptopRec) {
             BigDecimal budget = parseBudget(query);
             List<com.smartstore.backend.model.Product> candidates = new ArrayList<>();
-            candidates.addAll(productRepository.findByCategory("Computers"));
-            if (candidates.isEmpty()) candidates.addAll(productRepository.findByNameContainingIgnoreCase("laptop"));
-            if (candidates.isEmpty()) candidates.addAll(productRepository.findByNameContainingIgnoreCase("notebook"));
+            if (sessionStoreId != null) {
+                candidates.addAll(productRepository.findByStore_Id(sessionStoreId, org.springframework.data.domain.Pageable.unpaged()).getContent());
+            } else {
+                candidates.addAll(productRepository.findByCategory("Computers"));
+                if (candidates.isEmpty()) candidates.addAll(productRepository.findByNameContainingIgnoreCase("laptop"));
+                if (candidates.isEmpty()) candidates.addAll(productRepository.findByNameContainingIgnoreCase("notebook"));
+            }
 
             candidates = candidates.stream()
                     .filter(p -> p != null && p.getStockQuantity() != null && p.getStockQuantity() > 0)
@@ -375,7 +392,9 @@ public class ChatController {
         }
 
         if (isDiscounted) {
-            var all = productRepository.findAll();
+            var all = (sessionStoreId != null)
+                    ? productRepository.findByStore_Id(sessionStoreId, org.springframework.data.domain.Pageable.unpaged()).getContent()
+                    : productRepository.findAll();
             List<com.smartstore.backend.model.Product> inStock = all.stream()
                     .filter(p -> p != null && p.getStockQuantity() != null && p.getStockQuantity() > 0 && p.getBasePrice() != null)
                     .sorted((a, b) -> a.getBasePrice().compareTo(b.getBasePrice()))
@@ -407,7 +426,9 @@ public class ChatController {
         }
 
         if (isBrandCompare) {
-            var all = productRepository.findAll();
+            var all = (sessionStoreId != null)
+                    ? productRepository.findByStore_Id(sessionStoreId, org.springframework.data.domain.Pageable.unpaged()).getContent()
+                    : productRepository.findAll();
             var apple = all.stream().filter(p -> p != null && p.getBrand() != null && p.getBrand().toLowerCase().contains("apple")).toList();
             var samsung = all.stream().filter(p -> p != null && p.getBrand() != null && p.getBrand().toLowerCase().contains("samsung")).toList();
             java.util.function.Function<List<com.smartstore.backend.model.Product>, BigDecimal> avg = (list) -> {
@@ -680,6 +701,7 @@ public class ChatController {
                 .or(() -> storeRepository.findByOwnerName(user.getFullName()).map(s -> s.getId()))
                 .orElse(null);
     }
+
 
     private static boolean isTruthy(Object v) {
         if (v == null) return false;

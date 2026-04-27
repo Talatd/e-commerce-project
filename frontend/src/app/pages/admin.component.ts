@@ -25,8 +25,9 @@ import { Chart } from './chart-register';
 .nav-r-a { display:flex; align-items:center; gap:12px; }
 .nav-av-a { width:30px; height:30px; border-radius:50%; background:var(--teal-dim); border:1px solid rgba(62,207,178,0.2); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:var(--teal); }
 
-.body-a { display:flex; flex:1; overflow:hidden; }
-.sidebar-a { width:200px; min-width:200px; border-right:1px solid var(--border); background:rgba(8,8,8,0.4); display:flex; flex-direction:column; padding:16px 10px; }
+.body-a { display:flex; flex:1; overflow:hidden; position:relative; }
+/* Ensure sidebar stays clickable even if main overlays render. */
+.sidebar-a { width:200px; min-width:200px; border-right:1px solid var(--border); background:rgba(8,8,8,0.4); display:flex; flex-direction:column; padding:16px 10px; position:relative; z-index:20; }
 .sg-label-a { font-size:8.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3); padding:0 12px; margin:14px 0 6px; }
 .sg-label-a:first-child { margin-top:0; }
 .sitem-a { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:12px; font-size:13px; color:var(--text2); cursor:pointer; transition:all 0.2s; margin-bottom:2px; justify-content:space-between; }
@@ -42,7 +43,7 @@ import { Chart } from './chart-register';
 .su-name-a { font-size:12px; font-weight:500; color:var(--text); }
 .su-role-a { font-size:10px; color:var(--text3); }
 
-.main-a { flex:1; overflow-y:auto; padding:24px; position:relative; }
+.main-a { flex:1; overflow-y:auto; padding:24px; position:relative; z-index:1; }
 .panel-a { display:none; animation:fade-up 0.4s ease forwards; }
 .panel-a.active { display:block; }
 @keyframes fade-up { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
@@ -93,11 +94,12 @@ import { Chart } from './chart-register';
 .tbl-a tr:hover td { background:rgba(255,255,255,0.02); }
 .td-mono-a { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--teal2); }
 .td-name-a { color:var(--text); font-weight:500; }
-.spill-a { display:inline-flex; align-items:center; gap:6px; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:500; }
-.sp-green-a { background:var(--green-dim); color:var(--green); }
-.sp-blue-a { background:rgba(107,168,200,0.1); color:var(--blue); }
-.sp-amber-a { background:rgba(232,169,74,0.1); color:var(--amber); }
-.sp-red-a { background:var(--red-dim); color:var(--red); border:1px solid var(--red-border); }
+.spill-a { display:inline-flex; align-items:center; gap:6px; font-size:11px; padding:3px 10px; border-radius:999px; font-weight:600; letter-spacing:0.02em; border:1px solid transparent; }
+.sp-green-a { background:rgba(62,201,138,0.14); color:var(--green); border-color:rgba(62,201,138,0.28); }
+.sp-blue-a { background:rgba(107,168,200,0.14); color:var(--blue); border-color:rgba(107,168,200,0.28); }
+.sp-amber-a { background:rgba(232,169,74,0.14); color:var(--amber); border-color:rgba(232,169,74,0.30); }
+.sp-red-a { background:rgba(224,112,112,0.14); color:var(--red); border-color:rgba(224,112,112,0.32); }
+.sp-gray-a { background:rgba(140,140,140,0.12); color:var(--text2); border-color:rgba(140,140,140,0.22); }
 .audit-filters{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
 .af-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .af-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;}
@@ -289,7 +291,7 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- DASHBOARD PANEL -->
-      <div class="panel-a" [class.active]="tab === 'dashboard'">
+      <div class="panel-a active" *ngIf="tab === 'dashboard'">
         <div class="top-bar-a">
           <div><div class="page-title-a">Dashboard</div><div class="page-sub-a">Friday, 17 April · Platform overview</div></div>
           <div class="top-actions-a">
@@ -326,7 +328,17 @@ import { Chart } from './chart-register';
                 <td class="td-name-a">{{o.user?.fullName || 'N/A'}}</td>
                 <td>{{o.items?.length || 0}} items</td>
                 <td>{{o.totalAmount | currency}}</td>
-                <td><span class="spill-a" [class.sp-green-a]="o.status==='DELIVERED'" [class.sp-blue-a]="o.status==='SHIPPED' || o.status==='PROCESSING'" [class.sp-amber-a]="o.status==='PENDING'" [class.sp-red-a]="o.status==='CANCELLED'">● {{o.status}}</span></td>
+                <td>
+                  <span
+                    class="spill-a"
+                    [class.sp-green-a]="o.status==='DELIVERED'"
+                    [class.sp-blue-a]="o.status==='SHIPPED' || o.status==='PROCESSING'"
+                    [class.sp-amber-a]="o.status==='PENDING'"
+                    [class.sp-red-a]="o.status==='CANCELLED'"
+                    [class.sp-gray-a]="o.status==='RETURNED'">
+                    ● {{o.status}}
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -334,7 +346,7 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- ANALYTICS PANEL -->
-      <div class="panel-a" [class.active]="tab === 'analytics'">
+      <div class="panel-a active" *ngIf="tab === 'analytics'">
         <div class="top-bar-a"><div><div class="page-title-a">Analytics</div><div class="page-sub-a">Deep platform insights.</div></div></div>
         <div class="kpi-row-a">
           <div class="kpi-a"><div class="kpi-label-a">Conversion Rate</div><div class="kpi-val-a">3.2%</div><div class="kpi-delta-a up-a">↑ 0.4%</div></div>
@@ -359,7 +371,7 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- STORES PANEL -->
-      <div class="panel-a" [class.active]="tab === 'stores'">
+      <div class="panel-a active" *ngIf="tab === 'stores'">
         <div class="top-bar-a">
           <div><div class="page-title-a">Store Management</div><div class="page-sub-a">Approve, open or close stores.</div></div>
           <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a">+ New Store</button></div>
@@ -420,7 +432,7 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- CROSS-STORE COMPARISON PANEL -->
-      <div class="panel-a" [class.active]="tab === 'comparison'">
+      <div class="panel-a active" *ngIf="tab === 'comparison'">
         <div class="top-bar-a">
           <div><div class="page-title-a">Cross-Store Comparison</div><div class="page-sub-a">Compare stores by revenue, orders, rating & avg. order value.</div></div>
         </div>
@@ -463,7 +475,7 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- USERS PANEL -->
-      <div class="panel-a" [class.active]="tab === 'users'">
+      <div class="panel-a active" *ngIf="tab === 'users'">
         <div class="top-bar-a">
           <div><div class="page-title-a">User Management</div><div class="page-sub-a">View, suspend or ban users.</div></div>
           <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a">+ Add User</button></div>
@@ -537,26 +549,43 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- PRODUCTS PANEL -->
-      <div class="panel-a" [class.active]="tab === 'products'">
+      <div class="panel-a active" *ngIf="tab === 'products'">
         <div class="top-bar-a">
           <div><div class="page-title-a">Product Catalog</div><div class="page-sub-a">Manage all store products.</div></div>
           <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a">+ Add Product</button></div>
         </div>
-        <div class="prod-mgmt-grid-a">
-          <div class="pm-card-a" *ngFor="let p of pagedProducts.slice(0,9)">
-            <div class="pm-img-a">
-              <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="pm-img-a-photo" [alt]="p.name"/>
-              <svg *ngIf="!p.imageUrl" width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="4" y="9" width="32" height="20" rx="3" stroke="var(--teal)" stroke-width="1.1" opacity="0.3"/></svg>
-            </div>
-            <div class="pm-body-a">
-              <div class="pm-name-a">{{p.name}}</div>
-              <div class="pm-row-a">
-                <div class="pm-price-a">{{p.basePrice | currency}}</div>
-                <div class="pm-stock-a ok">In Stock</div>
+        <div *ngFor="let g of productGroups" style="margin-bottom:18px;">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px;">
+            <div>
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:18px;color:var(--text);line-height:1;">
+                {{g.storeName}}
               </div>
-              <div class="sc-actions-a">
-                <button class="sc-btn-a">Edit</button>
-                <button class="sc-btn-a danger">Delete</button>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px;">{{g.products.length}} products</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span class="spill-a sp-blue-a" style="font-size:10px;">Store view</span>
+            </div>
+          </div>
+
+          <div class="prod-mgmt-grid-a">
+            <div class="pm-card-a" *ngFor="let p of g.products">
+              <div class="pm-img-a">
+                <img *ngIf="p.imageUrl" [src]="p.imageUrl" class="pm-img-a-photo" [alt]="p.name"/>
+                <svg *ngIf="!p.imageUrl" width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="4" y="9" width="32" height="20" rx="3" stroke="var(--teal)" stroke-width="1.1" opacity="0.3"/></svg>
+              </div>
+              <div class="pm-body-a">
+                <div class="pm-name-a">{{p.name}}</div>
+                <div style="font-size:10px;color:var(--text3);margin:-2px 0 10px;">{{p.category || '—'}} · {{p.brand || '—'}}</div>
+                <div class="pm-row-a">
+                  <div class="pm-price-a">{{p.basePrice | currency}}</div>
+                  <div class="pm-stock-a" [class.ok]="(p.stockQuantity || 0) > 5" [class.low]="(p.stockQuantity || 0) > 0 && (p.stockQuantity || 0) <= 5" [class.sp-red-a]="(p.stockQuantity || 0) <= 0">
+                    {{(p.stockQuantity || 0) <= 0 ? 'Out' : ((p.stockQuantity || 0) <= 5 ? (p.stockQuantity + ' left') : 'In Stock')}}
+                  </div>
+                </div>
+                <div class="sc-actions-a">
+                  <button class="sc-btn-a">Edit</button>
+                  <button class="sc-btn-a danger">Delete</button>
+                </div>
               </div>
             </div>
           </div>
@@ -564,7 +593,7 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- ORDERS PANEL -->
-      <div class="panel-a" [class.active]="tab === 'orders'">
+      <div class="panel-a active" *ngIf="tab === 'orders'">
         <div class="top-bar-a">
           <div><div class="page-title-a">Order Management</div><div class="page-sub-a">View and manage all platform orders.</div></div>
         </div>
@@ -576,7 +605,19 @@ import { Chart } from './chart-register';
                 <td class="td-mono-a">#ORD-{{o.orderId}}</td>
                 <td class="td-name-a">{{o.user?.fullName || 'N/A'}}</td>
                 <td>{{o.totalAmount | currency}}</td>
-                <td><span class="spill-a" [ngClass]="{'sp-green-a': o.status === 'DELIVERED', 'sp-blue-a': o.status === 'PROCESSING' || o.status === 'SHIPPED', 'sp-amber-a': o.status === 'PENDING'}">● {{o.status}}</span></td>
+                <td>
+                  <span
+                    class="spill-a"
+                    [ngClass]="{
+                      'sp-green-a': o.status === 'DELIVERED',
+                      'sp-blue-a': o.status === 'PROCESSING' || o.status === 'SHIPPED',
+                      'sp-amber-a': o.status === 'PENDING',
+                      'sp-red-a': o.status === 'CANCELLED',
+                      'sp-gray-a': o.status === 'RETURNED'
+                    }">
+                    ● {{o.status}}
+                  </span>
+                </td>
                 <td>{{o.orderDate | date:'short'}}</td>
               </tr>
               <tr *ngIf="allOrders.length === 0">
@@ -588,7 +629,7 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- CATEGORIES PANEL -->
-      <div class="panel-a" [class.active]="tab === 'categories'">
+      <div class="panel-a active" *ngIf="tab === 'categories'">
         <div class="top-bar-a">
           <div><div class="page-title-a">Category Management</div><div class="page-sub-a">Manage product taxonomy.</div></div>
           <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a" (click)="addCategory()">+ Add Category</button></div>
@@ -614,7 +655,7 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- AUDIT LOGS PANEL -->
-      <div class="panel-a" [class.active]="tab === 'auditlogs'">
+      <div class="panel-a active" *ngIf="tab === 'auditlogs'">
         <div class="top-bar-a"><div><div class="page-title-a">Audit Logs</div><div class="page-sub-a">Platform activity monitoring.</div></div></div>
         <div class="table-card-a">
           <div class="audit-filters">
@@ -650,14 +691,15 @@ import { Chart } from './chart-register';
       </div>
 
       <!-- AI ASSISTANT PANEL (Admin / platform-wide) -->
-      <div class="panel-a" [class.active]="tab === 'assistant'">
+      <div class="panel-a active" *ngIf="tab === 'assistant'">
         <div class="top-bar-a">
           <div><div class="page-title-a">AI Assistant</div><div class="page-sub-a">Platform-wide Text2SQL analytics (admin scope)</div></div>
           <div class="top-actions-a">
             <button class="tbtn-a tbtn-ghost-a" (click)="clearAiChat()">New Chat</button>
           </div>
         </div>
-        <div class="chat-shell-a">
+        <div style="display:grid;grid-template-columns:1.25fr 0.75fr;gap:14px;align-items:stretch;">
+        <div class="chat-shell-a" style="min-height:560px;">
           <div class="chat-head-a">
             <div>
               <div class="chat-name-a">Nexus AI</div>
@@ -713,10 +755,51 @@ import { Chart } from './chart-register';
             </div>
           </div>
         </div>
+
+        <!-- Explainable AI panel -->
+        <div class="gcard-a" style="min-height:560px;display:flex;flex-direction:column;">
+          <div class="gc-head-a">
+            <div class="gc-title-a">Explainable AI</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span class="spill-a sp-blue-a" style="font-size:10px;">rows: {{aiTrace.rowCount}}</span>
+              <span class="spill-a" [class.sp-green-a]="aiTrace.confidence>=0.8" [class.sp-amber-a]="aiTrace.confidence<0.8 && aiTrace.confidence>=0.5" [class.sp-red-a]="aiTrace.confidence<0.5">confidence: {{(aiTrace.confidence*100).toFixed(0)}}%</span>
+            </div>
+          </div>
+          <div class="gc-body-a" style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;overflow:auto;">
+            <div>
+              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Trace</div>
+              <div *ngIf="aiTrace.steps.length===0" style="color:var(--text3);font-size:12px;line-height:1.6;">No steps yet. Run a query to see what the agent did.</div>
+              <div *ngFor="let s of aiTrace.steps" style="padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:var(--glass);margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;gap:10px;">
+                  <div style="font-size:11px;color:var(--text2);font-weight:650;">{{s.agent || 'agent'}}</div>
+                  <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;">{{s.at}}</div>
+                </div>
+                <div style="font-size:11px;color:var(--text3);margin-top:4px;">{{s.action || 'step'}}</div>
+                <div *ngIf="s.detail" style="font-size:11.5px;color:var(--text2);margin-top:6px;white-space:pre-wrap;">{{s.detail}}</div>
+              </div>
+            </div>
+
+            <div>
+              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">SQL</div>
+              <div style="background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text3);white-space:pre-wrap;min-height:64px;">
+                {{aiTrace.sql || '—'}}
+              </div>
+            </div>
+
+            <div>
+              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Guardrails</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <span class="spill-a" [class.sp-red-a]="aiTrace.blocked" [class.sp-green-a]="!aiTrace.blocked">{{aiTrace.blocked ? 'BLOCKED' : 'OK'}}</span>
+                <span class="spill-a sp-gray-a" style="font-size:10px;">server-side scope enforced</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
       </div>
 
       <!-- CONFIG PANEL -->
-      <div class="panel-a" [class.active]="tab === 'settings'">
+      <div class="panel-a active" *ngIf="tab === 'settings'">
         <div class="top-bar-a"><div><div class="page-title-a">System Config</div><div class="page-sub-a">Manage platform behavior.</div></div></div>
         <div class="set-card-a">
           <div class="set-row-a">
@@ -769,6 +852,13 @@ export class AdminComponent implements OnInit, AfterViewInit {
   auditOnlyLowStock = false;
   aiPrompt = '';
   aiBusy = false;
+  aiTrace = {
+    steps: [] as Array<{ at: string; agent?: string; action?: string; detail?: string }>,
+    sql: '' as string,
+    rowCount: 0 as number,
+    confidence: 0 as number,
+    blocked: false as boolean,
+  };
   aiChatMessages: any[] = [
     { sender: 'ai', text: 'Ask me anything about platform analytics. I will generate SQL and summarize results.' }
   ];
@@ -779,6 +869,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
   orders: any[] = [];
   allOrders: any[] = [];
   pagedProducts: any[] = [];
+  productGroups: Array<{ storeName: string; products: any[] }> = [];
   stats: any = {};
 
   storeViewOpen = false;
@@ -918,6 +1009,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
         next: (results: any) => {
           this.pagedProducts = results[0];
           this.stores = results[1];
+          this.productGroups = this.computeProductGroups(this.pagedProducts, this.stores);
           this.users = results[2];
           this.allOrders = results[3];
           this.orders = results[3].slice(0, 10);
@@ -931,6 +1023,42 @@ export class AdminComponent implements OnInit, AfterViewInit {
         }
       });
     });
+  }
+
+  private computeProductGroups(input: any[], stores: any[] = []): Array<{ storeName: string; products: any[] }> {
+    const list = Array.isArray(input) ? input : [];
+    const by = new Map<string, any[]>();
+
+    for (const p of list) {
+      const storeName = String(p?.store?.name || p?.storeName || 'Unknown store');
+      if (!by.has(storeName)) by.set(storeName, []);
+      by.get(storeName)!.push(p);
+    }
+
+    // Keep store order stable and "nice": known stores first if present.
+    const preferred = ['TechHub Performance', 'GadgetPro Lifestyle'];
+    const namesSet = new Set<string>(Array.from(by.keys()));
+    // Ensure every known store appears even if it has 0 products.
+    (Array.isArray(stores) ? stores : []).forEach((s: any) => {
+      const n = String(s?.name || '').trim();
+      if (n) namesSet.add(n);
+    });
+
+    const names = Array.from(namesSet).sort((a, b) => {
+      const ai = preferred.indexOf(a);
+      const bi = preferred.indexOf(b);
+      if (ai !== -1 || bi !== -1) {
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      }
+      return a.localeCompare(b);
+    });
+
+    return names.map((n) => ({
+      storeName: n,
+      products: (by.get(n) || []).slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''))),
+    }));
   }
 
   openStoreView(s: any) {
@@ -1029,6 +1157,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
     this.aiBusy = false;
     // AiService has session support; reset it if available.
     this.ai.sessionId = null;
+    this.aiTrace = { steps: [], sql: '', rowCount: 0, confidence: 0, blocked: false };
     this.aiChatMessages = [
       { sender: 'ai', text: 'New session started. Try: “Compare total revenue of all stores”.' }
     ];
@@ -1045,30 +1174,58 @@ export class AdminComponent implements OnInit, AfterViewInit {
     if (!q || this.aiBusy) return;
     this.aiPrompt = '';
     this.aiBusy = true;
+    this.aiTrace = { steps: [], sql: '', rowCount: 0, confidence: 0, blocked: false };
     this.aiChatMessages.push({ sender: 'user', text: q });
 
-    this.ai.query(q, this.aiHistory).subscribe({
-      next: (res: any) => {
+    const now = () => new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+    this.ai.queryStream(
+      q,
+      this.aiHistory,
+      (step: any) => {
+        const agent = step?.agent || step?.name || step?.tool || step?.source;
+        const action = step?.action || step?.type || 'step';
+        const detail = step?.detail || step?.message || step?.text || '';
+        this.aiTrace.steps.push({ at: now(), agent, action, detail });
+      },
+      (final: any) => {
+        const res = final?.result ?? final; // tolerate both shapes
         const cleaned = this.cleanAiResponse(res?.response);
+        const dataLen = Array.isArray(res?.data) ? res.data.length : 0;
+        const blocked = !!res?.blocked;
+        const sql = (res?.sql || '').toString();
+
+        this.aiTrace.blocked = blocked;
+        this.aiTrace.sql = sql;
+        this.aiTrace.rowCount = dataLen;
+        this.aiTrace.confidence = this.computeConfidenceScore(blocked, sql, dataLen);
+
         const noDataHint = this.buildNoDataHintIfNeeded(q, res);
         this.aiChatMessages.push({
           sender: 'ai',
           text: cleaned || 'No response',
-          blocked: !!res?.blocked,
+          blocked,
           detection_type: res?.detection_type,
           guardrail: res?.guardrail,
           requested_store_id: res?.requested_store_id,
-          sql: res?.sql,
+          sql,
           noDataHint,
         });
         this.aiHistory.push('User: ' + q, 'AI: ' + (cleaned || ''));
         this.aiBusy = false;
       },
-      error: () => {
+      () => {
         this.aiChatMessages.push({ sender: 'ai', text: 'Sorry, something went wrong. Please try again.' });
         this.aiBusy = false;
       }
-    });
+    );
+  }
+
+  private computeConfidenceScore(blocked: boolean, sql: string, rowCount: number): number {
+    if (blocked) return 0;
+    const hasSql = !!(sql || '').trim();
+    if (rowCount <= 0) return hasSql ? 0.55 : 0.45;
+    return hasSql ? 0.85 : 0.7;
   }
 
   private cleanAiResponse(v: any): string {

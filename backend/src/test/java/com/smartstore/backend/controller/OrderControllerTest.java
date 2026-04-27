@@ -59,7 +59,7 @@ class OrderControllerTest {
         o.setOrderId(1L);
         o.setTotalAmount(BigDecimal.valueOf(250));
         o.setUser(buyer);
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(o));
+        when(orderRepository.findDetailedById(1L)).thenReturn(Optional.of(o));
         when(userRepository.findByEmail("owner@test.com")).thenReturn(Optional.of(buyer));
 
         UserDetails principal = org.springframework.security.core.userdetails.User
@@ -102,7 +102,7 @@ class OrderControllerTest {
         Order o = new Order();
         o.setOrderId(1L);
         o.setUser(owner);
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(o));
+        when(orderRepository.findDetailedById(1L)).thenReturn(Optional.of(o));
         when(userRepository.findByEmail("other@test.com")).thenReturn(Optional.of(other));
 
         UserDetails principal = org.springframework.security.core.userdetails.User

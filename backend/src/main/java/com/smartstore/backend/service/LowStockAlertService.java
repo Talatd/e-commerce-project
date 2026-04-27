@@ -27,6 +27,7 @@ public class LowStockAlertService {
     @Value("${app.stock.low-alert-cooldown-minutes:360}")
     private int cooldownMinutes;
 
+    @SuppressWarnings("null")
     public void maybeAlert(Product product, String triggeredBy) {
         if (product == null || product.getProductId() == null) return;
         Integer stock = product.getStockQuantity();
