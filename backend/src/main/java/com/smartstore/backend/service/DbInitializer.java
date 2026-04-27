@@ -457,6 +457,20 @@ public class DbInitializer {
                 review.setComment(comment);
                 review.setSentimentScore(BigDecimal.valueOf(0.5 + (rating - 3) * 0.2 + (random.nextDouble() * 0.1)));
 
+                // Spread review timestamps across the last 12 months for trend analysis.
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime start = now.minusMonths(12);
+                long spanSeconds = java.time.Duration.between(start, now).getSeconds();
+                long off = spanSeconds > 0 ? random.nextLong(spanSeconds) : 0;
+                LocalDateTime createdAt = start.plusSeconds(off);
+                review.setCreatedAt(createdAt);
+
+                // Some reviews have store responses after a short delay (demo realism).
+                if (random.nextDouble() < 0.25) {
+                    review.setStoreResponse("Thanks for the feedback — we’re glad you liked it.");
+                    review.setRespondedAt(createdAt.plusDays(1 + random.nextInt(10)));
+                }
+
                 reviewRepository.save(review);
                 totalRating += rating;
             }
@@ -634,12 +648,26 @@ public class DbInitializer {
             return;
         }
 
-        for (int i = 0; i < 50; i++) {
+        // Spread orders across the last 12 months so analytics + AI queries have meaningful trends.
+        // Ensure each month has at least a few orders.
+        final int monthsBack = 12;
+        final int ordersPerMonthMin = 6;
+        final int ordersPerMonthExtra = 10; // adds 0..9 extra orders per month
+
+        int created = 0;
+        for (int m = 0; m < monthsBack; m++) {
+            int n = ordersPerMonthMin + random.nextInt(ordersPerMonthExtra);
+            for (int j = 0; j < n; j++) {
             User customer = customers.get(random.nextInt(customers.size()));
 
             Order order = new Order();
             order.setUser(customer);
-            order.setOrderDate(LocalDateTime.now().minusDays(random.nextInt(30)));
+            // Pick a stable random timestamp within the month window (m months ago).
+            LocalDateTime monthStart = LocalDateTime.now().minusMonths(m).withDayOfMonth(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
+            LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
+            long span = java.time.Duration.between(monthStart, monthEnd).getSeconds();
+            long offset = span > 0 ? random.nextLong(span) : 0;
+            order.setOrderDate(monthStart.plusSeconds(offset));
             
             // Seed 1–3 order items so Orders UI can render details.
             int itemCount = 1 + random.nextInt(3);
@@ -664,29 +692,39 @@ public class DbInitializer {
             order.setTotalAmount(order.getSubtotalAmount().add(order.getTaxAmount()).add(order.getShippingAmount()));
             order.setShippingAddress(customer.getFullName() + "'s Home, " + new String[] { "San Francisco", "Seattle", "Austin", "New York" }[random.nextInt(4)]);
 
-            OrderStatus[] statuses = OrderStatus.values();
-            // Ensure at least one visible PENDING order in the demo list.
-            if (i == 0) {
+            // Status distribution (realistic-ish):
+            // - most orders end up DELIVERED
+            // - some are CANCELLED
+            // - a smaller slice becomes RETURNED (only after delivery)
+            // - keep some in-flight states for dashboards
+            if (created == 0) {
                 order.setStatus(OrderStatus.PENDING);
             } else {
-                order.setStatus(statuses[random.nextInt(statuses.length)]);
+                double r = random.nextDouble();
+                if (r < 0.10) order.setStatus(OrderStatus.CANCELLED);
+                else if (r < 0.18) order.setStatus(OrderStatus.RETURNED);
+                else if (r < 0.30) order.setStatus(OrderStatus.SHIPPED);
+                else if (r < 0.42) order.setStatus(OrderStatus.PROCESSING);
+                else order.setStatus(OrderStatus.DELIVERED);
             }
 
             Order savedOrder = orderRepository.save(order);
             seedOrderEvents(savedOrder);
             seedShipmentForOrder(savedOrder, random);
+            created++;
+            }
         }
     }
 
     private void seedOrderEvents(Order order) {
         OrderEvent e1 = new OrderEvent();
         e1.setOrder(order);
-        e1.setStatus(order.getStatus().name());
+        e1.setStatus(OrderStatus.PENDING.name());
         e1.setNotes("Order received and pending payment verification.");
         e1.setEventDate(order.getOrderDate());
         orderEventRepository.save(e1);
 
-        if (order.getStatus() != OrderStatus.PENDING) {
+        if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CANCELLED) {
             OrderEvent e2 = new OrderEvent();
             e2.setOrder(order);
             e2.setStatus(OrderStatus.PROCESSING.name());
@@ -695,7 +733,7 @@ public class DbInitializer {
             orderEventRepository.save(e2);
         }
 
-        if (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED) {
+        if (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.RETURNED) {
             OrderEvent e3 = new OrderEvent();
             e3.setOrder(order);
             e3.setStatus(OrderStatus.SHIPPED.name());
@@ -704,7 +742,7 @@ public class DbInitializer {
             orderEventRepository.save(e3);
         }
 
-        if (order.getStatus() == OrderStatus.DELIVERED) {
+        if (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.RETURNED) {
             OrderEvent e4 = new OrderEvent();
             e4.setOrder(order);
             e4.setStatus(OrderStatus.DELIVERED.name());
@@ -712,10 +750,28 @@ public class DbInitializer {
             e4.setEventDate(order.getOrderDate().plusDays(3));
             orderEventRepository.save(e4);
         }
+
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            OrderEvent eC = new OrderEvent();
+            eC.setOrder(order);
+            eC.setStatus(OrderStatus.CANCELLED.name());
+            eC.setNotes("Order cancelled by customer (demo seed).");
+            eC.setEventDate(order.getOrderDate().plusHours(6));
+            orderEventRepository.save(eC);
+        }
+
+        if (order.getStatus() == OrderStatus.RETURNED) {
+            OrderEvent eR = new OrderEvent();
+            eR.setOrder(order);
+            eR.setStatus(OrderStatus.RETURNED.name());
+            eR.setNotes("Return processed (demo seed).");
+            eR.setEventDate(order.getOrderDate().plusDays(7));
+            orderEventRepository.save(eR);
+        }
     }
 
     private void seedShipmentForOrder(Order order, Random random) {
-        if (order.getStatus() == OrderStatus.PENDING)
+        if (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CANCELLED)
             return;
         Shipment shipment = new Shipment();
         shipment.setOrder(order);
@@ -725,17 +781,28 @@ public class DbInitializer {
                 new String[] { "Nexus Logistics", "Global Express", "Prime Delivery", "Swift Carrier" }[random
                         .nextInt(4)]);
         shipment.setTrackingNumber("NX-" + (100000 + random.nextInt(900000)));
-        shipment.setEstimatedDelivery(order.getOrderDate().plusDays(3 + random.nextInt(3)));
+        shipment.setEstimatedDelivery(order.getOrderDate().plusDays(3 + random.nextInt(5)));
 
         if (order.getStatus() == OrderStatus.PROCESSING) {
             shipment.setStatus(Shipment.ShipmentStatus.PREPARING);
         } else if (order.getStatus() == OrderStatus.SHIPPED) {
-            shipment.setStatus(Shipment.ShipmentStatus.SHIPPED);
+            shipment.setStatus(Shipment.ShipmentStatus.IN_TRANSIT);
             shipment.setShippedAt(order.getOrderDate().plusHours(24));
+            // Some shipments are overdue (estimatedDelivery passed but not delivered).
+            if (random.nextDouble() < 0.25) {
+                shipment.setEstimatedDelivery(order.getOrderDate().plusDays(2));
+                shipment.setOnTimeDelivery(false);
+                shipment.setCustomerCareCalls(1 + random.nextInt(4));
+            }
         } else if (order.getStatus() == OrderStatus.DELIVERED) {
             shipment.setStatus(Shipment.ShipmentStatus.DELIVERED);
             shipment.setShippedAt(order.getOrderDate().plusHours(24));
             shipment.setDeliveredAt(shipment.getEstimatedDelivery().minusHours(random.nextInt(12)));
+            shipment.setOnTimeDelivery(true);
+        } else if (order.getStatus() == OrderStatus.RETURNED) {
+            shipment.setStatus(Shipment.ShipmentStatus.RETURNED);
+            shipment.setShippedAt(order.getOrderDate().plusHours(24));
+            shipment.setDeliveredAt(order.getOrderDate().plusDays(3));
             shipment.setOnTimeDelivery(true);
         }
         shipmentRepository.save(shipment);

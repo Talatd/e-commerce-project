@@ -205,36 +205,51 @@ def analysis_agent(state: AgentState):
             resp = f"{k.replace('_', ' ').capitalize()}: {val}"
         return {**state, "response": resp, "next_step": "end"}
 
-    # Case B: small result set => render a compact table-like text.
+    # Case B: render an aligned plain-text table (works well in chat bubbles).
     max_rows = 8
-    show = rows[:max_rows]
-    cols = keys[:6] if keys else []
+    show = [r for r in rows[:max_rows] if isinstance(r, dict)]
+    cols = (keys[:6] if keys else [])
 
-    def _cell(k, v):
+    def _cell(k, v) -> str:
         if v is None:
             return "—"
-        return _fmt_currency(v) if _is_money_key(k) else str(v)
+        s = _fmt_currency(v) if _is_money_key(k) else str(v)
+        # Keep rows compact
+        s = s.replace("\n", " ").strip()
+        if len(s) > 28:
+            s = s[:27] + "…"
+        return s
 
-    lines = []
-    if cols:
-        header = " | ".join([c.replace("_", " ") for c in cols])
-        lines.append(header)
-        lines.append("-" * min(len(header), 80))
+    lines: List[str] = []
+    if cols and show:
+        # Compute per-column widths from header + values
+        headers = [c.replace("_", " ") for c in cols]
+        widths = [len(h) for h in headers]
         for r in show:
-            if not isinstance(r, dict):
-                continue
-            lines.append(" | ".join(_cell(c, r.get(c)) for c in cols))
+            for i, c in enumerate(cols):
+                widths[i] = min(28, max(widths[i], len(_cell(c, r.get(c)))))
+
+        def _row(values: List[str]) -> str:
+            parts = []
+            for i, v in enumerate(values):
+                parts.append(v.ljust(widths[i]))
+            return " | ".join(parts)
+
+        lines.append(_row(headers))
+        lines.append("-+-".join("-" * w for w in widths))
+        for r in show:
+            lines.append(_row([_cell(c, r.get(c)) for c in cols]))
 
     if is_tr:
         prefix = f"{len(rows)} satır bulundu."
         resp = prefix + ("\n\n" + "\n".join(lines) if lines else "")
+        if len(rows) > max_rows:
+            resp += "\n\nNot: Daha fazla satır var, ilk kısmı gösteriyorum."
     else:
         prefix = f"Found {len(rows)} rows."
         resp = prefix + ("\n\n" + "\n".join(lines) if lines else "")
-
-    # If we truncated rows, tell the user.
-    if len(rows) > max_rows:
-        resp += "\n\n" + ("Not: Daha fazla satır var, ilk kısmı gösteriyorum." if is_tr else "Note: More rows exist; showing the first ones.")
+        if len(rows) > max_rows:
+            resp += "\n\nNote: More rows exist; showing the first ones."
 
     return {**state, "response": resp, "next_step": "end"}
 

@@ -729,16 +729,34 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   private buildRevenueChart() {
     if (!this.revenueCanvas?.nativeElement) return;
     if (this.revenueChart) this.revenueChart.destroy();
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const months: { y: number; m: number; label: string; key: string }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      months.push({
+        y,
+        m,
+        label: `${monthNames[m]}`,
+        key: `${y}-${String(m + 1).padStart(2, '0')}`,
+      });
+    }
+    const idxByKey = new Map<string, number>(months.map((x, i) => [x.key, i]));
     const revenueByMonth = new Array(12).fill(0);
-    this.storeOrders.forEach((o: any) => {
+    (this.storeOrders || []).forEach((o: any) => {
       const d = new Date(o.orderDate);
-      if (!isNaN(d.getTime())) revenueByMonth[d.getMonth()] += o.totalAmount || 0;
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const idx = idxByKey.get(key);
+      if (idx === undefined) return;
+      revenueByMonth[idx] += Number(o.totalAmount || 0);
     });
     this.revenueChart = new Chart(this.revenueCanvas.nativeElement, {
       type: 'bar',
       data: {
-        labels: months,
+        labels: months.map(x => x.label),
         datasets: [{
           label: 'Revenue ($)',
           data: revenueByMonth,
@@ -752,7 +770,7 @@ export class ManagerComponent implements OnInit, AfterViewInit {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          x: { ticks: { color: '#7A918D', maxRotation: 0, autoSkip: false }, grid: { color: 'rgba(255,255,255,0.04)' } },
           y: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } }
         }
       }
@@ -811,14 +829,29 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   }
 
   private recomputeMonthlyRevenueBars() {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const months: { label: string; key: string }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      months.push({
+        label: `${monthNames[m]}`,
+        key: `${y}-${String(m + 1).padStart(2, '0')}`,
+      });
+    }
+    const idxByKey = new Map<string, number>(months.map((x, i) => [x.key, i]));
     const revenueByMonth = new Array(12).fill(0);
 
     // Dashboard should reflect full store performance (not date-filtered analytics).
     (this.storeOrders || []).forEach((o: any) => {
       const d = new Date(o.orderDate);
       if (!isNaN(d.getTime())) {
-        revenueByMonth[d.getMonth()] += Number(o.totalAmount || 0);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const idx = idxByKey.get(key);
+        if (idx === undefined) return;
+        revenueByMonth[idx] += Number(o.totalAmount || 0);
       }
     });
 
@@ -831,12 +864,12 @@ export class ManagerComponent implements OnInit, AfterViewInit {
       const raw = revenueByMonth[i];
       const pct = max > 0 ? Math.round((raw / max) * 100) : 0;
       const h = max > 0 ? Math.max(minPct, pct) : 8;
-      return { h, l: m, hi: i === peakIdx && max > 0, v: raw };
+      return { h, l: m.label, hi: i === peakIdx && max > 0, v: raw };
     });
 
     if (peakIdx >= 0) {
       const val = Math.round(max);
-      this.monthlyRevenuePeakLabel = `Peak: ${months[peakIdx]} · $${val.toLocaleString()}`;
+      this.monthlyRevenuePeakLabel = `Peak: ${months[peakIdx].label} · $${val.toLocaleString()}`;
     } else {
       this.monthlyRevenuePeakLabel = 'Peak: —';
     }

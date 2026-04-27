@@ -895,16 +895,34 @@ export class AdminComponent implements OnInit, AfterViewInit {
   private buildAdminCharts() {
     if (this.adminRevenueCanvas?.nativeElement) {
       if (this.revChart) this.revChart.destroy();
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const now = new Date();
+      const months: { y: number; m: number; label: string; key: string }[] = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const y = d.getFullYear();
+        const m = d.getMonth();
+        months.push({
+          y,
+          m,
+          label: `${monthNames[m]}`,
+          key: `${y}-${String(m + 1).padStart(2, '0')}`,
+        });
+      }
+      const idxByKey = new Map<string, number>(months.map((x, i) => [x.key, i]));
       const revenueByMonth = new Array(12).fill(0);
-      this.allOrders.forEach((o: any) => {
+      (this.allOrders || []).forEach((o: any) => {
         const d = new Date(o.orderDate);
-        if (!isNaN(d.getTime())) revenueByMonth[d.getMonth()] += o.totalAmount || 0;
+        if (isNaN(d.getTime())) return;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const idx = idxByKey.get(key);
+        if (idx === undefined) return;
+        revenueByMonth[idx] += Number(o.totalAmount || 0);
       });
       this.revChart = new Chart(this.adminRevenueCanvas.nativeElement, {
         type: 'line',
         data: {
-          labels: months,
+          labels: months.map(x => x.label),
           datasets: [{
             label: 'Revenue ($)',
             data: revenueByMonth,
@@ -920,7 +938,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            x: { ticks: { color: '#7A918D', maxRotation: 0, autoSkip: false }, grid: { color: 'rgba(255,255,255,0.04)' } },
             y: { ticks: { color: '#7A918D' }, grid: { color: 'rgba(255,255,255,0.04)' } }
           }
         }

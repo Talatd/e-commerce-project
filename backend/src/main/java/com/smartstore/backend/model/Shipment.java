@@ -56,7 +56,9 @@ public class Shipment {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
     }
 
     /** Values must match MySQL ENUM on shipments.status (see database/schema.sql). */
