@@ -447,7 +447,77 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
 .rs-neutral{background:var(--glass2);color:var(--text2);border:1px solid var(--border);}
 .rev-kw{font-size:10px;padding:2px 8px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--text3);}
 
-/* (moved) AI assistant/chat + flow styles → src/styles.css */
+/* AI assistant/chat + flow styles */
+.chat-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:rgba(255,255,255,0.03);
+  backdrop-filter:blur(12px);
+}
+.ch-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.ai-avatar{width:34px;height:34px;border-radius:12px;background:var(--teal-dim);border:1px solid rgba(62,207,178,0.2);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;}
+.ai-online{position:absolute;right:6px;bottom:6px;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 2px rgba(8,8,8,0.8);}
+.ch-name{font-size:12.5px;font-weight:650;color:var(--text);line-height:1.1;}
+.ch-status{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text3);margin-top:3px;white-space:nowrap;}
+.ch-status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(62,201,138,0.22);}
+.ch-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.ai-badge{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--teal);background:rgba(62,207,178,0.08);border:1px solid rgba(62,207,178,0.16);padding:6px 10px;border-radius:999px;white-space:nowrap;}
+.ch-btn{font-size:11px;color:var(--text2);background:rgba(255,255,255,0.03);border:1px solid var(--border);padding:6px 10px;border-radius:999px;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.ch-btn:hover{background:var(--glass2);color:var(--text);}
+
+.ai-flow-strip{margin-top:10px;}
+.ai-flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,0.02);}
+.af-node{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--text3);padding:5px 8px;border-radius:999px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);white-space:nowrap;}
+.af-node.active{color:var(--teal);border-color:rgba(62,207,178,0.25);background:rgba(62,207,178,0.08);}
+.af-node.done{color:var(--green);border-color:rgba(62,201,138,0.22);background:rgba(62,201,138,0.08);}
+.af-node.err{color:var(--red);border-color:rgba(224,112,112,0.22);background:rgba(224,112,112,0.08);}
+.af-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0.85;}
+.af-arrow{font-size:10px;color:var(--text3);opacity:0.7;}
+.af-meta{margin-left:auto;font-size:10px;color:var(--text3);}
+
+.messages-area{
+  margin-top:10px;
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  padding:12px 10px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:rgba(255,255,255,0.02);
+}
+.msg-user{display:flex;justify-content:flex-end;margin:8px 0;}
+.msg-user-bubble{max-width:min(620px, 86%);background:rgba(62,207,178,0.14);border:1px solid rgba(62,207,178,0.22);color:var(--text);padding:10px 12px;border-radius:14px 14px 4px 14px;font-size:13px;line-height:1.55;white-space:pre-wrap;}
+.msg-ai{display:flex;gap:10px;align-items:flex-start;margin:10px 0;}
+.msg-ai-av{width:30px;height:30px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.msg-ai-body{min-width:0;max-width:min(720px, 90%);}
+.msg-ai-name{font-size:9.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);font-weight:700;margin:2px 0 6px;}
+.msg-ai-bubble{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);color:var(--text2);padding:10px 12px;border-radius:4px 14px 14px 14px;font-size:13px;line-height:1.6;}
+.msg-ai-bubble a{color:var(--teal);text-decoration:none;}
+.msg-ai-bubble a:hover{text-decoration:underline;}
+.msg-time{font-size:10px;color:var(--text3);margin-top:6px;}
+
+.typing-ind{display:flex;gap:10px;align-items:flex-start;margin:10px 0;}
+.typing-av{width:30px;height:30px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.typing-dots{display:flex;gap:6px;align-items:center;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);padding:10px 12px;border-radius:4px 14px 14px 14px;}
+.td-dot{width:6px;height:6px;border-radius:50%;background:rgba(110,222,200,0.8);animation:dotb 1s infinite ease-in-out;}
+.td-dot:nth-child(2){animation-delay:0.15s;opacity:0.8;}
+.td-dot:nth-child(3){animation-delay:0.3s;opacity:0.6;}
+@keyframes dotb{0%,80%,100%{transform:translateY(0);opacity:0.5;}40%{transform:translateY(-3px);opacity:1;}}
+
+.chat-input-wrap{margin-top:10px;padding:10px 14px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,0.03);}
+.chat-input-box{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:14px;padding:10px 12px;}
+.chat-input-box input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:13px;}
+.send-btn{width:34px;height:34px;border-radius:50%;background:var(--teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.send-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.send-btn:hover:not(:disabled){background:var(--teal2);}
+.input-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--text3);}
+.im-hint{opacity:0.9;}
+.im-counter{font-family:'JetBrains Mono',monospace;}
 
 /* Light mode chat polish */
 :host-context(html.light-mode) .chat-header{
@@ -1248,42 +1318,13 @@ import { CONSUMER_NAV } from '../consumer-nav.paths';
                       </div>
                     </div>
                   </div>
-                  <!-- SQL BLOCK -->
-                  <div *ngIf="!m.blocked && m.sql">
-                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Generated SQL</div>
-                    <div class="sql-block">{{m.sql}}</div>
-                  </div>
-                  <!-- RESULT TABLE -->
-                  <div *ngIf="!m.blocked && m.results && m.results.length > 0">
-                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Results</div>
-                    <div class="result-table-wrap">
-                      <table class="result-table">
-                        <thead><tr><th>Product</th><th>Price</th><th>Rating</th><th>Stock</th></tr></thead>
-                        <tbody>
-                          <tr *ngFor="let r of m.results"><td class="td-name">{{r.name}}</td><td class="td-price-c">{{r.basePrice | currency}}</td><td class="td-score">{{r.rating || '4.8'}}★</td><td style="font-size:11px;color:var(--green);">{{r.stockQuantity > 0 ? '✓ In stock' : 'Out of stock'}}</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
                   <!-- SUCCESS BANNER -->
                   <div class="success-banner" *ngIf="!m.blocked && m.success">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#3EC98A" stroke-width="1.2"/><path d="M5 8l2 2 4-4" stroke="#3EC98A" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     <span>{{m.success}}</span>
                   </div>
                   <!-- TEXT -->
-                  <div [innerHTML]="m.text"></div>
-                  <!-- PLOTLY VISUALIZATION -->
-                  <div *ngIf="!m.blocked && m.visualization" class="plotly-wrap">
-                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;">AI-Generated Chart</div>
-                    <div [id]="'plotly-chart-' + i" style="width:100%;min-height:300px;background:rgba(255,255,255,0.02);border-radius:10px;overflow:hidden;"></div>
-                  </div>
-                  <!-- PRODUCT CHIPS -->
-                  <div class="prod-chips" *ngIf="!m.blocked && m.results && m.results.length > 0">
-                    <div class="prod-chip" *ngFor="let r of m.results.slice(0,3)" (click)="selectProduct(r)">
-                      <div class="pc-chip-icon" style="background:rgba(62,207,178,0.08);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L1 4v4l6 3 6-3V4L7 1Z" stroke="#3ECFB2" stroke-width="1.1" stroke-linejoin="round"/></svg></div>
-                      <div><div class="pc-chip-name">{{r.name}}</div><div class="pc-chip-price">{{r.basePrice | currency}}</div></div>
-                    </div>
-                  </div>
+                  <div style="white-space:pre-wrap;">{{m.text}}</div>
                 </div>
                 <div class="msg-time">{{m.time}}</div>
               </div>
@@ -1459,7 +1500,7 @@ export class ConsumerComponent implements OnInit, OnDestroy {
     const userName = this.auth.currentUserValue?.fullName || 'there';
     this.chatMessages.push({
       sender: 'ai',
-      text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language, and I'll analyze the database to find the best products for you.`,
+      text: `Hello ${userName}! I'm Nexus AI — your shopping assistant.\n\nAsk me anything in natural language, and I'll analyze the database to find the best products for you.`,
       time: this.getTimeNow()
     });
 
@@ -1887,7 +1928,7 @@ export class ConsumerComponent implements OnInit, OnDestroy {
     const userName = this.auth.currentUserValue?.fullName || 'there';
     this.chatMessages.push({
       sender: 'ai',
-      text: `Hello <strong>${userName}</strong>! 👋 I'm Nexus AI — your shopping assistant.<br><br>Ask me anything in natural language.`,
+      text: `Hello ${userName}! I'm Nexus AI — your shopping assistant.\n\nAsk me anything in natural language.`,
       time: this.getTimeNow()
     });
   }
@@ -2007,15 +2048,11 @@ export class ConsumerComponent implements OnInit, OnDestroy {
             .filter(s => s !== 'done' && this.aiFlowDone.includes(s))
             .map(s => this.aiFlowLabel(s));
           aiMsg.duration = '0.8s';
-          if (res.sql) aiMsg.sql = res.sql;
-          if (res.data && res.data.length > 0) aiMsg.results = res.data;
-          if (res.visualization) aiMsg.visualization = res.visualization;
+          // Keep consumer UI simple: show only the final text response (no SQL / tables / charts).
         }
         this.chatMessages.push(aiMsg);
         this.history.push('User: ' + userMsg, 'AI: ' + (res?.response || ''));
-        if (!blocked && res?.visualization) {
-          setTimeout(() => this.renderPlotly(this.chatMessages.length - 1, res.visualization, res.data || []), 100);
-        }
+        // Consumer UI intentionally does not render visualizations.
       },
       (err: string) => {
         this.isTyping = false;

@@ -690,10 +690,7 @@ import { Chart } from './chart-register';
                     <div class="t">No data / Next steps</div>
                     <div>{{m.noDataHint}}</div>
                   </div>
-                  <div *ngIf="m.sql" style="margin-top:10px;">
-                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">SQL</div>
-                    <div class="sql-block">{{m.sql}}</div>
-                  </div>
+                  <!-- SQL intentionally hidden in Manager UI -->
                 </div>
               </div>
             </ng-container>
@@ -1227,7 +1224,6 @@ export class ManagerComponent implements OnInit, AfterViewInit {
           guardrail: res?.guardrail,
           session_store_id: res?.session_store_id,
           requested_store_id: res?.requested_store_id,
-          sql: res?.sql,
           noDataHint,
         });
         this.aiHistory.push('User: ' + q, 'AI: ' + (cleaned || ''));

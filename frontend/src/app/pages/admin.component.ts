@@ -6,6 +6,8 @@ import { AuthService, ProductService, StoreService, AdminService, OrderService, 
 import { NexusLogoComponent } from '../nexus-logo.component';
 import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
 import { Chart } from './chart-register';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-admin',
@@ -1066,38 +1068,51 @@ export class AdminComponent implements OnInit, AfterViewInit {
 
   refreshData() {
     this.isLoading = true;
-    import('rxjs').then(({ forkJoin }) => {
-      forkJoin([
-        this.productService.getProducts(),
-        this.storeService.getStores(),
-        this.adminService.getUsers(),
-        this.adminService.getOrders(),
-        this.adminService.getStats()
-      ]).subscribe({
-        next: (results: any) => {
-          this.pagedProducts = results[0];
-          this.stores = results[1];
-          this.productGroups = this.computeProductGroups(this.pagedProducts, this.stores);
-          this.users = results[2];
-          const incomingOrders = Array.isArray(results[3]) ? results[3] : [];
-          const sortedOrders = incomingOrders.slice().sort((a: any, b: any) => {
-            const ta = new Date(a?.orderDate).getTime();
-            const tb = new Date(b?.orderDate).getTime();
-            const na = isNaN(ta) ? 0 : ta;
-            const nb = isNaN(tb) ? 0 : tb;
-            return nb - na; // newest first
-          });
-          this.allOrders = sortedOrders;
-          this.orders = sortedOrders.slice(0, 10);
-          this.stats = results[4];
-          this.isLoading = false;
-          setTimeout(() => this.buildAdminCharts(), 200);
-        },
-        error: () => {
-          this.toast.show('Error fetching data', 'error');
-          this.isLoading = false;
-        }
+    const errors: string[] = [];
+    const safe = <T>(label: string, fallback: T) =>
+      catchError((e: any) => {
+        const code = e?.status ? `HTTP ${e.status}` : 'HTTP error';
+        const msg = e?.error?.message || e?.message || e?.statusText || '';
+        errors.push(`${label}: ${code}${msg ? ` — ${msg}` : ''}`);
+        return of(fallback);
       });
+
+    forkJoin({
+      products: this.productService.getProducts().pipe(safe('products', [] as any[])),
+      stores: this.storeService.getStores().pipe(safe('stores', [] as any[])),
+      users: this.adminService.getUsers().pipe(safe('users', [] as any[])),
+      orders: this.adminService.getOrders().pipe(safe('orders', [] as any[])),
+      stats: this.adminService.getStats().pipe(safe('stats', {} as any)),
+    }).subscribe({
+      next: (res: any) => {
+        this.pagedProducts = res.products || [];
+        this.stores = res.stores || [];
+        this.productGroups = this.computeProductGroups(this.pagedProducts, this.stores);
+        this.users = res.users || [];
+
+        const incomingOrders = Array.isArray(res.orders) ? res.orders : [];
+        const sortedOrders = incomingOrders.slice().sort((a: any, b: any) => {
+          const ta = new Date(a?.orderDate).getTime();
+          const tb = new Date(b?.orderDate).getTime();
+          const na = isNaN(ta) ? 0 : ta;
+          const nb = isNaN(tb) ? 0 : tb;
+          return nb - na; // newest first
+        });
+        this.allOrders = sortedOrders;
+        this.orders = sortedOrders.slice(0, 10);
+        this.stats = res.stats || {};
+
+        this.isLoading = false;
+        setTimeout(() => this.buildAdminCharts(), 200);
+
+        if (errors.length) {
+          this.toast.show(`Data fetch issues: ${errors.join(' | ')}`, 'error');
+        }
+      },
+      error: (e) => {
+        this.toast.show(e?.message || 'Error fetching data', 'error');
+        this.isLoading = false;
+      }
     });
   }
 
