@@ -13,7 +13,7 @@ import { Chart } from './chart-register';
   imports: [CommonModule, FormsModule, RouterModule, NexusLogoComponent, NexusThemeToggleComponent],
   template: `
 <style>
-.admin-page { background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+.admin-page { background:var(--bg); color:var(--text); min-height:100vh; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 :host-context(html.light-mode) .navbar-a{background:rgba(245,242,237,0.96);}
 :host-context(html.light-mode) .sidebar-a{background:rgba(245,242,237,0.55);}
 .navbar-a { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; border-bottom:1px solid var(--border); background:rgba(8,8,8,0.95); backdrop-filter:blur(20px); flex-shrink:0; z-index:100; }
@@ -25,7 +25,7 @@ import { Chart } from './chart-register';
 .nav-r-a { display:flex; align-items:center; gap:12px; }
 .nav-av-a { width:30px; height:30px; border-radius:50%; background:var(--teal-dim); border:1px solid rgba(62,207,178,0.2); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:var(--teal); }
 
-.body-a { display:flex; flex:1; overflow:hidden; position:relative; }
+.body-a { display:flex; flex:1; overflow:hidden; position:relative; min-height:0; }
 /* Ensure sidebar stays clickable even if main overlays render. */
 .sidebar-a { width:200px; min-width:200px; border-right:1px solid var(--border); background:rgba(8,8,8,0.4); display:flex; flex-direction:column; padding:16px 10px; position:relative; z-index:20; }
 .sg-label-a { font-size:8.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3); padding:0 12px; margin:14px 0 6px; }
@@ -43,7 +43,7 @@ import { Chart } from './chart-register';
 .su-name-a { font-size:12px; font-weight:500; color:var(--text); }
 .su-role-a { font-size:10px; color:var(--text3); }
 
-.main-a { flex:1; overflow-y:auto; padding:24px; position:relative; z-index:1; }
+.main-a { flex:1; overflow-y:auto; padding:24px; position:relative; z-index:1; min-height:0; }
 .panel-a { display:none; animation:fade-up 0.4s ease forwards; }
 .panel-a.active { display:block; }
 @keyframes fade-up { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
@@ -532,7 +532,7 @@ import { Chart } from './chart-register';
                   <span class="spill-a" [class.sp-green-a]="userEditModel.enabled" [class.sp-amber-a]="!userEditModel.enabled">
                     {{userEditModel.enabled ? 'Active' : 'Banned'}}
                   </span>
-                  <button class="sc-btn-a danger" style="padding:6px 10px; font-size:11px;" (click)="userEditModel.enabled = true" [disabled]="userEditModel.enabled">Unban</button>
+                  <button class="sc-btn-a danger" style="padding:6px 10px; font-size:11px;" (click)="unbanUser(userEditModel)" [disabled]="userEditModel.enabled">Unban</button>
                 </div>
               </div>
               <div style="grid-column:1 / -1;">
@@ -599,29 +599,56 @@ import { Chart } from './chart-register';
         </div>
         <div class="table-card-a">
           <table class="tbl-a">
-            <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
             <tbody>
               <tr *ngFor="let o of allOrders">
                 <td class="td-mono-a">#ORD-{{o.orderId}}</td>
                 <td class="td-name-a">{{o.user?.fullName || 'N/A'}}</td>
                 <td>{{o.totalAmount | currency}}</td>
                 <td>
-                  <span
-                    class="spill-a"
-                    [ngClass]="{
-                      'sp-green-a': o.status === 'DELIVERED',
-                      'sp-blue-a': o.status === 'PROCESSING' || o.status === 'SHIPPED',
-                      'sp-amber-a': o.status === 'PENDING',
-                      'sp-red-a': o.status === 'CANCELLED',
-                      'sp-gray-a': o.status === 'RETURNED'
-                    }">
-                    ● {{o.status}}
-                  </span>
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span
+                      class="spill-a"
+                      [ngClass]="{
+                        'sp-green-a': (orderStatusDraft[o.orderId] || o.status) === 'DELIVERED',
+                        'sp-blue-a': (orderStatusDraft[o.orderId] || o.status) === 'PROCESSING' || (orderStatusDraft[o.orderId] || o.status) === 'SHIPPED',
+                        'sp-amber-a': (orderStatusDraft[o.orderId] || o.status) === 'PENDING',
+                        'sp-red-a': (orderStatusDraft[o.orderId] || o.status) === 'CANCELLED',
+                        'sp-gray-a': (orderStatusDraft[o.orderId] || o.status) === 'RETURNED'
+                      }">
+                      ● {{orderStatusDraft[o.orderId] || o.status}}
+                    </span>
+                    <select
+                      class="ue-select"
+                      [ngModel]="orderStatusDraft[o.orderId] || o.status"
+                      (ngModelChange)="orderStatusDraft[o.orderId] = $event"
+                      style="max-width:160px;">
+                      <option *ngFor="let s of orderStatusOptions" [value]="s">{{s}}</option>
+                    </select>
+                  </div>
                 </td>
                 <td>{{o.orderDate | date:'short'}}</td>
+                <td>
+                  <div style="display:flex; gap:6px; align-items:center;">
+                    <button
+                      class="sc-btn-a"
+                      style="padding:4px 10px; font-size:10px;"
+                      (click)="saveOrderStatus(o)"
+                      [disabled]="orderSaving[o.orderId] || ((orderStatusDraft[o.orderId] || o.status) === o.status)">
+                      {{orderSaving[o.orderId] ? 'Saving…' : 'Save'}}
+                    </button>
+                    <button
+                      class="sc-btn-a"
+                      style="padding:4px 10px; font-size:10px;"
+                      (click)="resetOrderStatus(o)"
+                      [disabled]="orderSaving[o.orderId] || (orderStatusDraft[o.orderId] == null)">
+                      Reset
+                    </button>
+                  </div>
+                </td>
               </tr>
               <tr *ngIf="allOrders.length === 0">
-                <td colspan="5" style="text-align:center;color:var(--text3);padding:32px;">No orders yet.</td>
+                <td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">No orders yet.</td>
               </tr>
             </tbody>
           </table>
@@ -787,6 +814,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
   productService = inject(ProductService);
   storeService = inject(StoreService);
   adminService = inject(AdminService);
+  orderService = inject(OrderService);
   categoryService = inject(CategoryService);
   toast = inject(ToastService);
   ai = inject(AiService);
@@ -817,6 +845,9 @@ export class AdminComponent implements OnInit, AfterViewInit {
   users: any[] = [];
   orders: any[] = [];
   allOrders: any[] = [];
+  orderStatusOptions: string[] = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED'];
+  orderStatusDraft: Record<number, string> = {};
+  orderSaving: Record<number, boolean> = {};
   pagedProducts: any[] = [];
   productGroups: Array<{ storeName: string; products: any[] }> = [];
   stats: any = {};
@@ -978,8 +1009,16 @@ export class AdminComponent implements OnInit, AfterViewInit {
           this.stores = results[1];
           this.productGroups = this.computeProductGroups(this.pagedProducts, this.stores);
           this.users = results[2];
-          this.allOrders = results[3];
-          this.orders = results[3].slice(0, 10);
+          const incomingOrders = Array.isArray(results[3]) ? results[3] : [];
+          const sortedOrders = incomingOrders.slice().sort((a: any, b: any) => {
+            const ta = new Date(a?.orderDate).getTime();
+            const tb = new Date(b?.orderDate).getTime();
+            const na = isNaN(ta) ? 0 : ta;
+            const nb = isNaN(tb) ? 0 : tb;
+            return nb - na; // newest first
+          });
+          this.allOrders = sortedOrders;
+          this.orders = sortedOrders.slice(0, 10);
           this.stats = results[4];
           this.isLoading = false;
           setTimeout(() => this.buildAdminCharts(), 200);
@@ -1203,6 +1242,46 @@ export class AdminComponent implements OnInit, AfterViewInit {
       this.toast.show('User banned');
       this.logAudit('Ban User', 'warning', `Banned ${u.fullName}`);
       this.refreshData();
+    });
+  }
+
+  unbanUser(u: any) {
+    if (!confirm(`Unban ${u.fullName}?`)) return;
+    this.adminService.unbanUser(u.userId).subscribe(() => {
+      this.toast.show('User unbanned');
+      this.logAudit('Unban User', 'info', `Unbanned ${u.fullName}`);
+      this.refreshData();
+    });
+  }
+
+  resetOrderStatus(o: any) {
+    const id = Number(o?.orderId);
+    if (!id) return;
+    delete this.orderStatusDraft[id];
+  }
+
+  saveOrderStatus(o: any) {
+    const id = Number(o?.orderId);
+    if (!id) return;
+    const next = String(this.orderStatusDraft[id] || o?.status || '').trim().toUpperCase();
+    if (!next || next === String(o?.status || '').toUpperCase()) return;
+    if (!this.orderStatusOptions.includes(next)) {
+      this.toast.show('Invalid status', 'error');
+      return;
+    }
+    this.orderSaving[id] = true;
+    this.orderService.updateStatus(id, next).subscribe({
+      next: (updated: any) => {
+        o.status = updated?.status || next;
+        delete this.orderStatusDraft[id];
+        this.orderSaving[id] = false;
+        this.toast.show('Order status updated');
+        this.logAudit('Update Order Status', 'info', `Order #${id} -> ${o.status}`);
+      },
+      error: (e) => {
+        this.orderSaving[id] = false;
+        this.toast.show(e.error?.message || 'Failed to update order status', 'error');
+      }
     });
   }
 

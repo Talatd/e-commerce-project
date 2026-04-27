@@ -52,4 +52,12 @@ public class UserController {
         user.setEnabled(false);
         return ResponseEntity.ok(userRepository.save(user));
     }
+
+    @PostMapping("/{id}/unban")
+    @Operation(summary = "Unban a user")
+    public ResponseEntity<User> unbanUser(@PathVariable Long id) {
+        User user = userRepository.findById(Objects.requireNonNull(id)).orElseThrow();
+        user.setEnabled(true);
+        return ResponseEntity.ok(userRepository.save(user));
+    }
 }

@@ -357,6 +357,11 @@ export class OrderService {
   getMyStoreOrders(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/my-store`);
   }
+
+  /** Admin/Manager: update order status. */
+  updateStatus(orderId: number, status: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${orderId}/status`, { status });
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -401,6 +406,10 @@ export class AdminService {
 
   banUser(id: number): Observable<any> {
     return this.http.post(`${API_V1}/admin/users/${id}/ban`, {});
+  }
+
+  unbanUser(id: number): Observable<any> {
+    return this.http.post(`${API_V1}/admin/users/${id}/unban`, {});
   }
 
   updateUser(id: number, user: any): Observable<any> {
