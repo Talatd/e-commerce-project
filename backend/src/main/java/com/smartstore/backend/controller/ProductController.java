@@ -64,11 +64,17 @@ public class ProductController {
     public ResponseEntity<?> getMyStoreProducts(@AuthenticationPrincipal UserDetails principal) {
         if (principal == null) return ResponseEntity.status(401).build();
         com.smartstore.backend.model.User user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
-        
-        // Find store where ownerName matches user's full name (simple mapping for this MVP)
-        return storeRepository.findByName(user.getFullName().contains("Marcus") ? "TechHub Performance" : "GadgetPro Lifestyle")
-            .map(store -> ResponseEntity.ok(productRepository.findByStore_Id(store.getId(), org.springframework.data.domain.Pageable.unpaged()).getContent()))
-            .orElse(ResponseEntity.ok(List.of()));
+
+        // Prefer an explicit owner_id mapping; fall back to a name-based demo mapping.
+        var storeOpt = storeRepository.findByOwnerId(user.getUserId());
+        if (storeOpt.isEmpty()) {
+            storeOpt = storeRepository.findByName(user.getFullName().contains("Marcus") ? "TechHub Performance" : "GadgetPro Lifestyle");
+        }
+
+        return storeOpt
+                .map(store -> ResponseEntity.ok(
+                        productRepository.findByStore_Id(store.getId(), org.springframework.data.domain.Pageable.unpaged()).getContent()))
+                .orElse(ResponseEntity.ok(List.of()));
     }
 
     @GetMapping("/{id}")

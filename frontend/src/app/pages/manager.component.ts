@@ -281,39 +281,39 @@ import { Chart } from './chart-register';
     <!-- SIDEBAR -->
     <div class="msb">
       <div class="msl">Overview</div>
-      <div class="msi" [class.act]="activePanel==='dashboard'" (click)="activePanel='dashboard'">
+      <div class="msi" [class.act]="activePanel==='dashboard'" (click)="setPanel('dashboard')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.6"/><rect x="7" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.4"/><rect x="1" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.4"/><rect x="7" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.3"/></svg>Dashboard</div>
       </div>
       <div class="msl">My Store</div>
-      <div class="msi" [class.act]="activePanel==='products'" (click)="activePanel='products'">
+      <div class="msi" [class.act]="activePanel==='products'" (click)="setPanel('products')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L1 4v5l5.5 3L12 9V4L6.5 1Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>Products</div>
         <div class="msib">{{products.length}}</div>
       </div>
-      <div class="msi" [class.act]="activePanel==='orders'" (click)="activePanel='orders'">
+      <div class="msi" [class.act]="activePanel==='orders'" (click)="setPanel('orders')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h1.5l2 7h5.5l1.3-4.5H4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="11" r="1" fill="currentColor"/><circle cx="9.5" cy="11" r="1" fill="currentColor"/></svg>Orders</div>
         <div class="msib red">5</div>
       </div>
-      <div class="msi" [class.act]="activePanel==='inventory'" (click)="activePanel='inventory'">
+      <div class="msi" [class.act]="activePanel==='inventory'" (click)="setPanel('inventory')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 10V3h9v7H2Z" stroke="currentColor" stroke-width="1.1"/><path d="M5 6h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Inventory<span *ngIf="lowStockProducts.length > 0" style="margin-left:auto;background:rgba(232,169,74,0.15);color:#E8A94A;font-size:9px;padding:1px 6px;border-radius:8px;">{{lowStockProducts.length}}</span></div>
       </div>
-      <div class="msi" [class.act]="activePanel==='reviews'" (click)="activePanel='reviews'">
+      <div class="msi" [class.act]="activePanel==='reviews'" (click)="setPanel('reviews')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L8 5h4.5l-3.5 2.5 1.3 4.5L6.5 9.5 2.7 12l1.3-4.5L.5 5H5L6.5 1Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>Reviews</div>
       </div>
-      <div class="msi" [class.act]="activePanel==='addprod'" (click)="activePanel='addprod'">
+      <div class="msi" [class.act]="activePanel==='addprod'" (click)="setPanel('addprod')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Add Product</div>
       </div>
       <div class="msl">Analytics</div>
-      <div class="msi" [class.act]="activePanel==='analytics'" (click)="activePanel='analytics'">
+      <div class="msi" [class.act]="activePanel==='analytics'" (click)="setPanel('analytics')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 10L4 6l3 2.5 5-6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Performance</div>
       </div>
-      <div class="msi" [class.act]="activePanel==='assistant'" (click)="activePanel='assistant'">
+      <div class="msi" [class.act]="activePanel==='assistant'" (click)="setPanel('assistant')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L1 4v5l5.5 3L12 9V4L6.5 1Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 1v5.5M1 4l5.5 2.5L12 4" stroke="currentColor" stroke-width="1.1"/></svg>AI Assistant</div>
       </div>
-      <div class="msi" [class.act]="activePanel==='customers'" (click)="activePanel='customers'; loadSegments()">
+      <div class="msi" [class.act]="activePanel==='customers'" (click)="setPanel('customers')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1.5 11.5c0-2.7 2-4 5-4s5 1.3 5 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Customers</div>
       </div>
       <div class="msl">Store</div>
-      <div class="msi" [class.act]="activePanel==='settings'" (click)="activePanel='settings'">
+      <div class="msi" [class.act]="activePanel==='settings'" (click)="setPanel('settings')">
         <div class="msil"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1v1M6.5 11v1M1 6.5h1M11 6.5h1M2.6 2.6l.7.7M9.7 9.7l.7.7M2.6 10.4l.7-.7M9.7 3.3l.7-.7" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>Store Settings</div>
       </div>
       <div class="msi-info">
@@ -375,12 +375,12 @@ import { Chart } from './chart-register';
       <ng-container *ngIf="activePanel==='dashboard'">
         <div class="mtb">
           <div><div class="mpt">My Store Dashboard</div><div class="mps">{{products.length}} products · {{storeOrders.length}} orders</div></div>
-          <div class="mta"><div class="mtbtn mtbg">Download Report</div><div class="mtbtn mtbt" (click)="activePanel='addprod'">+ Add Product</div></div>
+          <div class="mta"><div class="mtbtn mtbg">Download Report</div><div class="mtbtn mtbt" (click)="setPanel('addprod')">+ Add Product</div></div>
         </div>
         <div class="malert" *ngIf="lowStockProducts.length > 0">
           <div class="malert-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5L1.5 12h11L7 1.5Z" stroke="#E8A94A" stroke-width="1.1" stroke-linejoin="round"/><path d="M7 6v3M7 11v.3" stroke="#E8A94A" stroke-width="1.1" stroke-linecap="round"/></svg></div>
           <div class="malert-text"><strong>{{lowStockProducts.length}} products low on stock</strong> — {{lowStockAlert}}</div>
-          <div class="malert-btn" (click)="activePanel='products'">View Products</div>
+          <div class="malert-btn" (click)="setPanel('products')">View Products</div>
         </div>
         <div class="mkr">
           <div class="mkpi"><div class="mkl">Store Revenue</div><div class="mkv">{{filteredRevenue | currency:'USD':'symbol':'1.0-0'}}</div><div class="mkd mup-c">{{filteredOrders.length}} orders</div></div>
@@ -421,10 +421,10 @@ import { Chart } from './chart-register';
           </div>
         </div>
         <div class="mtc">
-          <div class="mgh"><div class="mgt">Recent Orders</div><div class="mgm" style="cursor:pointer;" (click)="activePanel='orders'">View all →</div></div>
+          <div class="mgh"><div class="mgt">Recent Orders</div><div class="mgm" style="cursor:pointer;" (click)="setPanel('orders')">View all →</div></div>
           <table class="mt"><thead><tr><th>Order</th><th>Customer</th><th>Product</th><th>Amount</th><th>Status</th></tr></thead>
           <tbody>
-            <tr *ngFor="let o of storeOrders.slice(0,5)">
+            <tr *ngFor="let o of sortedStoreOrders.slice(0,5)">
               <td class="mtm">#{{o.orderId}}</td>
               <td class="mtn">{{o.user?.fullName || 'Customer'}}</td>
               <td>{{o.items?.length || 0}} items</td>
@@ -707,23 +707,70 @@ export class ManagerComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.productService.getMyStoreProducts().subscribe(res => {
-      this.products = res;
-      this.buildCategoryChart();
+      this.products = Array.isArray(res) ? res : [];
+      if (this.activePanel === 'analytics') {
+        this.scheduleAnalyticsCharts();
+      }
     });
     this.orderService.getMyStoreOrders().subscribe(res => {
-      this.storeOrders = res;
-      this.filteredOrders = [...res];
+      const list = Array.isArray(res) ? res : [];
+      // Keep orders stable + readable in UI: newest first.
+      this.storeOrders = list.slice().sort((a: any, b: any) => {
+        const ta = new Date(a?.orderDate).getTime();
+        const tb = new Date(b?.orderDate).getTime();
+        const na = isNaN(ta) ? 0 : ta;
+        const nb = isNaN(tb) ? 0 : tb;
+        return nb - na;
+      });
+      this.filteredOrders = [...this.storeOrders];
       this.recomputeMonthlyRevenueBars();
-      this.buildRevenueChart();
+      if (this.activePanel === 'analytics') {
+        this.scheduleAnalyticsCharts();
+      }
     });
     this.productService.getAllReviews().subscribe(res => this.reviews = res);
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
+    if (this.activePanel === 'analytics') {
+      this.scheduleAnalyticsCharts();
+    }
+  }
+
+  setPanel(panel: string) {
+    const prev = this.activePanel;
+    this.activePanel = panel;
+
+    // Leaving analytics: destroy charts so we don't keep stale canvases around.
+    if (prev === 'analytics' && panel !== 'analytics') {
+      if (this.revenueChart) { this.revenueChart.destroy(); this.revenueChart = null; }
+      if (this.categoryChart) { this.categoryChart.destroy(); this.categoryChart = null; }
+    }
+
+    if (panel === 'customers') {
+      this.loadSegments();
+    }
+
+    if (panel === 'analytics') {
+      this.scheduleAnalyticsCharts();
+    }
+  }
+
+  private scheduleAnalyticsCharts() {
+    // *ngIf mounts canvases after change detection; build charts on next frame.
+    const raf = (cb: FrameRequestCallback) =>
+      (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+        ? window.requestAnimationFrame(cb)
+        : setTimeout(() => cb(0 as any), 0);
+
+    raf(() => raf(() => {
       this.buildRevenueChart();
       this.buildCategoryChart();
-    }, 500);
+    }));
+  }
+
+  get sortedStoreOrders(): any[] {
+    return this.storeOrders || [];
   }
 
   private buildRevenueChart() {
@@ -929,7 +976,7 @@ export class ManagerComponent implements OnInit, AfterViewInit {
   }
 
   addProduct() {
-    this.activePanel = 'addprod';
+    this.setPanel('addprod');
   }
 
   deleteProduct(p: any) {
