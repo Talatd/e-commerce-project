@@ -253,9 +253,14 @@ async def process_query(request: ChatRequest):
     try:
         final_state = await asyncio.to_thread(ai_graph.invoke, initial_state)
     except Exception as e:
-        # Fallback for demos / quota issues: return deterministic demo response.
+        # Hardcoded/demo responses are disabled; return a clear error instead.
         traceback.print_exc()
-        final_state = _demo_response_for(request.query, request.session_store_id)
+        final_state = {
+            "response": "AI service is temporarily unavailable. Please try again later.",
+            "sql_query": "",
+            "results": [],
+            "visualization_code": "",
+        }
 
     # If SQL executed but returned no rows, answer deterministically instead of vague text.
     try:
@@ -363,10 +368,14 @@ async def process_query_stream(request: ChatRequest):
                     err_payload["retry_after_seconds"] = retry_after_s
                 asyncio.run_coroutine_threadsafe(q.put({"kind": "error", **err_payload}), loop)
 
+                # Hardcoded/demo responses are disabled; emit an empty final with an error message.
                 try:
-                    demo_state = _demo_response_for(request.query, request.session_store_id)
-                    if isinstance(demo_state, dict):
-                        current_state = _merge_state(current_state, demo_state)
+                    current_state = _merge_state(current_state, {
+                        "response": "AI service is temporarily unavailable. Please try again later.",
+                        "sql_query": "",
+                        "results": [],
+                        "visualization_code": "",
+                    })
                     asyncio.run_coroutine_threadsafe(q.put({"kind": "final", "state": current_state}), loop)
                 except Exception:
                     pass

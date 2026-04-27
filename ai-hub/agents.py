@@ -166,13 +166,76 @@ def analysis_agent(state: AgentState):
         msg = "Eşleşen veri bulunamadı. Tarih aralığını genişletmeyi deneyin." if is_tr else "No matching data was returned. Try widening the date range."
         return {**state, "response": msg, "next_step": "end"}
 
-    # Simple deterministic summary: show row count + top keys + first few rows.
-    keys = list(rows[0].keys()) if isinstance(rows[0], dict) else []
-    preview = rows[:5]
+    # Deterministic, user-friendly formatting (no LLM call).
+    first = rows[0] if isinstance(rows[0], dict) else {}
+    keys = list(first.keys())
+
+    def _fmt_number(v):
+        try:
+            if v is None:
+                return None
+            # ints/floats as numbers
+            if isinstance(v, (int, float)):
+                return float(v)
+            # strings that look like numbers
+            s = str(v).strip().replace(",", "")
+            return float(s) if s.replace(".", "", 1).isdigit() else None
+        except Exception:
+            return None
+
+    def _fmt_currency(v):
+        n = _fmt_number(v)
+        if n is None:
+            return str(v)
+        # Keep it simple: $ with 2 decimals (backend is seeded with $ prices)
+        return f"${n:,.2f}"
+
+    def _is_money_key(k: str) -> bool:
+        k = (k or "").lower()
+        return any(x in k for x in ["revenue", "total", "amount", "price", "ciro", "gelir"])
+
+    # Case A: one row, one column => answer directly.
+    if len(rows) == 1 and len(keys) == 1:
+        k = keys[0]
+        v = first.get(k)
+        val = _fmt_currency(v) if _is_money_key(k) else str(v)
+        if is_tr:
+            resp = f"{k.replace('_', ' ').capitalize()}: {val}"
+        else:
+            resp = f"{k.replace('_', ' ').capitalize()}: {val}"
+        return {**state, "response": resp, "next_step": "end"}
+
+    # Case B: small result set => render a compact table-like text.
+    max_rows = 8
+    show = rows[:max_rows]
+    cols = keys[:6] if keys else []
+
+    def _cell(k, v):
+        if v is None:
+            return "—"
+        return _fmt_currency(v) if _is_money_key(k) else str(v)
+
+    lines = []
+    if cols:
+        header = " | ".join([c.replace("_", " ") for c in cols])
+        lines.append(header)
+        lines.append("-" * min(len(header), 80))
+        for r in show:
+            if not isinstance(r, dict):
+                continue
+            lines.append(" | ".join(_cell(c, r.get(c)) for c in cols))
+
     if is_tr:
-        resp = f"{len(rows)} satır döndü. Alanlar: {', '.join(keys[:8])}.\nÖrnek:\n" + json.dumps(preview, ensure_ascii=False, indent=2, default=str)
+        prefix = f"{len(rows)} satır bulundu."
+        resp = prefix + ("\n\n" + "\n".join(lines) if lines else "")
     else:
-        resp = f"Returned {len(rows)} rows. Fields: {', '.join(keys[:8])}.\nPreview:\n" + json.dumps(preview, indent=2, default=str)
+        prefix = f"Found {len(rows)} rows."
+        resp = prefix + ("\n\n" + "\n".join(lines) if lines else "")
+
+    # If we truncated rows, tell the user.
+    if len(rows) > max_rows:
+        resp += "\n\n" + ("Not: Daha fazla satır var, ilk kısmı gösteriyorum." if is_tr else "Note: More rows exist; showing the first ones.")
+
     return {**state, "response": resp, "next_step": "end"}
 
 def visualization_agent(state: AgentState):

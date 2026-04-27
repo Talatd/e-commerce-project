@@ -71,13 +71,6 @@ public class ChatController {
         Long sessionStoreId = resolveSessionStoreId(user);
         String query = payload != null && payload.get("query") != null ? payload.get("query").toString() : "";
 
-        // For demo reliability: answer common analytics questions directly from the backend DB.
-        // This ensures answers change immediately after real purchases in the app.
-        Map<String, Object> shortcut = tryAnswerFromBackendDb(user, sessionStoreId, query);
-        if (shortcut != null) {
-            return ResponseEntity.ok(shortcut);
-        }
-
         Map<String, Object> safePayload = payload != null ? payload : Map.of();
 
         Map<String, Object> aiRequest = new HashMap<>();
