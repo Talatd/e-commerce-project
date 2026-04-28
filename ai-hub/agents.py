@@ -1,6 +1,7 @@
 import os
 import json
 import sqlparse
+import sys
 from typing import TypedDict, List, Annotated, Union, Optional
 from langgraph.graph import StateGraph, END, START
 import google.generativeai as genai
@@ -12,8 +13,7 @@ load_dotenv()
 # Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-GREETINGS = {"hi", "hello", "hey", "merhaba", "selam", "günaydın", "iyi günler"}
-MAX_RETRIES = 3
+GREETINGS = {"hi", "hello", "hey", "merhaba", "selam", "günaydın", "iyi günler", "naber", "nasıl gidiyor"}
 
 class AgentState(TypedDict):
     query: str
@@ -41,235 +41,119 @@ DB_URL = (
 engine = create_engine(DB_URL)
 
 SCHEMA_DESCRIPTION = """
-DATABASE SCHEMA (MySQL):
-- users (user_id INT PK, email, password_hash, full_name, role ENUM('ADMIN','MANAGER','CONSUMER'), enabled, created_at)
-- stores (id INT PK, name, owner_name, owner_id FK->users.user_id, total_revenue, order_count, rating, status ENUM('OPEN','CLOSED','PENDING'))
-- products (product_id INT PK, store_id FK->stores.id, name, description, brand, category, base_price, image_url, stock_quantity)
-- regional_inventory (inventory_id INT PK, product_id FK->products.product_id, region, stock_quantity)
-- shipping_info (id INT PK, product_id FK->products.product_id, carrier_name, estimated_days, shipping_cost, shipping_region, is_free_shipping)
-- product_specifications (id INT PK, product_id FK->products.product_id, spec_key, spec_value)
-- shipments (shipment_id INT PK, order_id FK->orders.order_id, status, carrier, tracking_number UNIQUE, estimated_delivery, delivered_at, created_at)
-- integration_logs (id INT PK, username, action, type, detail, created_at)
-- password_reset_tokens (id INT PK, user_id FK->users.user_id, token UNIQUE, expires_at, used)
-- coupons (coupon_id INT PK, code UNIQUE, percent_off, active, restricted_category, expires_at)
-- orders (order_id INT PK, user_id FK->users.user_id, total_amount, subtotal_amount, discount_amount, tax_amount, shipping_amount, coupon_code, shipping_address, status ENUM('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED'), order_date)
-- order_items (order_item_id INT PK, order_id FK->orders.order_id, product_id FK->products.product_id, quantity, price_at_purchase)
-- product_reviews (review_id INT PK, product_id FK->products.product_id, user_id FK->users.user_id, rating, comment, sentiment_score, store_response, created_at)
-- categories (category_id INT PK, name, description, parent_id FK->categories.category_id, active)
-- customer_profiles (profile_id INT PK, user_id FK->users.user_id, gender, age, city, country, membership_type, total_spend, items_purchased, avg_rating, satisfaction_level)
-- order_events (id INT PK, order_id FK->orders.order_id, status, event_date, notes)
+VERİTABANI ŞEMASI:
+- users (user_id, email, full_name, role)
+- stores (id, name, owner_id)
+- products (product_id, store_id, name, brand, category, base_price, stock_quantity)
+- orders (order_id, user_id, total_amount, subtotal_amount, status, order_date, shipping_address)
+- order_items (order_item_id, order_id, product_id, quantity, price_at_purchase)
+- shipments (shipment_id, order_id, status, tracking_number)
 
-BUSINESS RULES (important for correct SQL):
-1. Order totals are server-calculated:
-   - orders.subtotal_amount = SUM(order_items.quantity * order_items.price_at_purchase)
-   - orders.discount_amount is the coupon discount (0 when no coupon)
-   - orders.tax_amount is tax on (subtotal - discount)
-   - orders.shipping_amount is shipping cost (can be 0)
-   - orders.total_amount = (subtotal - discount) + tax + shipping
-2. Coupons:
-   - coupons.code is case-insensitive in validation, but stored/returned as UPPERCASE
-   - coupons.percent_off is 0–100 (percentage discount)
-   - coupon is valid when active = true AND (expires_at is NULL OR expires_at > NOW())
-   - if coupons.restricted_category is NOT NULL, it only applies to order items where products.category = restricted_category
-   - when applied, orders.coupon_code = coupons.code (otherwise NULL)
-3. Prefer order financial columns on orders table (subtotal/discount/tax/shipping/total) instead of re-deriving,
-   unless the user explicitly asks to recompute from order_items.
-
-RULES:
-1. Use snake_case.
-2. Join order_items with products/orders to get product names or customer details.
-3. For Managers: Always filter by owner_id in stores or related joins.
-4. Prefer using explicit joined table filters for access control (don't rely on client-provided IDs).
+ROL KURALLARI:
+- CONSUMER: Sadece kendi siparişlerini görebilir (orders.user_id = X).
+- MANAGER: Kendi mağazasının ürünlerini ve siparişlerini görebilir (products.store_id = Y).
+- ADMIN: Tüm verilere erişebilir.
 """
 
 def guardrails_agent(state: AgentState):
-    """Checks if the query is in scope."""
     q = state["query"].strip().lower()
     if any(g in q for g in GREETINGS) and len(q) < 15:
-        return {**state, "is_in_scope": False, "response": "Hello! I am your SmartStore AI Assistant. How can I help you with your data today?", "next_step": "end"}
-
-    # Lightweight heuristic (no LLM call) to avoid burning quota.
-    keywords = [
-        "order", "sipariş", "siparis", "revenue", "ciro", "sales", "gelir",
-        "product", "ürün", "urun", "stock", "stok", "customer", "müşteri", "musteri",
-        "shipment", "kargo", "shipping", "review", "yorum", "category", "kategori",
-        "store", "mağaza", "magaza", "user", "kullanıcı", "kullanici",
-    ]
-    if not any(k in q for k in keywords):
-        return {**state, "is_in_scope": False, "response": "I can only assist with SmartStore e-commerce data analysis questions.", "next_step": "end"}
-
+        return {**state, "is_in_scope": False, "response": "Merhaba! Ben SmartStore asistanıyım, size nasıl yardımcı olabilirim?", "next_step": "end"}
     return {**state, "is_in_scope": True, "next_step": "sql"}
 
 def sql_agent(state: AgentState):
-    """Generates SQL query based on user role."""
     role = state.get("user_role", "CONSUMER")
     uid = state.get("user_id", 0)
     sid = state.get("session_store_id")
     
     role_clause = ""
     if role == "CONSUMER":
-        role_clause = f"IMPORTANT: User (ID: {uid}) can only see their OWN data. Filter by orders.user_id = {uid} (or user_id where applicable)."
+        role_clause = f"Kısıtlama: Sadece user_id = {uid} olan siparişleri getir."
     elif role == "MANAGER":
-        # Prefer server-provided session store id when available; otherwise fall back to owner_id join.
-        if sid is not None:
-            role_clause = f"IMPORTANT: Manager can only see their STORE data. Always filter by products.store_id = {sid} (or stores.id = {sid})."
+        if sid:
+            role_clause = f"Kısıtlama: Sadece store_id = {sid} olan ürünleri getir."
         else:
-            role_clause = f"IMPORTANT: Manager can only see their STORE data. Join stores and filter by stores.owner_id = {uid}."
-    elif role == "ADMIN":
-        role_clause = "IMPORTANT: Admin can query platform-wide analytics. Prefer efficient aggregates."
+            role_clause = f"Kısıtlama: owner_id = {uid} olan mağazanın verilerini getir."
 
     prompt = f"""
-    You are a MySQL expert. 
+    Sen bir MySQL uzmanısın. 
     {SCHEMA_DESCRIPTION}
     {role_clause}
     
-    Current User Query: {state['query']}
+    Kullanıcı Sorusu: {state['query']}
     
-    Generate a valid read-only SELECT query. Return ONLY raw SQL code without markdown.
+    Kural: Sadece tek bir SELECT sorgusu üret. Markdown (```sql) kullanma. Sadece ham SQL kodu döndür.
+    İpucu: Sorguda DISTINCT kullanmayı unutma.
     """
-    model = genai.GenerativeModel("gemini-flash-latest")
+    
+    model = genai.GenerativeModel("gemini-2.5-flash")
     try:
-        sql = model.generate_content(prompt).text.strip()
-        sql = sql.replace("```sql", "").replace("```", "").strip()
-        return {**state, "sql_query": sql, "next_step": "execute"}
+        response = model.generate_content(prompt)
+        sql = response.text.strip()
+        
+        # Temizlik
+        for tag in ["```sql", "```SQL", "```"]:
+            sql = sql.replace(tag, "")
+        sql = sql.strip()
+        
+        pos = sql.upper().find("SELECT")
+        if pos != -1:
+            sql = sql[pos:].strip()
+            
+        print(f"DEBUG: Generated SQL: {sql}", file=sys.stderr)
+        return {**state, "sql_query": sql, "next_step": "execute", "error": ""}
     except Exception as e:
-        return {**state, "error": str(e), "next_step": "end"}
+        print(f"DEBUG: SQL Agent Error: {str(e)}", file=sys.stderr)
+        return {**state, "error": f"SQL Üretilemedi: {str(e)}", "next_step": "error"}
 
 def execution_agent(state: AgentState):
-    """Executes SQL safely."""
     sql = state.get("sql_query", "")
-    if not sql.lower().startswith("select"):
-        return {**state, "error": "Only SELECT queries allowed", "next_step": "error"}
+    if not sql or not sql.strip().lower().startswith("select"):
+        err_msg = state.get("error") or "Sorgu boş üretildi."
+        return {**state, "error": f"Sorgu hatası: {err_msg}", "next_step": "error"}
     
     try:
         with engine.connect() as conn:
             res = conn.execute(text(sql))
             rows = [dict(r._mapping) for r in res]
-            # Convert non-serializable objects to string
-            rows = json.loads(json.dumps(rows, default=str))
-            return {**state, "results": rows, "next_step": "analyze", "error": ""}
+            return {**state, "results": json.loads(json.dumps(rows, default=str)), "next_step": "analyze", "error": ""}
     except Exception as e:
-        return {**state, "error": str(e), "next_step": "error"}
+        return {**state, "error": f"Veritabanı çalıştırma hatası: {str(e)}", "next_step": "error"}
+
+def analyze_agent(state: AgentState):
+    rows = state.get("results", [])
+    if not rows:
+        return {**state, "response": "İstediğiniz kriterlere uygun veri bulunamadı.", "next_step": "end"}
+    
+    prompt = f"""
+    Sen bir mağaza asistanısın. Aşağıdaki verileri kullanıcıya Türkçe olarak samimi bir dille özetle:
+    Soru: {state['query']}
+    Veriler: {json.dumps(rows[:10])}
+    """
+    
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    try:
+        response = model.generate_content(prompt)
+        return {**state, "response": response.text.strip(), "next_step": "end"}
+    except Exception as e:
+        return {**state, "response": f"Verilere ulaşıldı ({len(rows)} kayıt), ancak özetleme sırasında bir sorun oluştu.", "next_step": "end"}
 
 def error_agent(state: AgentState):
-    """Fixes SQL errors."""
-    # Avoid additional LLM calls to save quota; ask user to refine instead.
-    return {**state, "next_step": "end", "response": f"I couldn't run the generated SQL due to: {state['error']}. Try rephrasing your question with a time range and metric."}
+    return {**state, "response": f"Üzgünüm, bir hata oluştu: {state['error']}", "next_step": "end"}
 
-def analysis_agent(state: AgentState):
-    """Explains results in natural language."""
-    rows = state.get("results") or []
-    q = (state.get("query") or "").lower()
-
-    is_tr = any(x in q for x in ["ç", "ğ", "ı", "ö", "ş", "ü", "sipariş", "urun", "ürün", "mağaza", "musteri", "müşteri"])
-    if not rows:
-        msg = "Eşleşen veri bulunamadı. Tarih aralığını genişletmeyi deneyin." if is_tr else "No matching data was returned. Try widening the date range."
-        return {**state, "response": msg, "next_step": "end"}
-
-    # Deterministic, user-friendly formatting (no LLM call).
-    first = rows[0] if isinstance(rows[0], dict) else {}
-    keys = list(first.keys())
-
-    def _fmt_number(v):
-        try:
-            if v is None:
-                return None
-            # ints/floats as numbers
-            if isinstance(v, (int, float)):
-                return float(v)
-            # strings that look like numbers
-            s = str(v).strip().replace(",", "")
-            return float(s) if s.replace(".", "", 1).isdigit() else None
-        except Exception:
-            return None
-
-    def _fmt_currency(v):
-        n = _fmt_number(v)
-        if n is None:
-            return str(v)
-        # Keep it simple: $ with 2 decimals (backend is seeded with $ prices)
-        return f"${n:,.2f}"
-
-    def _is_money_key(k: str) -> bool:
-        k = (k or "").lower()
-        return any(x in k for x in ["revenue", "total", "amount", "price", "ciro", "gelir"])
-
-    # Case A: one row, one column => answer directly.
-    if len(rows) == 1 and len(keys) == 1:
-        k = keys[0]
-        v = first.get(k)
-        val = _fmt_currency(v) if _is_money_key(k) else str(v)
-        if is_tr:
-            resp = f"{k.replace('_', ' ').capitalize()}: {val}"
-        else:
-            resp = f"{k.replace('_', ' ').capitalize()}: {val}"
-        return {**state, "response": resp, "next_step": "end"}
-
-    # Case B: render an aligned plain-text table (works well in chat bubbles).
-    max_rows = 8
-    show = [r for r in rows[:max_rows] if isinstance(r, dict)]
-    cols = (keys[:6] if keys else [])
-
-    def _cell(k, v) -> str:
-        if v is None:
-            return "—"
-        s = _fmt_currency(v) if _is_money_key(k) else str(v)
-        # Keep rows compact
-        s = s.replace("\n", " ").strip()
-        if len(s) > 28:
-            s = s[:27] + "…"
-        return s
-
-    lines: List[str] = []
-    if cols and show:
-        # Compute per-column widths from header + values
-        headers = [c.replace("_", " ") for c in cols]
-        widths = [len(h) for h in headers]
-        for r in show:
-            for i, c in enumerate(cols):
-                widths[i] = min(28, max(widths[i], len(_cell(c, r.get(c)))))
-
-        def _row(values: List[str]) -> str:
-            parts = []
-            for i, v in enumerate(values):
-                parts.append(v.ljust(widths[i]))
-            return " | ".join(parts)
-
-        lines.append(_row(headers))
-        lines.append("-+-".join("-" * w for w in widths))
-        for r in show:
-            lines.append(_row([_cell(c, r.get(c)) for c in cols]))
-
-    if is_tr:
-        prefix = f"{len(rows)} satır bulundu."
-        resp = prefix + ("\n\n" + "\n".join(lines) if lines else "")
-        if len(rows) > max_rows:
-            resp += "\n\nNot: Daha fazla satır var, ilk kısmı gösteriyorum."
-    else:
-        prefix = f"Found {len(rows)} rows."
-        resp = prefix + ("\n\n" + "\n".join(lines) if lines else "")
-        if len(rows) > max_rows:
-            resp += "\n\nNote: More rows exist; showing the first ones."
-
-    return {**state, "response": resp, "next_step": "end"}
-
-def visualization_agent(state: AgentState):
-    """Visualization intentionally disabled for reliability/quota."""
-    return {**state, "next_step": "end", "visualization_code": ""}
-
-# Build Graph
+# Grafik Yapısı
 builder = StateGraph(AgentState)
 builder.add_node("guardrails", guardrails_agent)
 builder.add_node("sql", sql_agent)
 builder.add_node("execute", execution_agent)
+builder.add_node("analyze", analyze_agent)
 builder.add_node("error", error_agent)
-builder.add_node("analyze", analysis_agent)
-builder.add_node("visualize", visualization_agent)
 
 builder.add_edge(START, "guardrails")
 builder.add_conditional_edges("guardrails", lambda x: "sql" if x["is_in_scope"] else END)
-builder.add_edge("sql", "execute")
-builder.add_conditional_edges("execute", lambda x: "error" if x["error"] else "analyze")
-builder.add_conditional_edges("error", lambda x: "execute" if x["next_step"] == "execute" else END)
+builder.add_conditional_edges("sql", lambda x: "execute" if not x["error"] else "error")
+builder.add_conditional_edges("execute", lambda x: "analyze" if not x["error"] else "error")
 builder.add_edge("analyze", END)
+builder.add_edge("error", END)
+
 ai_graph = builder.compile()

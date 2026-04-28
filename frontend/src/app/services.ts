@@ -147,12 +147,13 @@ export class AiService {
       if (!response.ok) {
         let text = '';
         try { text = await response.text(); } catch {}
-        // If streaming is forbidden/unavailable, fall back to the non-stream endpoint so the user still gets an answer.
-        const msg = `HTTP ${response.status} ${response.statusText}${text ? ` — ${text}` : ''}`;
-        onError(msg);
+        // If streaming is forbidden/unavailable, fall back to the non-stream endpoint WITHOUT showing error yet.
         this.query(prompt, history).subscribe({
           next: (res: any) => onFinal({ type: 'final', ...res }),
-          error: () => { /* swallow: onError already surfaced */ }
+          error: (fallbackErr) => {
+            const msg = fallbackErr?.message || `HTTP ${response.status} ${response.statusText}`;
+            onError(msg);
+          }
         });
         return;
       }
@@ -182,12 +183,13 @@ export class AiService {
         }
       }
     }).catch(err => {
-      const msg = err?.message || 'Stream failed';
-      onError(msg);
-      // Network/CORS issues: try non-stream path as a best-effort fallback.
+      // Stream failed (e.g. timeout): try non-stream path as a best-effort fallback WITHOUT showing error yet.
       this.query(prompt, history).subscribe({
         next: (res: any) => onFinal({ type: 'final', ...res }),
-        error: () => { /* swallow */ }
+        error: (fallbackErr) => {
+          const msg = fallbackErr?.message || 'Request failed';
+          onError(msg);
+        }
       });
     });
   }

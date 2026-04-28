@@ -274,6 +274,7 @@ public class ProductController {
         product.setStockQuantity(productDetails.getStockQuantity());
         product.setCategory(productDetails.getCategory());
         product.setImageUrl(productDetails.getImageUrl());
+        product.setBrand(productDetails.getBrand());
         Product saved = productRepository.save(Objects.requireNonNull(product));
         Integer nextStock = saved.getStockQuantity();
         if (prevStock != null && nextStock != null && !prevStock.equals(nextStock)) {

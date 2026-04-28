@@ -627,7 +627,7 @@ public class ChatController {
             @RequestBody Map<String, Object> payload,
             @AuthenticationPrincipal UserDetails principal) {
 
-        SseEmitter emitter = new SseEmitter(60000L);
+        SseEmitter emitter = new SseEmitter(120000L);
         User user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
         Long sessionStoreId = resolveSessionStoreId(user);
 
@@ -650,6 +650,8 @@ public class ChatController {
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
+                conn.setConnectTimeout(30000);
+                conn.setReadTimeout(120000);
                 conn.setDoOutput(true);
                 conn.getOutputStream().write(jsonBody.getBytes(StandardCharsets.UTF_8));
 

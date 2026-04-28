@@ -8,6 +8,8 @@ import { NexusThemeToggleComponent } from '../nexus-theme-toggle.component';
 import { Chart } from './chart-register';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { apiRoot } from '../../environments/environment';
 
 @Component({
   selector: 'app-admin',
@@ -480,7 +482,7 @@ import { catchError } from 'rxjs/operators';
       <div class="panel-a active" *ngIf="tab === 'users'">
         <div class="top-bar-a">
           <div><div class="page-title-a">User Management</div><div class="page-sub-a">View, suspend or ban users.</div></div>
-          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a">+ Add User</button></div>
+          <div class="top-actions-a"><button class="tbtn-a tbtn-primary-a" (click)="openUserAdd()">+ Add User</button></div>
         </div>
         <div class="table-card-a">
           <table class="tbl-a">
@@ -550,6 +552,39 @@ import { catchError } from 'rxjs/operators';
         </div>
       </div>
 
+      <!-- USER ADD MODAL -->
+      <div *ngIf="userAddOpen" style="position:fixed; inset:0; z-index:12000; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(8,8,8,0.72); backdrop-filter:blur(10px);">
+        <div style="width:min(640px, 96vw); background:var(--bg); border:1px solid var(--border2); border-radius:16px; overflow:hidden; box-shadow:0 20px 70px rgba(0,0,0,0.5);">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border);">
+            <div style="min-width:0;">
+              <div style="font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Add user</div>
+              <div style="font-size:16px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">New User</div>
+            </div>
+            <button class="sc-btn-a" style="max-width:120px;" (click)="closeUserAdd()">Close</button>
+          </div>
+          <div style="padding:16px 18px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Full name</div>
+                <input [(ngModel)]="userAddModel.fullName" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="John Doe"/>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Email</div>
+                <input [(ngModel)]="userAddModel.email" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="john@example.com"/>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Password</div>
+                <input [(ngModel)]="userAddModel.passwordHash" type="password" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="Password"/>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <button class="tbtn-a tbtn-primary-a" style="flex:1;" (click)="saveUserAdd()" [disabled]="userAddSaving">Create User</button>
+              <button class="tbtn-a tbtn-ghost-a" style="flex:1;" (click)="closeUserAdd()">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- PRODUCTS PANEL -->
       <div class="panel-a active" *ngIf="tab === 'products'">
         <div class="top-bar-a">
@@ -585,8 +620,8 @@ import { catchError } from 'rxjs/operators';
                   </div>
                 </div>
                 <div class="sc-actions-a">
-                  <button class="sc-btn-a">Edit</button>
-                  <button class="sc-btn-a danger">Delete</button>
+                  <button class="sc-btn-a" (click)="openProductEdit(p)">Edit</button>
+                  <button class="sc-btn-a danger" (click)="deleteProduct(p)">Delete</button>
                 </div>
               </div>
             </div>
@@ -646,6 +681,56 @@ import { catchError } from 'rxjs/operators';
             <div style="display:flex; gap:10px; margin-top:14px;">
               <button class="tbtn-a tbtn-primary-a" style="flex:1;" (click)="saveProductAdd()" [disabled]="productAddSaving">Create</button>
               <button class="tbtn-a tbtn-ghost-a" style="flex:1;" (click)="closeProductAdd()">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRODUCT EDIT MODAL -->
+      <div *ngIf="productEditOpen" style="position:fixed; inset:0; z-index:12000; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(8,8,8,0.72); backdrop-filter:blur(10px);">
+        <div style="width:min(720px, 96vw); background:var(--bg); border:1px solid var(--border2); border-radius:16px; overflow:hidden; box-shadow:0 20px 70px rgba(0,0,0,0.5);">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border);">
+            <div style="min-width:0;">
+              <div style="font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Edit product (admin)</div>
+              <div style="font-size:16px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{productEditModel.name}}</div>
+              <div style="font-size:12px; color:var(--text3); margin-top:2px;">ID: {{productEditModel.productId}}</div>
+            </div>
+            <button class="sc-btn-a" style="max-width:120px;" (click)="closeProductEdit()">Close</button>
+          </div>
+          <div style="padding:16px 18px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Category</div>
+                <input [(ngModel)]="productEditModel.category" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="e.g. Keyboards"/>
+              </div>
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Brand</div>
+                <input [(ngModel)]="productEditModel.brand" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="Brand"/>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Name</div>
+                <input [(ngModel)]="productEditModel.name" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="Product name"/>
+              </div>
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Price</div>
+                <input [(ngModel)]="productEditModel.basePrice" type="number" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="0"/>
+              </div>
+              <div>
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Stock</div>
+                <input [(ngModel)]="productEditModel.stockQuantity" type="number" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="0"/>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Image URL</div>
+                <input [(ngModel)]="productEditModel.imageUrl" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text);" placeholder="https://..."/>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px;">Description</div>
+                <textarea [(ngModel)]="productEditModel.description" rows="3" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--glass); color:var(--text); resize:none;" placeholder="Short description..."></textarea>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <button class="tbtn-a tbtn-primary-a" style="flex:1;" (click)="saveProductEdit()" [disabled]="productEditSaving">Save changes</button>
+              <button class="tbtn-a tbtn-ghost-a" style="flex:1;" (click)="closeProductEdit()">Cancel</button>
             </div>
           </div>
         </div>
@@ -878,6 +963,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
   toast = inject(ToastService);
   ai = inject(AiService);
   router = inject(Router);
+  http = inject(HttpClient);
 
   @ViewChild('adminRevenueChart') adminRevenueCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('adminCategoryChart') adminCategoryCanvas!: ElementRef<HTMLCanvasElement>;
@@ -918,6 +1004,10 @@ export class AdminComponent implements OnInit, AfterViewInit {
   userEditSaving = false;
   userEditModel: any = { userId: null, fullName: '', email: '', role: 'CONSUMER', enabled: true };
 
+  userAddOpen = false;
+  userAddSaving = false;
+  userAddModel: any = { fullName: '', email: '', passwordHash: '' };
+
   productAddOpen = false;
   productAddSaving = false;
   productAddModel: any = {
@@ -930,6 +1020,10 @@ export class AdminComponent implements OnInit, AfterViewInit {
     description: '',
     imageUrl: ''
   };
+
+  productEditOpen = false;
+  productEditSaving = false;
+  productEditModel: any = { productId: null, name: '', brand: '', basePrice: 0, stockQuantity: 0, category: '', description: '', imageUrl: '' };
 
   sysSettings = {
     maintenance: false,
@@ -1335,7 +1429,40 @@ export class AdminComponent implements OnInit, AfterViewInit {
     this.adminService.unbanUser(u.userId).subscribe(() => {
       this.toast.show('User unbanned');
       this.logAudit('Unban User', 'info', `Unbanned ${u.fullName}`);
+      u.enabled = true;
       this.refreshData();
+    });
+  }
+
+  openUserAdd() {
+    this.userAddModel = { fullName: '', email: '', passwordHash: '' };
+    this.userAddOpen = true;
+    this.userAddSaving = false;
+  }
+
+  closeUserAdd() {
+    this.userAddOpen = false;
+    this.userAddSaving = false;
+  }
+
+  saveUserAdd() {
+    const m = this.userAddModel;
+    if (!m.fullName || !m.email || !m.passwordHash) {
+      this.toast.show('Please fill all fields', 'error');
+      return;
+    }
+    this.userAddSaving = true;
+    this.http.post<any>(apiRoot() + '/auth/register', m).subscribe({
+      next: () => {
+        this.toast.show('User created successfully');
+        this.logAudit('Create User', 'success', `Created ${m.email}`);
+        this.closeUserAdd();
+        this.refreshData();
+      },
+      error: (e) => {
+        this.userAddSaving = false;
+        this.toast.show(e.error?.message || 'Failed to create user', 'error');
+      }
     });
   }
 
@@ -1500,6 +1627,61 @@ export class AdminComponent implements OnInit, AfterViewInit {
     });
   }
 
+  openProductEdit(p: any) {
+    if (!p) return;
+    this.productEditModel = { ...p };
+    this.productEditOpen = true;
+    this.productEditSaving = false;
+  }
+
+  closeProductEdit() {
+    this.productEditOpen = false;
+    this.productEditSaving = false;
+  }
+
+  saveProductEdit() {
+    const m = this.productEditModel;
+    if (!m || !m.productId) return;
+    
+    const payload: any = {
+      name: String(m.name || '').trim(),
+      brand: String(m.brand || '').trim(),
+      basePrice: Number(m.basePrice || 0),
+      stockQuantity: Number.isFinite(Number(m.stockQuantity)) ? Number(m.stockQuantity) : 0,
+      category: String(m.category || '').trim() || 'Accessories',
+      description: String(m.description || '').trim(),
+      imageUrl: String(m.imageUrl || '').trim()
+    };
+    
+    this.productEditSaving = true;
+    this.productService.updateProduct(m.productId, payload).subscribe({
+      next: () => {
+        this.productEditSaving = false;
+        this.productEditOpen = false;
+        this.toast.show('Product updated');
+        this.logAudit('Update Product', 'info', `${payload.name} ID=${m.productId}`);
+        this.refreshData();
+      },
+      error: (e) => {
+        this.productEditSaving = false;
+        this.toast.show(e.error?.message || 'Failed to update product', 'error');
+      }
+    });
+  }
+
+  deleteProduct(p: any) {
+    if (!p || !p.productId) return;
+    if (!confirm(`Delete product "${p.name}"?`)) return;
+    
+    this.productService.deleteProduct(p.productId).subscribe({
+      next: () => {
+        this.toast.show('Product deleted');
+        this.logAudit('Delete Product', 'warning', `${p.name} ID=${p.productId}`);
+        this.refreshData();
+      },
+      error: (e) => this.toast.show(e.error?.message || 'Failed to delete product', 'error')
+    });
+  }
   logout() {
     this.auth.logout();
     this.router.navigate(['/login']);
